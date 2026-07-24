@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: predicto_db
+    environment:
+      POSTGRES_USER: predicto_user
+      POSTGRES_PASSWORD: predicto_password
+      POSTGRES_DB: predicto
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U predicto_user -d predicto"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - predicto_network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  predicto_network:
+    driver: bridge

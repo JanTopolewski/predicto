@@ -1,0 +1,377 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// UŻYTKOWNICY
+// ============================================================================
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  email        String   @unique
+  passwordHash String
+  role         UserRole @default(USER)
+  totalPoints  Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  leagueMembers           LeagueMember[]
+  seasonWinnerPredictions SeasonWinnerPrediction[]
+  footballPredictions     FootballPrediction[]
+  f1Predictions           F1Prediction[]
+
+  @@index([username])
+  @@index([email])
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+// ============================================================================
+// LIGI
+// ============================================================================
+
+model League {
+  id         String   @id @default(cuid())
+  name       String
+  inviteCode String   @unique
+  createdBy  String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  members      LeagueMember[]
+  competitions Competition[]
+
+  @@index([createdBy])
+  @@index([inviteCode])
+}
+
+model LeagueMember {
+  id       String   @id @default(cuid())
+  leagueId String
+  userId   String
+  joinedAt DateTime @default(now())
+
+  league League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([leagueId, userId])
+  @@index([leagueId])
+  @@index([userId])
+}
+
+// ============================================================================
+// KONKURENCJE (SEASON/TURNIEJ)
+// ============================================================================
+
+model Competition {
+  id             String          @id @default(cuid())
+  leagueId       String
+  type           CompetitionType
+  name           String
+  season         String
+  startDate      DateTime
+  endDate        DateTime
+  winnerResolved Boolean         @default(false)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  league                  League                   @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  seasonWinnerPredictions SeasonWinnerPrediction[]
+  footballSeasons         FootballSeason[]
+  f1Seasons               F1Season[]
+  scoringRules            CompetitionScoring?
+
+  @@index([leagueId])
+  @@index([type])
+  @@index([season])
+}
+
+enum CompetitionType {
+  FOOTBALL
+  F1
+}
+
+// ============================================================================
+// REGUŁY PUNKTACJI
+// ============================================================================
+
+model CompetitionScoring {
+  id                 String   @id @default(cuid())
+  competitionId      String   @unique
+  exactScorePoints   Int      @default(3)
+  winnerPoints       Int      @default(1)
+  seasonWinnerPoints Int      @default(10)
+  podiumExactPoints  Int      @default(3)
+  podiumAnyPoints    Int      @default(1)
+  polePositionPoints Int      @default(2)
+  wildcardPoints     Int      @default(2)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+}
+
+// ============================================================================
+// TYPY ZWYCIĘZCY SEZONU
+// ============================================================================
+
+model SeasonWinnerPrediction {
+  id            String   @id @default(cuid())
+  competitionId String
+  userId        String
+  winnerId      String // TeamId dla FOOTBALL, DriverId dla F1
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([competitionId, userId])
+  @@index([competitionId])
+  @@index([userId])
+  @@index([winnerId])
+}
+
+// ============================================================================
+// PIŁKA NOŻNA
+// ============================================================================
+
+model FootballSeason {
+  id            String   @id @default(cuid())
+  competitionId String
+  createdAt     DateTime @default(now())
+
+  competition Competition     @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  matches     FootballMatch[]
+
+  @@index([competitionId])
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  shortName String   @unique
+  logo      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  homeMatches FootballMatch[] @relation("homeTeam")
+  awayMatches FootballMatch[] @relation("awayTeam")
+}
+
+model FootballMatch {
+  id         String      @id @default(cuid())
+  seasonId   String
+  homeTeamId String
+  awayTeamId String
+  kickoff    DateTime
+  status     MatchStatus @default(SCHEDULED)
+  homeGoals  Int?
+  awayGoals  Int?
+  resolved   Boolean     @default(false)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  season      FootballSeason       @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  homeTeam    Team                 @relation("homeTeam", fields: [homeTeamId], references: [id])
+  awayTeam    Team                 @relation("awayTeam", fields: [awayTeamId], references: [id])
+  predictions FootballPrediction[]
+  auditLogs   AuditLog[]
+
+  @@index([seasonId])
+  @@index([homeTeamId])
+  @@index([awayTeamId])
+  @@index([kickoff])
+  @@index([status])
+}
+
+enum MatchStatus {
+  SCHEDULED
+  IN_PROGRESS
+  FINISHED
+  POSTPONED
+  CANCELLED
+}
+
+model FootballPrediction {
+  id        String   @id @default(cuid())
+  matchId   String
+  userId    String
+  homeGoals Int
+  awayGoals Int
+  points    Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  match FootballMatch @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  user  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, userId])
+  @@index([matchId])
+  @@index([userId])
+}
+
+// ============================================================================
+// FORMULA 1
+// ============================================================================
+
+model F1Season {
+  id            String   @id @default(cuid())
+  competitionId String
+  createdAt     DateTime @default(now())
+
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  weekends    F1Weekend[]
+
+  @@index([competitionId])
+}
+
+model Driver {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  number    Int      @unique
+  team      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  f1Results     F1Result[]
+  f1Predictions F1Prediction[]
+  wildcards     Wildcard[]
+
+  @@index([number])
+}
+
+model F1Weekend {
+  id        String   @id @default(cuid())
+  seasonId  String
+  grandPrix String
+  country   String
+  raceDate  DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  season    F1Season    @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  sessions  F1Session[]
+  wildcards Wildcard[]
+
+  @@index([seasonId])
+  @@index([raceDate])
+}
+
+model F1Session {
+  id        String        @id @default(cuid())
+  weekendId String
+  type      F1SessionType
+  startTime DateTime
+  resolved  Boolean       @default(false)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  weekend     F1Weekend      @relation(fields: [weekendId], references: [id], onDelete: Cascade)
+  results     F1Result[]
+  predictions F1Prediction[]
+  wildcards   Wildcard[]
+  auditLogs   AuditLog[]
+
+  @@index([weekendId])
+  @@index([type])
+  @@index([startTime])
+}
+
+enum F1SessionType {
+  PRACTICE1
+  PRACTICE2
+  PRACTICE3
+  QUALIFYING
+  SPRINT
+  RACE
+}
+
+model F1Result {
+  id        String   @id @default(cuid())
+  sessionId String
+  driverId  String
+  position  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  session F1Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  driver  Driver    @relation(fields: [driverId], references: [id])
+
+  @@unique([sessionId, driverId])
+  @@index([sessionId])
+  @@index([driverId])
+}
+
+model F1Prediction {
+  id                 String   @id @default(cuid())
+  sessionId          String
+  userId             String
+  firstDriver        String // DriverId
+  secondDriver       String // DriverId
+  thirdDriver        String // DriverId
+  polePosition       String? // DriverId (opcjonalne)
+  wildcardPrediction Int? // pozycja dla wildcard kierowcy
+  points             Int      @default(0)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  session  F1Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Driver   Driver?   @relation(fields: [driverId], references: [id])
+  driverId String?
+
+  @@unique([sessionId, userId])
+  @@index([sessionId])
+  @@index([userId])
+}
+
+model Wildcard {
+  id        String   @id @default(cuid())
+  sessionId String?
+  weekendId String?
+  driverId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  session F1Session? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  weekend F1Weekend? @relation(fields: [weekendId], references: [id], onDelete: Cascade)
+  driver  Driver     @relation(fields: [driverId], references: [id])
+
+  @@index([sessionId])
+  @@index([weekendId])
+  @@index([driverId])
+}
+
+// ============================================================================
+// AUDIT LOGS (dla zmian dokonanych przez admina)
+// ============================================================================
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  action     String // "UPDATE_MATCH_RESULT", "UPDATE_SESSION_RESULT", etc.
+  adminId    String
+  entityType String // "FootballMatch", "F1Session"
+  entityId   String
+  oldValues  String? // JSON
+  newValues  String? // JSON
+  createdAt  DateTime @default(now())
+
+  match           FootballMatch? @relation(fields: [footballMatchId], references: [id], onDelete: SetNull)
+  session         F1Session?     @relation(fields: [f1SessionId], references: [id], onDelete: SetNull)
+  footballMatchId String?
+  f1SessionId     String?
+
+  @@index([adminId])
+  @@index([entityType])
+  @@index([createdAt])
+}
