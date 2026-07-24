@@ -1,0 +1,174 @@
+"use client";
+
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+
+export default function RegisterPage() {
+    const router = useRouter();
+    const [username, setUsername] = useState("");
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [error, setError] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
+
+    const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        setError("");
+        setIsLoading(true);
+
+        try {
+            if (!username || !email || !password || !confirmPassword) {
+                setError("Wszystkie pola są wymagane");
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                setError("Hasła nie zgadzają się");
+                return;
+            }
+
+            if (password.length < 8) {
+                setError("Hasło musi mieć co najmniej 8 znaków");
+                return;
+            }
+
+            const response = await fetch("/api/auth/register", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, email, password }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                setError(data.message || "Błąd rejestracji");
+                return;
+            }
+
+            router.push("/auth/login?registered=true");
+        } catch (_err) {
+            setError("Coś poszło nie tak");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-950 dark:to-zinc-900 px-4">
+            <div className="w-full max-w-md">
+                <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-8 border border-zinc-200 dark:border-zinc-800">
+                    <div className="mb-8">
+                        <h1 className="text-3xl font-bold text-center text-zinc-900 dark:text-white mb-2">
+                            Predicto
+                        </h1>
+                        <p className="text-center text-zinc-600 dark:text-zinc-400">
+                            Utwórz nowe konto
+                        </p>
+                    </div>
+
+                    {error && (
+                        <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                            <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+                        </div>
+                    )}
+
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <div>
+                            <label
+                                htmlFor="username"
+                                className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
+                            >
+                                Nazwa użytkownika
+                            </label>
+                            <input
+                                id="username"
+                                type="text"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                                placeholder="twoja_nazwa"
+                                disabled={isLoading}
+                            />
+                        </div>
+
+                        <div>
+                            <label
+                                htmlFor="email"
+                                className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
+                            >
+                                Email
+                            </label>
+                            <input
+                                id="email"
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                                placeholder="twoj@email.com"
+                                disabled={isLoading}
+                            />
+                        </div>
+
+                        <div>
+                            <label
+                                htmlFor="password"
+                                className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
+                            >
+                                Hasło
+                            </label>
+                            <input
+                                id="password"
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                                placeholder="••••••••"
+                                disabled={isLoading}
+                            />
+                        </div>
+
+                        <div>
+                            <label
+                                htmlFor="confirmPassword"
+                                className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
+                            >
+                                Potwierdź hasło
+                            </label>
+                            <input
+                                id="confirmPassword"
+                                type="password"
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+                                placeholder="••••••••"
+                                disabled={isLoading}
+                            />
+                        </div>
+
+                        <button
+                            type="submit"
+                            disabled={isLoading}
+                            className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {isLoading ? "Rejestracja..." : "Zarejestruj się"}
+                        </button>
+                    </form>
+
+                    <div className="mt-6 text-center">
+                        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                            Masz już konto?{" "}
+                            <Link
+                                href="/auth/login"
+                                className="font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                            >
+                                Zaloguj się
+                            </Link>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
