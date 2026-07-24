@@ -57,6 +57,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             if (user) {
                 token.id = user.id;
                 token.email = user.email;
+
+                // Pobierz rolę z bazy danych
+                const dbUser = await prisma.user.findUnique({
+                    where: { id: user.id },
+                    select: { role: true },
+                });
+                token.role = dbUser?.role;
             }
             return token;
         },
@@ -64,6 +71,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             if (session.user) {
                 session.user.id = token.id as string;
                 session.user.email = token.email as string;
+                session.user.role = token.role as string;
             }
             return session;
         },
