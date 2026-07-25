@@ -17,14 +17,13 @@ model User {
   email        String   @unique
   passwordHash String
   role         UserRole @default(USER)
-  totalPoints  Int      @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  leagueMembers           LeagueMember[]
+  competitionMembers      CompetitionMember[]
   seasonWinnerPredictions SeasonWinnerPrediction[]
   footballPredictions     FootballPrediction[]
-  f1Predictions           F1Prediction[]
+  racingPredictions       RacingPrediction[]
 
   @@index([username])
   @@index([email])
@@ -36,68 +35,57 @@ enum UserRole {
 }
 
 // ============================================================================
-// LIGI
-// ============================================================================
-
-model League {
-  id         String   @id @default(cuid())
-  name       String
-  inviteCode String   @unique
-  createdBy  String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  members      LeagueMember[]
-  competitions Competition[]
-
-  @@index([createdBy])
-  @@index([inviteCode])
-}
-
-model LeagueMember {
-  id       String   @id @default(cuid())
-  leagueId String
-  userId   String
-  joinedAt DateTime @default(now())
-
-  league League @relation(fields: [leagueId], references: [id], onDelete: Cascade)
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([leagueId, userId])
-  @@index([leagueId])
-  @@index([userId])
-}
-
-// ============================================================================
-// KONKURENCJE (SEASON/TURNIEJ)
+// KONKURENCJE (SEASON/TURNIEJ/LIGA)
 // ============================================================================
 
 model Competition {
   id             String          @id @default(cuid())
-  leagueId       String
   type           CompetitionType
   name           String
   season         String
+  inviteCode     String          @unique
+  isPublic       Boolean         @default(true)
+  createdBy      String
+  createdAt      DateTime        @default(now())
   startDate      DateTime
   endDate        DateTime
   winnerResolved Boolean         @default(false)
-  createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 
-  league                  League                   @relation(fields: [leagueId], references: [id], onDelete: Cascade)
+  members                 CompetitionMember[]
   seasonWinnerPredictions SeasonWinnerPrediction[]
   footballSeasons         FootballSeason[]
-  f1Seasons               F1Season[]
+  racingSeasons           RacingSeason[]
   scoringRules            CompetitionScoring?
 
-  @@index([leagueId])
   @@index([type])
   @@index([season])
+  @@index([createdBy])
+  @@index([inviteCode])
 }
 
 enum CompetitionType {
   FOOTBALL
-  F1
+  RACING
+}
+
+// ============================================================================
+// CZŁONKOWIE KONKURENCJI (WCZEŚNIEJ LEAGUEMEMBER)
+// ============================================================================
+
+model CompetitionMember {
+  id            String   @id @default(cuid())
+  competitionId String
+  userId        String
+  joinedAt      DateTime @default(now())
+  points        Int      @default(0)
+
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([competitionId, userId])
+  @@index([competitionId])
+  @@index([userId])
 }
 
 // ============================================================================
@@ -128,7 +116,7 @@ model SeasonWinnerPrediction {
   id            String   @id @default(cuid())
   competitionId String
   userId        String
-  winnerId      String // TeamId dla FOOTBALL, DriverId dla F1
+  winnerId      String // TeamId dla FOOTBALL, DriverId dla RACING
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -160,7 +148,6 @@ model Team {
   id        String   @id @default(cuid())
   name      String   @unique
   shortName String   @unique
-  logo      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -224,13 +211,13 @@ model FootballPrediction {
 // FORMULA 1
 // ============================================================================
 
-model F1Season {
+model RacingSeason {
   id            String   @id @default(cuid())
   competitionId String
   createdAt     DateTime @default(now())
 
-  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
-  weekends    F1Weekend[]
+  competition Competition     @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  weekends    RacingWeekend[]
 
   @@index([competitionId])
 }
@@ -243,14 +230,14 @@ model Driver {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  f1Results     F1Result[]
-  f1Predictions F1Prediction[]
-  wildcards     Wildcard[]
+  racingResults     RacingResult[]
+  racingPredictions RacingPrediction[]
+  wildcards         Wildcard[]
 
   @@index([number])
 }
 
-model F1Weekend {
+model RacingWeekend {
   id        String   @id @default(cuid())
   seasonId  String
   grandPrix String
@@ -259,26 +246,26 @@ model F1Weekend {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  season    F1Season    @relation(fields: [seasonId], references: [id], onDelete: Cascade)
-  sessions  F1Session[]
+  season    RacingSeason    @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  sessions  RacingSession[]
   wildcards Wildcard[]
 
   @@index([seasonId])
   @@index([raceDate])
 }
 
-model F1Session {
-  id        String        @id @default(cuid())
+model RacingSession {
+  id        String            @id @default(cuid())
   weekendId String
-  type      F1SessionType
+  type      RacingSessionType
   startTime DateTime
-  resolved  Boolean       @default(false)
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  resolved  Boolean           @default(false)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
 
-  weekend     F1Weekend      @relation(fields: [weekendId], references: [id], onDelete: Cascade)
-  results     F1Result[]
-  predictions F1Prediction[]
+  weekend     RacingWeekend      @relation(fields: [weekendId], references: [id], onDelete: Cascade)
+  results     RacingResult[]
+  predictions RacingPrediction[]
   wildcards   Wildcard[]
   auditLogs   AuditLog[]
 
@@ -287,7 +274,7 @@ model F1Session {
   @@index([startTime])
 }
 
-enum F1SessionType {
+enum RacingSessionType {
   PRACTICE1
   PRACTICE2
   PRACTICE3
@@ -296,7 +283,7 @@ enum F1SessionType {
   RACE
 }
 
-model F1Result {
+model RacingResult {
   id        String   @id @default(cuid())
   sessionId String
   driverId  String
@@ -304,15 +291,15 @@ model F1Result {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  session F1Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  driver  Driver    @relation(fields: [driverId], references: [id])
+  session RacingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  driver  Driver        @relation(fields: [driverId], references: [id])
 
   @@unique([sessionId, driverId])
   @@index([sessionId])
   @@index([driverId])
 }
 
-model F1Prediction {
+model RacingPrediction {
   id                 String   @id @default(cuid())
   sessionId          String
   userId             String
@@ -325,9 +312,9 @@ model F1Prediction {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  session  F1Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  Driver   Driver?   @relation(fields: [driverId], references: [id])
+  session  RacingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Driver   Driver?       @relation(fields: [driverId], references: [id])
   driverId String?
 
   @@unique([sessionId, userId])
@@ -343,9 +330,9 @@ model Wildcard {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  session F1Session? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  weekend F1Weekend? @relation(fields: [weekendId], references: [id], onDelete: Cascade)
-  driver  Driver     @relation(fields: [driverId], references: [id])
+  session RacingSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  weekend RacingWeekend? @relation(fields: [weekendId], references: [id], onDelete: Cascade)
+  driver  Driver         @relation(fields: [driverId], references: [id])
 
   @@index([sessionId])
   @@index([weekendId])
@@ -367,9 +354,9 @@ model AuditLog {
   createdAt  DateTime @default(now())
 
   match           FootballMatch? @relation(fields: [footballMatchId], references: [id], onDelete: SetNull)
-  session         F1Session?     @relation(fields: [f1SessionId], references: [id], onDelete: SetNull)
+  session         RacingSession? @relation(fields: [racingSessionId], references: [id], onDelete: SetNull)
   footballMatchId String?
-  f1SessionId     String?
+  racingSessionId String?
 
   @@index([adminId])
   @@index([entityType])

@@ -42,6 +42,13 @@ export default function DashboardLayout({
                                 Dashboard
                             </Link>
 
+                            <Link
+                                href="/dashboard/competitions"
+                                className="text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white font-medium transition-colors"
+                            >
+                                Konkurencje
+                            </Link>
+
                             {isAdmin && (
                                 <Link
                                     href="/dashboard/users"
