@@ -16,10 +16,8 @@ export async function GET(
             );
         }
 
-        // Unwrap params - to jest Promise
         const { id: competitionId } = await params;
 
-        // Pobranie konkurencji ze wszystkimi członkami i ich punktami
         const competition = await prisma.competition.findUnique({
             where: { id: competitionId },
             include: {
@@ -43,7 +41,6 @@ export async function GET(
             );
         }
 
-        // Mapowanie danych
         const competitionData = {
             id: competition.id,
             name: competition.name,

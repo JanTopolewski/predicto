@@ -135,7 +135,7 @@ export default function CompetitionsPage() {
     };
 
     const getCompetitionTypeLabel = (type: string) => {
-        return type === "FOOTBALL" ? "⚽ Piłka nożna" : "🏎️ Wyścigi";
+        return type === "FOOTBALL" ? "Piłka nożna" : "Wyścigi";
     };
 
     const getCompetitionTypeColor = (type: string) => {
@@ -149,20 +149,20 @@ export default function CompetitionsPage() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-8 border border-zinc-200 dark:border-zinc-800">
-                <div className="flex items-center justify-between">
+            <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 sm:p-8 border border-zinc-200 dark:border-zinc-800">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
-                        <h2 className="text-3xl font-bold text-zinc-900 dark:text-white">
+                        <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white">
                             Konkurencje
                         </h2>
-                        <p className="text-zinc-600 dark:text-zinc-400 mt-2">
+                        <p className="text-sm sm:text-base text-zinc-600 dark:text-zinc-400 mt-2">
                             Przeglądaj dostępne konkurencje i dołącz do nich
                         </p>
                     </div>
                     {isAdmin && (
                         <Link
                             href="/dashboard/competitions/create"
-                            className="px-6 py-3 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white font-medium rounded-lg transition-colors"
+                            className="px-4 sm:px-6 py-2.5 sm:py-3 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white font-medium rounded-lg transition-colors text-center text-sm sm:text-base whitespace-nowrap"
                         >
                             + Utwórz konkurencję
                         </Link>
@@ -175,7 +175,7 @@ export default function CompetitionsPage() {
                 <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-4">
                     🔒 Dołącz do konkurencji prywatnej
                 </h3>
-                <form onSubmit={handleJoinByCode} className="flex gap-2">
+                <form onSubmit={handleJoinByCode} className="flex flex-col sm:flex-row gap-2">
                     <input
                         type="text"
                         value={inviteCodeInput}
@@ -187,7 +187,7 @@ export default function CompetitionsPage() {
                     <button
                         type="submit"
                         disabled={joiningByCode}
-                        className="px-6 py-2 bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                        className="px-6 py-2 bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap text-sm"
                     >
                         {joiningByCode ? "Dołączanie..." : "Dołącz"}
                     </button>
@@ -210,150 +210,251 @@ export default function CompetitionsPage() {
                 </div>
             )}
 
-            {/* Competitions Table */}
-            <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg overflow-hidden border border-zinc-200 dark:border-zinc-800">
-                {loading ? (
-                    <div className="p-8 text-center">
-                        <p className="text-zinc-600 dark:text-zinc-400">
-                            Ładowanie konkurencji...
-                        </p>
+            {/* Competitions */}
+            {loading ? (
+                <div className="p-8 text-center bg-white dark:bg-zinc-900 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-800">
+                    <p className="text-zinc-600 dark:text-zinc-400">
+                        Ładowanie konkurencji...
+                    </p>
+                </div>
+            ) : competitions.length === 0 ? (
+                <div className="p-8 text-center bg-white dark:bg-zinc-900 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-800">
+                    <p className="text-zinc-600 dark:text-zinc-400">
+                        Brak dostępnych konkurencji
+                    </p>
+                </div>
+            ) : (
+                <>
+                    {/* Desktop Table View */}
+                    <div className="hidden lg:block bg-white dark:bg-zinc-900 rounded-lg shadow-lg overflow-hidden border border-zinc-200 dark:border-zinc-800">
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead>
+                                <tr className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800">
+                                    <th className="px-6 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">
+                                        Konkurencja
+                                    </th>
+                                    <th className="px-6 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">
+                                        Typ
+                                    </th>
+                                    <th className="px-6 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">
+                                        Sezon
+                                    </th>
+                                    <th className="px-6 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">
+                                        Członkowie
+                                    </th>
+                                    <th className="px-6 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">
+                                        Status
+                                    </th>
+                                    <th className="px-6 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">
+                                        Kod dostępu
+                                    </th>
+                                    <th className="px-6 py-3 text-right text-sm font-semibold text-zinc-900 dark:text-white">
+                                        Akcje
+                                    </th>
+                                </tr>
+                                </thead>
+                                <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                                {competitions.map((comp) => (
+                                    <tr
+                                        key={comp.id}
+                                        className="hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                                    >
+                                        <td className="px-6 py-4">
+                                            <p className="font-medium text-zinc-900 dark:text-white">
+                                                {comp.name}
+                                            </p>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                                <span
+                                                    className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getCompetitionTypeColor(
+                                                        comp.type
+                                                    )}`}
+                                                >
+                                                    {getCompetitionTypeLabel(comp.type)}
+                                                </span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <p className="text-zinc-600 dark:text-zinc-400">
+                                                {comp.season}
+                                            </p>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <p className="text-zinc-600 dark:text-zinc-400">
+                                                {comp.memberCount}
+                                            </p>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                                <span
+                                                    className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                                                        comp.isPublic
+                                                            ? "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300"
+                                                            : "bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300"
+                                                    }`}
+                                                >
+                                                    {comp.isPublic ? "🌍 Publiczna" : "🔒 Prywatna"}
+                                                </span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            {comp.canSeeInviteCode ? (
+                                                <div className="flex items-center gap-2">
+                                                    <code className="px-3 py-1 bg-zinc-100 dark:bg-zinc-800 rounded text-sm font-mono text-zinc-900 dark:text-white">
+                                                        {comp.inviteCode}
+                                                    </code>
+                                                    <button
+                                                        onClick={() => {
+                                                            navigator.clipboard.writeText(comp.inviteCode);
+                                                            setSuccessMessage("Kod skopiowany do schowka!");
+                                                            setTimeout(() => setSuccessMessage(""), 3000);
+                                                        }}
+                                                        className="text-xs px-2 py-1 bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 rounded transition-colors"
+                                                        title="Skopiuj kod"
+                                                    >
+                                                        📋
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <span className="text-xs text-zinc-400 dark:text-zinc-500">
+                                                        -
+                                                    </span>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <div className="flex gap-2 justify-end">
+                                                {comp.isMember ? (
+                                                    <>
+                                                        <Link
+                                                            href={`/dashboard/competitions/${comp.id}`}
+                                                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white text-sm font-medium rounded transition-colors"
+                                                        >
+                                                            Wejdź
+                                                        </Link>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        {comp.isPublic ? (
+                                                            <button
+                                                                onClick={() => handleJoinCompetition(comp.id)}
+                                                                disabled={joiningId === comp.id}
+                                                                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white text-sm font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                            >
+                                                                {joiningId === comp.id ? "Dołączanie..." : "Dołącz"}
+                                                            </button>
+                                                        ) : (
+                                                            <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                                                                    Potrzebujesz kodu
+                                                                </span>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                ) : competitions.length === 0 ? (
-                    <div className="p-8 text-center">
-                        <p className="text-zinc-600 dark:text-zinc-400">
-                            Brak dostępnych konkurencji
-                        </p>
-                    </div>
-                ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead>
-                            <tr className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800">
-                                <th className="px-6 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">
-                                    Konkurencja
-                                </th>
-                                <th className="px-6 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">
-                                    Typ
-                                </th>
-                                <th className="px-6 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">
-                                    Sezon
-                                </th>
-                                <th className="px-6 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">
-                                    Członkowie
-                                </th>
-                                <th className="px-6 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">
-                                    Status
-                                </th>
-                                <th className="px-6 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">
-                                    Kod dostępu
-                                </th>
-                                <th className="px-6 py-3 text-right text-sm font-semibold text-zinc-900 dark:text-white">
-                                    Akcje
-                                </th>
-                            </tr>
-                            </thead>
-                            <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                            {competitions.map((comp) => (
-                                <tr
-                                    key={comp.id}
-                                    className="hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
-                                >
-                                    <td className="px-6 py-4">
-                                        <p className="font-medium text-zinc-900 dark:text-white">
-                                            {comp.name}
-                                        </p>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                            <span
-                                                className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getCompetitionTypeColor(
-                                                    comp.type
-                                                )}`}
-                                            >
-                                                {getCompetitionTypeLabel(comp.type)}
-                                            </span>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <p className="text-zinc-600 dark:text-zinc-400">
-                                            {comp.season}
-                                        </p>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <p className="text-zinc-600 dark:text-zinc-400">
+
+                    {/* Mobile Card View */}
+                    <div className="lg:hidden space-y-4">
+                        {competitions.map((comp) => (
+                            <div
+                                key={comp.id}
+                                className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-4 border border-zinc-200 dark:border-zinc-800 space-y-3"
+                            >
+                                {/* Header */}
+                                <div>
+                                    <h3 className="font-bold text-lg text-zinc-900 dark:text-white mb-1">
+                                        {comp.name}
+                                    </h3>
+                                    <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                                        Sezon: {comp.season}
+                                    </p>
+                                </div>
+
+                                {/* Info Grid */}
+                                <div className="grid grid-cols-2 gap-3 text-sm">
+                                    <div className="bg-zinc-50 dark:bg-zinc-800 p-2 rounded">
+                                        <p className="text-xs text-zinc-600 dark:text-zinc-400">Typ</p>
+                                        <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium mt-1 ${getCompetitionTypeColor(comp.type)}`}>
+                                            {getCompetitionTypeLabel(comp.type)}
+                                        </span>
+                                    </div>
+
+                                    <div className="bg-zinc-50 dark:bg-zinc-800 p-2 rounded">
+                                        <p className="text-xs text-zinc-600 dark:text-zinc-400">Członkowie</p>
+                                        <p className="font-semibold text-zinc-900 dark:text-white text-base mt-1">
                                             {comp.memberCount}
                                         </p>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                            <span
-                                                className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
-                                                    comp.isPublic
-                                                        ? "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300"
-                                                        : "bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300"
-                                                }`}
-                                            >
-                                                {comp.isPublic ? "🌍 Publiczna" : "🔒 Prywatna"}
-                                            </span>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        {comp.canSeeInviteCode ? (
-                                            <div className="flex items-center gap-2">
-                                                <code className="px-3 py-1 bg-zinc-100 dark:bg-zinc-800 rounded text-sm font-mono text-zinc-900 dark:text-white">
+                                    </div>
+
+                                    <div className="bg-zinc-50 dark:bg-zinc-800 p-2 rounded">
+                                        <p className="text-xs text-zinc-600 dark:text-zinc-400">Status</p>
+                                        <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium mt-1 ${
+                                            comp.isPublic
+                                                ? "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300"
+                                                : "bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300"
+                                        }`}>
+                                            {comp.isPublic ? "🌍 Publiczna" : "🔒 Prywatna"}
+                                        </span>
+                                    </div>
+
+                                    {comp.canSeeInviteCode && (
+                                        <div className="bg-zinc-50 dark:bg-zinc-800 p-2 rounded">
+                                            <p className="text-xs text-zinc-600 dark:text-zinc-400">Kod</p>
+                                            <div className="flex items-center gap-1 mt-1">
+                                                <code className="px-2 py-1 bg-zinc-200 dark:bg-zinc-700 rounded text-xs font-mono text-zinc-900 dark:text-white">
                                                     {comp.inviteCode}
                                                 </code>
                                                 <button
                                                     onClick={() => {
                                                         navigator.clipboard.writeText(comp.inviteCode);
-                                                        setSuccessMessage("Kod skopiowany do schowka!");
+                                                        setSuccessMessage("Kod skopiowany!");
                                                         setTimeout(() => setSuccessMessage(""), 3000);
                                                     }}
-                                                    className="text-xs px-2 py-1 bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 rounded transition-colors"
+                                                    className="p-1 text-xs"
                                                     title="Skopiuj kod"
                                                 >
                                                     📋
                                                 </button>
                                             </div>
-                                        ) : (
-                                            <span className="text-xs text-zinc-400 dark:text-zinc-500">
-                                                    -
-                                                </span>
-                                        )}
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <div className="flex gap-2 justify-end">
-                                            {comp.isMember ? (
-                                                <>
-                                                    <Link
-                                                        href={`/dashboard/competitions/${comp.id}`}
-                                                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white text-sm font-medium rounded transition-colors"
-                                                    >
-                                                        Wejdź
-                                                    </Link>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    {comp.isPublic ? (
-                                                        <button
-                                                            onClick={() => handleJoinCompetition(comp.id)}
-                                                            disabled={joiningId === comp.id}
-                                                            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white text-sm font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                                        >
-                                                            {joiningId === comp.id ? "Dołączanie..." : "Dołącz"}
-                                                        </button>
-                                                    ) : (
-                                                        <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                                                                Potrzebujesz kodu
-                                                            </span>
-                                                    )}
-                                                </>
-                                            )}
                                         </div>
-                                    </td>
-                                </tr>
-                            ))}
-                            </tbody>
-                        </table>
+                                    )}
+                                </div>
+
+                                {/* Actions */}
+                                <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800">
+                                    {comp.isMember ? (
+                                        <Link
+                                            href={`/dashboard/competitions/${comp.id}`}
+                                            className="block w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white text-sm font-medium rounded transition-colors text-center"
+                                        >
+                                            Wejdź
+                                        </Link>
+                                    ) : (
+                                        <>
+                                            {comp.isPublic ? (
+                                                <button
+                                                    onClick={() => handleJoinCompetition(comp.id)}
+                                                    disabled={joiningId === comp.id}
+                                                    className="w-full px-4 py-2 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600 text-white text-sm font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                >
+                                                    {joiningId === comp.id ? "Dołączanie..." : "Dołącz"}
+                                                </button>
+                                            ) : (
+                                                <div className="w-full px-4 py-2 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 text-sm font-medium rounded text-center">
+                                                    Potrzebujesz kodu
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
                     </div>
-                )}
-            </div>
+                </>
+            )}
         </div>
     );
 }

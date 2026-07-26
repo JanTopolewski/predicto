@@ -14,7 +14,6 @@ export async function GET(_request: NextRequest) {
             );
         }
 
-        // Pobranie wszystkich konkurencji, w których użytkownik jest członkiem
         const competitionMembers = await prisma.competitionMember.findMany({
             where: {
                 userId: session.user.id,
@@ -38,7 +37,6 @@ export async function GET(_request: NextRequest) {
             },
         });
 
-        // Formatowanie danych dla frontendu
         const competitions = competitionMembers.map((member) => ({
             id: member.competition.id,
             name: member.competition.name,

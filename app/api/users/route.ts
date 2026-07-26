@@ -13,14 +13,12 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        // Pobierz parametry paginacji
         const searchParams = request.nextUrl.searchParams;
         const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
         const limit = Math.min(100, parseInt(searchParams.get("limit") || "10"));
 
         const skip = (page - 1) * limit;
 
-        // Pobierz użytkowników
         const [users, total] = await Promise.all([
             prisma.user.findMany({
                 select: {

@@ -20,7 +20,6 @@ export async function DELETE(
         const { id } = await params;
         const userId = id;
 
-        // Nie pozwól na usunięcie siebie
         if (session.user?.id === userId) {
             return NextResponse.json(
                 { message: "Nie możesz usunąć swojego konta" },
@@ -28,7 +27,6 @@ export async function DELETE(
             );
         }
 
-        // Usuń użytkownika
         await prisma.user.delete({
             where: { id: userId },
         });

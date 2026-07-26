@@ -40,14 +40,12 @@ export default function UsersPage() {
     });
     const [actionLoading, setActionLoading] = useState(false);
 
-    // Sprawdzenie czy użytkownik jest adminem
     useEffect(() => {
         if (session && session.user?.role !== "ADMIN") {
             router.push("/dashboard");
         }
     }, [session, router]);
 
-    // Pobranie listy użytkowników
     useEffect(() => {
         const fetchUsers = async () => {
             setLoading(true);

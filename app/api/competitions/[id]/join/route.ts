@@ -16,11 +16,9 @@ export async function POST(
             );
         }
 
-        // Unwrap params - to jest Promise
         const { id } = await params;
         const competitionId = id;
 
-        // Sprawdzenie czy konkurencja istnieje
         const competition = await prisma.competition.findUnique({
             where: { id: competitionId },
         });
@@ -32,7 +30,6 @@ export async function POST(
             );
         }
 
-        // Sprawdzenie czy użytkownik już jest członkiem
         const existingMember = await prisma.competitionMember.findUnique({
             where: {
                 competitionId_userId: {
@@ -49,7 +46,6 @@ export async function POST(
             );
         }
 
-        // Dodanie użytkownika do konkurencji
         await prisma.competitionMember.create({
             data: {
                 competitionId,

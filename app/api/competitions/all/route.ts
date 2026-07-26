@@ -13,7 +13,6 @@ export async function GET() {
             );
         }
 
-        // Pobranie konkurencji, w których użytkownik jest członkiem
         const userCompetitions = await prisma.competitionMember.findMany({
             where: {
                 userId: session.user.id,
@@ -27,21 +26,16 @@ export async function GET() {
             userCompetitions.map((m) => m.competitionId)
         );
 
-        // Pobierz pełne dane użytkownika, aby sprawdzić rolę
         const user = await prisma.user.findUnique({
             where: { id: session.user.id },
             select: { role: true },
         });
 
-        // Pobranie wszystkich konkurencji z filtrami
         const allCompetitions = await prisma.competition.findMany({
             where: {
                 OR: [
-                    // Publiczne konkurencje
                     { isPublic: true },
-                    // Konkurencje, w których użytkownik jest członkiem
                     { id: { in: Array.from(userCompetitionIds) } },
-                    // Konkurencje stworzone przez ADMINA (jeśli jest admin)
                     ...(user?.role === "ADMIN" ? [{ createdBy: session.user.id }] : []),
                 ],
             },
@@ -61,7 +55,6 @@ export async function GET() {
             },
         });
 
-        // Mapowanie danych
         const competitions = allCompetitions.map((comp) => ({
             id: comp.id,
             name: comp.name,
@@ -72,7 +65,6 @@ export async function GET() {
             createdBy: comp.createdBy,
             memberCount: comp._count.members,
             isMember: userCompetitionIds.has(comp.id),
-            // Pokazuj kod dołączenia jeśli użytkownik jest właścicielem lub członkiem
             canSeeInviteCode: userCompetitionIds.has(comp.id) || comp.createdBy === session.user.id,
         }));
 

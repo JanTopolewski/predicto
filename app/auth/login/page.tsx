@@ -14,7 +14,6 @@ export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
-        // Sprawdzenie czy był błąd logowania lub sukces rejestracji
         const errorParam = searchParams.get("error");
         const registeredParam = searchParams.get("registered");
 
@@ -27,7 +26,7 @@ export default function LoginPage() {
         }
 
         if (registeredParam) {
-            setError(""); // Wyczyść błędy
+            setError("");
         }
     }, [searchParams]);
 

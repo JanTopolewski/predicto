@@ -49,7 +49,7 @@ export default function DashboardPage() {
     }, [session?.user?.id]);
 
     const getCompetitionTypeLabel = (type: string) => {
-        return type === "FOOTBALL" ? "⚽ Piłka nożna" : "🏎️ Wyścigi";
+        return type === "FOOTBALL" ? "Piłka nożna" : "Wyścigi";
     };
 
     const getCompetitionTypeColor = (type: string) => {
@@ -93,32 +93,33 @@ export default function DashboardPage() {
                     </div>
                     <Link
                         href="/dashboard/competitions"
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
+                        className="ml-5 px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
                     >
                         Przeglądaj konkurencje
                     </Link>
                 </div>
 
-                {loading ? (
-                    <div className="p-8 text-center">
-                        <p className="text-zinc-600 dark:text-zinc-400">
-                            Ładowanie konkurencji...
-                        </p>
-                    </div>
-                ) : competitions.length === 0 ? (
-                    <div className="p-8 text-center">
-                        <p className="text-zinc-600 dark:text-zinc-400 mb-4">
-                            Nie jesteś członkiem żadnej konkurencji
-                        </p>
-                        <Link
-                            href="/dashboard/competitions"
-                            className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
-                        >
-                            Dołącz do konkurencji
-                        </Link>
-                    </div>
-                ) : (
-                    <div className="overflow-x-auto">
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
+                    {loading ? (
+                        <div className="p-8 text-center">
+                            <p className="text-zinc-600 dark:text-zinc-400">
+                                Ładowanie konkurencji...
+                            </p>
+                        </div>
+                    ) : competitions.length === 0 ? (
+                        <div className="p-8 text-center">
+                            <p className="text-zinc-600 dark:text-zinc-400 mb-4">
+                                Nie jesteś członkiem żadnej konkurencji
+                            </p>
+                            <Link
+                                href="/dashboard/competitions"
+                                className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
+                            >
+                                Dołącz do konkurencji
+                            </Link>
+                        </div>
+                    ) : (
                         <table className="w-full">
                             <thead>
                             <tr className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800">
@@ -154,13 +155,13 @@ export default function DashboardPage() {
                                         </p>
                                     </td>
                                     <td className="px-6 py-4">
-                      <span
-                          className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getCompetitionTypeColor(
-                              comp.type
-                          )}`}
-                      >
-                        {getCompetitionTypeLabel(comp.type)}
-                      </span>
+                                      <span
+                                          className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getCompetitionTypeColor(
+                                              comp.type
+                                          )}`}
+                                      >
+                                        {getCompetitionTypeLabel(comp.type)}
+                                      </span>
                                     </td>
                                     <td className="px-6 py-4">
                                         <p className="text-zinc-600 dark:text-zinc-400">
@@ -189,8 +190,81 @@ export default function DashboardPage() {
                             ))}
                             </tbody>
                         </table>
-                    </div>
-                )}
+                    )}
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden">
+                    {loading ? (
+                        <div className="p-6 text-center">
+                            <p className="text-zinc-600 dark:text-zinc-400">
+                                Ładowanie konkurencji...
+                            </p>
+                        </div>
+                    ) : competitions.length === 0 ? (
+                        <div className="p-6 text-center">
+                            <p className="text-zinc-600 dark:text-zinc-400 mb-4">
+                                Nie jesteś członkiem żadnej konkurencji
+                            </p>
+                            <Link
+                                href="/dashboard/competitions"
+                                className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors text-sm"
+                            >
+                                Dołącz do konkurencji
+                            </Link>
+                        </div>
+                    ) : (
+                        <div className="divide-y divide-zinc-200 dark:divide-zinc-800">
+                            {competitions.map((comp) => (
+                                <div key={comp.id} className="p-4 space-y-3">
+                                    {/* Row 1: Name and Button */}
+                                    <div className="flex justify-between items-start gap-2">
+                                        <h4 className="font-semibold text-zinc-900 dark:text-white truncate">
+                                            {comp.name}
+                                        </h4>
+                                        <Link
+                                            href={`/dashboard/competitions/${comp.id}`}
+                                            className="px-3 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white text-xs font-medium rounded transition-colors whitespace-nowrap flex-shrink-0"
+                                        >
+                                            Wejdź
+                                        </Link>
+                                    </div>
+
+                                    {/* Row 2: Season */}
+                                    <p className="text-xs text-zinc-600 dark:text-zinc-400">
+                                        Sezon: {comp.season}
+                                    </p>
+
+                                    {/* Row 3: Grid with Typ, Punkty, Członkowie */}
+                                    <div className="grid grid-cols-3 gap-2 text-xs">
+                                        <div className="bg-zinc-50 dark:bg-zinc-800 p-2 rounded">
+                                            <p className="text-zinc-600 dark:text-zinc-400 mb-1">Typ</p>
+                                            <span
+                                                className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium w-full justify-center ${getCompetitionTypeColor(
+                                                    comp.type
+                                                )}`}
+                                            >
+                                                {getCompetitionTypeLabel(comp.type)}
+                                            </span>
+                                        </div>
+                                        <div className="bg-zinc-50 dark:bg-zinc-800 p-2 rounded">
+                                            <p className="text-zinc-600 dark:text-zinc-400 mb-1">Punkty</p>
+                                            <p className="font-semibold text-zinc-900 dark:text-white text-center">
+                                                {comp.points}
+                                            </p>
+                                        </div>
+                                        <div className="bg-zinc-50 dark:bg-zinc-800 p-2 rounded">
+                                            <p className="text-zinc-600 dark:text-zinc-400 mb-1">Członkowie</p>
+                                            <p className="font-semibold text-zinc-900 dark:text-white text-center">
+                                                {comp.memberCount}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Admin Section - Create Competition */}
