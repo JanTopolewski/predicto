@@ -171,28 +171,30 @@ export default function CompetitionsPage() {
             </div>
 
             {/* Join by Code Section */}
-            <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800">
-                <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-4">
-                    🔒 Dołącz do konkurencji prywatnej
-                </h3>
-                <form onSubmit={handleJoinByCode} className="flex flex-col sm:flex-row gap-2">
-                    <input
-                        type="text"
-                        value={inviteCodeInput}
-                        onChange={(e) => setInviteCodeInput(e.target.value)}
-                        placeholder="Wpisz kod dostępu (np. ABC123XYZ9)"
-                        disabled={joiningByCode}
-                        className="flex-1 px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-sm uppercase"
-                    />
-                    <button
-                        type="submit"
-                        disabled={joiningByCode}
-                        className="px-6 py-2 bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap text-sm"
-                    >
-                        {joiningByCode ? "Dołączanie..." : "Dołącz"}
-                    </button>
-                </form>
-            </div>
+            {!isAdmin && (
+                <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800">
+                    <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-4">
+                        Dołącz do konkurencji prywatnej
+                    </h3>
+                    <form onSubmit={handleJoinByCode} className="flex flex-col sm:flex-row gap-2">
+                        <input
+                            type="text"
+                            value={inviteCodeInput}
+                            onChange={(e) => setInviteCodeInput(e.target.value)}
+                            placeholder="Wpisz kod dostępu (np. ABC123XYZ9)"
+                            disabled={joiningByCode}
+                            className="flex-1 px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-sm uppercase"
+                        />
+                        <button
+                            type="submit"
+                            disabled={joiningByCode}
+                            className="px-6 py-2 bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap text-sm"
+                        >
+                            {joiningByCode ? "Dołączanie..." : "Dołącz"}
+                        </button>
+                    </form>
+                </div>
+            )}
 
             {/* Success Message */}
             {successMessage && (
@@ -321,7 +323,7 @@ export default function CompetitionsPage() {
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex gap-2 justify-end">
-                                                {comp.isMember ? (
+                                                {comp.isMember || (isAdmin && comp.createdBy === session?.user?.id) ? (
                                                     <>
                                                         <Link
                                                             href={`/dashboard/competitions/${comp.id}`}
@@ -330,7 +332,7 @@ export default function CompetitionsPage() {
                                                             Wejdź
                                                         </Link>
                                                     </>
-                                                ) : (
+                                                ) : (!isAdmin && (
                                                     <>
                                                         {comp.isPublic ? (
                                                             <button
@@ -346,7 +348,7 @@ export default function CompetitionsPage() {
                                                                 </span>
                                                         )}
                                                     </>
-                                                )}
+                                                ))}
                                             </div>
                                         </td>
                                     </tr>
@@ -425,14 +427,14 @@ export default function CompetitionsPage() {
 
                                 {/* Actions */}
                                 <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800">
-                                    {comp.isMember ? (
+                                    {comp.isMember || (isAdmin && comp.createdBy === session?.user?.id) ? (
                                         <Link
                                             href={`/dashboard/competitions/${comp.id}`}
                                             className="block w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white text-sm font-medium rounded transition-colors text-center"
                                         >
                                             Wejdź
                                         </Link>
-                                    ) : (
+                                    ) : (!isAdmin && (
                                         <>
                                             {comp.isPublic ? (
                                                 <button
@@ -448,7 +450,7 @@ export default function CompetitionsPage() {
                                                 </div>
                                             )}
                                         </>
-                                    )}
+                                    ))}
                                 </div>
                             </div>
                         ))}

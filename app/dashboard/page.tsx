@@ -273,12 +273,20 @@ export default function DashboardPage() {
                     <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-3">
                         Panel administratora
                     </h3>
-                    <Link
-                        href="/dashboard/competitions/create"
-                        className="inline-block px-6 py-3 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white font-medium rounded-lg transition-colors"
-                    >
-                        + Utwórz nową konkurencję
-                    </Link>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        <Link
+                            href="/dashboard/competitions/create"
+                            className="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white font-medium rounded-lg transition-colors text-center"
+                        >
+                            + Utwórz nową konkurencję
+                        </Link>
+                        <Link
+                            href="/dashboard/teams"
+                            className="flex-1 px-6 py-3 bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 text-white font-medium rounded-lg transition-colors text-center"
+                        >
+                            ⚙️ Zarządzaj drużynami
+                        </Link>
+                    </div>
                 </div>
             )}
         </div>

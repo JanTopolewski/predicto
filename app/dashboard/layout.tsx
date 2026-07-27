@@ -24,7 +24,10 @@ export default function DashboardLayout({
     const navLinks = [
         { href: "/dashboard", label: "Dashboard" },
         { href: "/dashboard/competitions", label: "Konkurencje" },
-        ...(isAdmin ? [{ href: "/dashboard/users", label: "Zarządzanie użytkownikami" }] : []),
+        ...(isAdmin ? [
+            { href: "/dashboard/users", label: "Zarządzanie użytkownikami" },
+            { href: "/dashboard/teams", label: "Zarządzanie drużynami" },
+        ] : []),
     ];
 
     return (

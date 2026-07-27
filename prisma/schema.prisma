@@ -20,10 +20,11 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  competitionMembers      CompetitionMember[]
-  seasonWinnerPredictions SeasonWinnerPrediction[]
-  footballPredictions     FootballPrediction[]
-  racingPredictions       RacingPrediction[]
+  competitionMembers              CompetitionMember[]
+  seasonWinnerPredictions         SeasonWinnerPrediction[]
+  footballPredictions             FootballPrediction[]
+  racingPredictions               RacingPrediction[]
+  footballSeasonWinnerPredictions FootballSeasonWinnerPrediction[]
 
   @@index([username])
   @@index([email])
@@ -134,12 +135,14 @@ model SeasonWinnerPrediction {
 // ============================================================================
 
 model FootballSeason {
-  id            String   @id @default(cuid())
-  competitionId String
-  createdAt     DateTime @default(now())
+  id              String   @id @default(cuid())
+  competitionId   String
+  createdAt       DateTime @default(now())
+  hasMatchStarted Boolean  @default(false)
 
-  competition Competition     @relation(fields: [competitionId], references: [id], onDelete: Cascade)
-  matches     FootballMatch[]
+  competition             Competition                      @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  matches                 FootballMatch[]
+  seasonWinnerPredictions FootballSeasonWinnerPrediction[]
 
   @@index([competitionId])
 }
@@ -151,22 +154,27 @@ model Team {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  homeMatches FootballMatch[] @relation("homeTeam")
-  awayMatches FootballMatch[] @relation("awayTeam")
+  homeMatches             FootballMatch[]                  @relation("homeTeam")
+  awayMatches             FootballMatch[]                  @relation("awayTeam")
+  seasonWinnerPredictions FootballSeasonWinnerPrediction[]
+
+  @@index([name])
 }
 
 model FootballMatch {
-  id         String      @id @default(cuid())
-  seasonId   String
-  homeTeamId String
-  awayTeamId String
-  kickoff    DateTime
-  status     MatchStatus @default(SCHEDULED)
-  homeGoals  Int?
-  awayGoals  Int?
-  resolved   Boolean     @default(false)
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
+  id               String      @id @default(cuid())
+  seasonId         String
+  homeTeamId       String
+  awayTeamId       String
+  kickoff          DateTime
+  status           MatchStatus @default(SCHEDULED)
+  homeGoals        Int?
+  awayGoals        Int?
+  resolved         Boolean     @default(false)
+  votingClosedAt   DateTime?
+  predictedEndTime DateTime?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
 
   season      FootballSeason       @relation(fields: [seasonId], references: [id], onDelete: Cascade)
   homeTeam    Team                 @relation("homeTeam", fields: [homeTeamId], references: [id])
@@ -179,6 +187,24 @@ model FootballMatch {
   @@index([awayTeamId])
   @@index([kickoff])
   @@index([status])
+}
+
+model FootballSeasonWinnerPrediction {
+  id        String   @id @default(cuid())
+  seasonId  String
+  userId    String
+  teamId    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  season FootballSeason @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  user   User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team   Team           @relation(fields: [teamId], references: [id])
+
+  @@unique([seasonId, userId])
+  @@index([seasonId])
+  @@index([userId])
+  @@index([teamId])
 }
 
 enum MatchStatus {

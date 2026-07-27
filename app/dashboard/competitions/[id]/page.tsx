@@ -5,6 +5,29 @@ import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 
+interface Match {
+    id: string;
+    homeTeam: { id: string; name: string; shortName: string };
+    awayTeam: { id: string; name: string; shortName: string };
+    homeGoals: number | null;
+    awayGoals: number | null;
+    kickoff: string;
+    status: string;
+    resolved: boolean;
+    predictions: Array<{ id: string; userId: string; homeGoals: number; awayGoals: number }>;
+}
+
+interface Team {
+    id: string;
+    name: string;
+}
+
+interface SeasonPrediction {
+    id: string;
+    teamId: string;
+    team: Team;
+}
+
 interface CompetitionDetail {
     id: string;
     name: string;
@@ -12,11 +35,17 @@ interface CompetitionDetail {
     season: string;
     startDate: string;
     endDate: string;
+    createdBy: string;
     members: Array<{
         id: string;
         username: string;
         points: number;
     }>;
+    matches: Match[];
+    allTeams: Team[];
+    seasonPrediction: SeasonPrediction | null;
+    hasMatchStarted: boolean;
+    winnerResolved: boolean;
 }
 
 export default function CompetitionDetailPage() {
@@ -26,31 +55,81 @@ export default function CompetitionDetailPage() {
     const [competition, setCompetition] = useState<CompetitionDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [selectedTeamId, setSelectedTeamId] = useState("");
+    const [predictingWinner, setPredictingWinner] = useState(false);
+    const [successMessage, setSuccessMessage] = useState("");
 
     const competitionId = params.id as string;
+    const isMember = competition?.members.some(m => m.id === session?.user?.id);
+    const isAdmin = session?.user?.role === "ADMIN";
+    const isOwner = competition?.createdBy === session?.user?.id;
+
+    const fetchCompetition = async () => {
+        try {
+            const response = await fetch(`/api/competitions/${competitionId}`);
+
+            if (!response.ok) {
+                throw new Error("Nie można pobrać konkurencji");
+            }
+
+            const data = await response.json();
+            setCompetition(data.competition);
+
+            if (data.competition.seasonPrediction?.team?.id) {
+                setSelectedTeamId(data.competition.seasonPrediction.team.id);
+            }
+        } catch (err) {
+            setError("Błąd podczas pobierania konkurencji");
+            console.error(err);
+        }
+    };
 
     useEffect(() => {
-        const fetchCompetition = async () => {
-            try {
-                setLoading(true);
-                const response = await fetch(`/api/competitions/${competitionId}`);
-
-                if (!response.ok) {
-                    throw new Error("Nie można pobrać konkurencji");
-                }
-
-                const data = await response.json();
-                setCompetition(data.competition);
-            } catch (err) {
-                setError("Błąd podczas pobierania konkurencji");
-                console.error(err);
-            } finally {
-                setLoading(false);
-            }
+        const loadCompetition = async () => {
+            setLoading(true);
+            await fetchCompetition();
+            setLoading(false);
         };
 
-        void fetchCompetition();
+        void loadCompetition();
     }, [competitionId]);
+
+    const handlePredictWinner = async () => {
+        if (!selectedTeamId) {
+            setError("Wybierz drużynę");
+            return;
+        }
+
+        setError("");
+        setPredictingWinner(true);
+
+        try {
+            const response = await fetch(
+                `/api/competitions/${competitionId}/football/season-winner`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ teamId: selectedTeamId }),
+                }
+            );
+
+            if (!response.ok) {
+                const data = await response.json();
+                setError(data.error || "Błąd podczas zapisywania predykcji");
+                setPredictingWinner(false);
+                return;
+            }
+
+            setSuccessMessage("✓ Twoja predykcja została zapisana");
+            setPredictingWinner(false);
+
+            setTimeout(() => setSuccessMessage(""), 3000);
+        } catch (err) {
+            setError("Błąd podczas zapisywania predykcji");
+            console.error(err);
+            setPredictingWinner(false);
+        }
+    };
 
     const getCompetitionTypeLabel = (type: string) => {
         return type === "FOOTBALL" ? "Piłka nożna" : "Wyścigi";
@@ -137,6 +216,19 @@ export default function CompetitionDetailPage() {
                 </div>
             </div>
 
+            {/* Messages */}
+            {error && (
+                <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                    <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+                </div>
+            )}
+
+            {successMessage && (
+                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg">
+                    <p className="text-sm text-emerald-700 dark:text-emerald-400">{successMessage}</p>
+                </div>
+            )}
+
             {/* Competition Info */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800">
@@ -166,116 +258,181 @@ export default function CompetitionDetailPage() {
                 </div>
             </div>
 
-            {/* Ranking */}
-            <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg overflow-hidden border border-zinc-200 dark:border-zinc-800">
-                <div className="p-6 border-b border-zinc-200 dark:border-zinc-800">
-                    <h3 className="text-xl font-bold text-zinc-900 dark:text-white">
-                        Ranking
+            {/* Season Winner Prediction - Only for members and if first match didn't start */}
+            {isMember && !isAdmin && competition.type === "FOOTBALL" && !competition.hasMatchStarted && (
+                <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800">
+                    <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-4">
+                        🏆 Obstawiaj zwycięzcę sezonu
                     </h3>
-                </div>
+                    <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+                        Wybierz drużynę, która twoim zdaniem wygra sezon
+                    </p>
 
-                {competition.members.length === 0 ? (
-                    <div className="p-8 text-center">
-                        <p className="text-zinc-600 dark:text-zinc-400">
-                            Brak członków w konkurencji
-                        </p>
+                    <div>
+                        <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
+                            Drużyna
+                        </label>
+                        <select
+                            value={selectedTeamId}
+                            onChange={(e) => setSelectedTeamId(e.target.value)}
+                            disabled={predictingWinner}
+                            className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="">Wybierz drużynę...</option>
+                            {competition.allTeams.map((team) => (
+                                <option key={team.id} value={team.id}>
+                                    {team.name}
+                                </option>
+                            ))}
+                        </select>
                     </div>
-                ) : (
-                    <>
-                        {/* Desktop Table View */}
-                        <div className="hidden sm:block overflow-x-auto">
-                            <table className="w-full">
-                                <thead>
-                                <tr className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800">
-                                    <th className="px-6 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">
-                                        Pozycja
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">
-                                        Użytkownik
-                                    </th>
-                                    <th className="px-6 py-3 text-right text-sm font-semibold text-zinc-900 dark:text-white">
-                                        Punkty
-                                    </th>
-                                </tr>
-                                </thead>
-                                <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800">
-                                {rankingData.map((member) => (
-                                    <tr
-                                        key={member.id}
-                                        className="hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
-                                    >
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center">
-                                                <div
-                                                    className={`flex items-center justify-center w-8 h-8 rounded-full font-bold text-white ${getMedalColor(member.position)}`}
-                                                >
-                                                    {member.position}
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <p
-                                                className={`font-medium ${
-                                                    member.username === session?.user?.name
-                                                        ? "text-blue-600 dark:text-blue-400"
-                                                        : "text-zinc-900 dark:text-white"
-                                                }`}
-                                            >
-                                                {member.username}
-                                                {member.username === session?.user?.name && " (Ty)"}
-                                            </p>
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <p className="text-lg font-semibold text-zinc-900 dark:text-white">
-                                                {member.points} pkt
-                                            </p>
-                                        </td>
-                                    </tr>
-                                ))}
-                                </tbody>
-                            </table>
-                        </div>
 
-                        {/* Mobile Card View */}
-                        <div className="sm:hidden divide-y divide-zinc-200 dark:divide-zinc-800">
+                    {selectedTeamId && competition.seasonPrediction?.team?.id === selectedTeamId && (
+                        <p className="mt-3 text-sm text-emerald-600 dark:text-emerald-400">
+                            ✓ Ta drużyna jest już Twoim typem
+                        </p>
+                    )}
+
+                    <button
+                        onClick={handlePredictWinner}
+                        disabled={predictingWinner || !selectedTeamId}
+                        className="w-full mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {predictingWinner ? "Zapisywanie..." : "Zapisz predykcję"}
+                    </button>
+                </div>
+            )}
+
+            {isMember && competition.type === "FOOTBALL" && competition.hasMatchStarted && !competition.seasonPrediction && (
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                    <p className="text-sm text-yellow-800 dark:text-yellow-300">
+                        ⚠️ Pierwszy mecz się już zaczął - nie możesz już obstawiać zwycięzcy sezonu
+                    </p>
+                </div>
+            )}
+
+            {/* Matches - For members who can make predictions */}
+            {isMember && competition.type === "FOOTBALL" && competition.matches.length > 0 && (
+                <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800">
+                    <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-4">
+                        ⚽ Mecze
+                    </h3>
+                    <Link
+                        href={`/dashboard/competitions/${competitionId}/matches`}
+                        className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
+                    >
+                        Przeglądaj i obstawiaj mecze →
+                    </Link>
+                </div>
+            )}
+
+            {(isMember || isAdmin) && (
+                <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg overflow-hidden border border-zinc-200 dark:border-zinc-800">
+                    <div className="p-6 border-b border-zinc-200 dark:border-zinc-800">
+                        <h3 className="text-xl font-bold text-zinc-900 dark:text-white">
+                            Ranking
+                        </h3>
+                    </div>
+
+                    {competition.members.length === 0 ? (
+                        <div className="p-8 text-center">
+                            <p className="text-zinc-600 dark:text-zinc-400">
+                                Brak członków w konkurencji
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="divide-y divide-zinc-200 dark:divide-zinc-800">
                             {rankingData.map((member) => (
                                 <div
                                     key={member.id}
-                                    className="p-4 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
+                                    className="p-4 sm:p-6 flex items-center gap-4 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"
                                 >
-                                    <div className="flex items-center gap-4">
-                                        <div
-                                            className={`flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-full font-bold text-white ${getMedalColor(member.position)}`}
+                                    <div
+                                        className={`flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-full font-bold text-white ${getMedalColor(member.position)}`}
+                                    >
+                                        {member.position}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p
+                                            className={`font-medium ${
+                                                member.username === session?.user?.name
+                                                    ? "text-blue-600 dark:text-blue-400"
+                                                    : "text-zinc-900 dark:text-white"
+                                            }`}
                                         >
-                                            {member.position}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p
-                                                className={`font-medium truncate ${
-                                                    member.username === session?.user?.name
-                                                        ? "text-blue-600 dark:text-blue-400"
-                                                        : "text-zinc-900 dark:text-white"
-                                                }`}
-                                            >
-                                                {member.username}
-                                                {member.username === session?.user?.name && " (Ty)"}
-                                            </p>
-                                            <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-0.5">
-                                                {member.points} pkt
-                                            </p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-lg font-semibold text-zinc-900 dark:text-white">
-                                                {member.points}
-                                            </p>
-                                        </div>
+                                            {member.username}
+                                            {member.username === session?.user?.name && " (Ty)"}
+                                        </p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-lg font-semibold text-zinc-900 dark:text-white">
+                                            {member.points} pkt
+                                        </p>
                                     </div>
                                 </div>
                             ))}
                         </div>
-                    </>
-                )}
-            </div>
+                    )}
+                </div>
+            )}
+
+            {/* Admin Actions */}
+            {isAdmin && isOwner && competition.type === "FOOTBALL" && (
+                <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800">
+                    <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-4">
+                        ⚙️ Panel administratora
+                    </h3>
+                    <div className="flex flex-col flex-wrap sm:flex-row gap-3">
+                        <Link
+                            href={`/dashboard/competitions/${competitionId}/admin/matches`}
+                            className="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white font-medium rounded-lg transition-colors text-center"
+                        >
+                            ⚽ Zarządzaj meczami
+                        </Link>
+                        <button
+                            onClick={async () => {
+                                if (window.confirm("Na pewno chcesz usunąć tę konkurencję? Ta akcja jest nieodwracalna!")) {
+                                    try {
+                                        const response = await fetch(`/api/competitions/${competitionId}/delete`, {
+                                            method: "DELETE",
+                                        });
+
+                                        if (!response.ok) {
+                                            alert("Błąd podczas usuwania konkurencji");
+                                            return;
+                                        }
+
+                                        router.push("/dashboard/competitions");
+                                    } catch (err) {
+                                        alert("Błąd podczas usuwania konkurencji");
+                                        console.error(err);
+                                    }
+                                }
+                            }}
+                            className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white font-medium rounded-lg transition-colors"
+                        >
+                            🗑️ Usuń konkurencję
+                        </button>
+
+                        {/* Announce season winner button - only if not resolved yet */}
+                        {!competition?.winnerResolved && (
+                            <Link
+                                href={`/dashboard/competitions/${competitionId}/admin/announce-winner`}
+                                className="block w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 text-white font-medium rounded-lg transition-colors text-center"
+                            >
+                                🏆 Ogłoś zwycięzcę sezonu
+                            </Link>
+                        )}
+
+                        {/* Show if already resolved */}
+                        {competition?.winnerResolved && (
+                            <div className="w-full px-4 py-3 bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg text-emerald-700 dark:text-emerald-300 font-medium text-center">
+                                ✓ Zwycięzca sezonu już ogłoszony
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
