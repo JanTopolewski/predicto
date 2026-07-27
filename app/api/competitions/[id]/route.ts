@@ -8,21 +8,15 @@ export async function GET(
 ) {
     try {
         const session = await auth();
-        const { id } = await params;
+        const competitionId = (await params).id;
 
         const competition = await prisma.competition.findUnique({
-            where: { id },
+            where: { id: competitionId },
             include: {
                 members: {
                     include: {
-                        user: {
-                            select: {
-                                id: true,
-                                username: true,
-                            },
-                        },
+                        user: true,
                     },
-                    orderBy: { points: "desc" },
                 },
                 footballSeasons: {
                     include: {
@@ -30,16 +24,34 @@ export async function GET(
                             include: {
                                 homeTeam: true,
                                 awayTeam: true,
+                                predictions: {
+                                    where: { userId: session?.user?.id },
+                                },
                             },
                             orderBy: { kickoff: "asc" },
                         },
                         seasonWinnerPredictions: {
-                            where: {
-                                userId: session?.user?.id || "",
-                            },
+                            where: { userId: session?.user?.id },
+                            include: { team: true },
+                        },
+                    },
+                },
+                racingSeasons: {
+                    include: {
+                        weekends: {
                             include: {
-                                team: true,
+                                sessions: {
+                                    include: {
+                                        participants: {
+                                            include: { driver: true },
+                                        },
+                                    },
+                                },
                             },
+                        },
+                        seasonWinnerPredictions: {
+                            where: { userId: session?.user?.id },
+                            include: { driver: true },
                         },
                     },
                 },
@@ -53,7 +65,7 @@ export async function GET(
             );
         }
 
-        const isMember = competition.members.some((m) => m.user.id === session?.user?.id);
+        const isMember = competition.members.some((m) => m.userId === session?.user?.id);
         const isAdmin = session?.user?.role === "ADMIN";
         const isOwner = competition.createdBy === session?.user?.id;
 
@@ -64,6 +76,7 @@ export async function GET(
             );
         }
 
+        // Pobierz wszystkie drużyny (dla FOOTBALL) na podstawie meczów w sezonie
         const footballSeason = competition.footballSeasons[0];
         let allTeams = [];
 
@@ -84,6 +97,30 @@ export async function GET(
             }
         }
 
+        // Pobierz wszystkich kierowców (dla RACING) na podstawie uczestników sesji
+        const racingSeason = competition.racingSeasons[0];
+        let allDrivers = [];
+
+        if (racingSeason) {
+            const driverIds = new Set<string>();
+            racingSeason.weekends.forEach((weekend) => {
+                weekend.sessions.forEach((session) => {
+                    session.participants.forEach((participant) => {
+                        driverIds.add(participant.driverId);
+                    });
+                });
+            });
+
+            if (driverIds.size > 0) {
+                allDrivers = await prisma.driver.findMany({
+                    where: {
+                        id: { in: Array.from(driverIds) },
+                    },
+                    orderBy: { number: "asc" },
+                });
+            }
+        }
+
         return NextResponse.json({
             competition: {
                 id: competition.id,
@@ -94,13 +131,16 @@ export async function GET(
                 endDate: competition.endDate,
                 createdBy: competition.createdBy,
                 members: competition.members.map((m) => ({
-                    id: m.user.id,
+                    id: m.userId,
                     username: m.user.username,
                     points: m.points,
                 })),
                 matches: footballSeason?.matches || [],
                 allTeams,
-                seasonPrediction: footballSeason?.seasonWinnerPredictions[0] || null,
+                allDrivers,
+                seasonPrediction: competition.type === "FOOTBALL"
+                    ? competition.footballSeasons[0]?.seasonWinnerPredictions[0] || null
+                    : competition.racingSeasons[0]?.seasonWinnerPredictions[0] || null,
                 hasMatchStarted: footballSeason?.hasMatchStarted || false,
                 winnerResolved: competition.winnerResolved,
             },

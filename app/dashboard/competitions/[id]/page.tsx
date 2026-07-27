@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
@@ -22,10 +22,18 @@ interface Team {
     name: string;
 }
 
+interface Driver {
+    id: string;
+    name: string;
+    number: number;
+}
+
 interface SeasonPrediction {
     id: string;
-    teamId: string;
-    team: Team;
+    teamId?: string;
+    driverId?: string;
+    team?: Team;
+    driver?: Driver;
 }
 
 interface CompetitionDetail {
@@ -43,6 +51,7 @@ interface CompetitionDetail {
     }>;
     matches: Match[];
     allTeams: Team[];
+    allDrivers: Driver[];
     seasonPrediction: SeasonPrediction | null;
     hasMatchStarted: boolean;
     winnerResolved: boolean;
@@ -56,6 +65,7 @@ export default function CompetitionDetailPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [selectedTeamId, setSelectedTeamId] = useState("");
+    const [selectedDriverId, setSelectedDriverId] = useState("");
     const [predictingWinner, setPredictingWinner] = useState(false);
     const [successMessage, setSuccessMessage] = useState("");
 
@@ -64,7 +74,7 @@ export default function CompetitionDetailPage() {
     const isAdmin = session?.user?.role === "ADMIN";
     const isOwner = competition?.createdBy === session?.user?.id;
 
-    const fetchCompetition = async () => {
+    const fetchCompetition = useCallback(async () => {
         try {
             const response = await fetch(`/api/competitions/${competitionId}`);
 
@@ -75,14 +85,16 @@ export default function CompetitionDetailPage() {
             const data = await response.json();
             setCompetition(data.competition);
 
-            if (data.competition.seasonPrediction?.team?.id) {
+            if (data.competition.type === "FOOTBALL" && data.competition.seasonPrediction?.team?.id) {
                 setSelectedTeamId(data.competition.seasonPrediction.team.id);
+            } else if (data.competition.type === "RACING" && data.competition.seasonPrediction?.driver?.id) {
+                setSelectedDriverId(data.competition.seasonPrediction.driver.id);
             }
         } catch (err) {
             setError("Błąd podczas pobierania konkurencji");
             console.error(err);
         }
-    };
+    }, [competitionId]);
 
     useEffect(() => {
         const loadCompetition = async () => {
@@ -92,11 +104,13 @@ export default function CompetitionDetailPage() {
         };
 
         void loadCompetition();
-    }, [competitionId]);
+    }, [fetchCompetition]);
 
     const handlePredictWinner = async () => {
-        if (!selectedTeamId) {
-            setError("Wybierz drużynę");
+        const selectedId = competition?.type === "FOOTBALL" ? selectedTeamId : selectedDriverId;
+
+        if (!selectedId) {
+            setError(competition?.type === "FOOTBALL" ? "Wybierz drużynę" : "Wybierz kierowcę");
             return;
         }
 
@@ -104,14 +118,17 @@ export default function CompetitionDetailPage() {
         setPredictingWinner(true);
 
         try {
-            const response = await fetch(
-                `/api/competitions/${competitionId}/football/season-winner`,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ teamId: selectedTeamId }),
-                }
-            );
+            const endpoint = competition?.type === "FOOTBALL"
+                ? `/api/competitions/${competitionId}/football/season-winner`
+                : `/api/competitions/${competitionId}/racing/season-winner`;
+
+            const bodyKey = competition?.type === "FOOTBALL" ? "teamId" : "driverId";
+
+            const response = await fetch(endpoint, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ [bodyKey]: selectedId }),
+            });
 
             if (!response.ok) {
                 const data = await response.json();
@@ -258,44 +275,68 @@ export default function CompetitionDetailPage() {
                 </div>
             </div>
 
-            {/* Season Winner Prediction - Only for members and if first match didn't start */}
-            {isMember && !isAdmin && competition.type === "FOOTBALL" && !competition.hasMatchStarted && (
+            {/* Season Winner Prediction - For members and if first match/session didn't start */}
+            {isMember && !isAdmin && !competition.hasMatchStarted && (
                 <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800">
                     <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-4">
-                        🏆 Obstawiaj zwycięzcę sezonu
+                        {competition.type === "FOOTBALL" ? "🏆 Obstawiaj zwycięzcę sezonu" : "🏆 Obstawiaj zwycięzcę sezonu"}
                     </h3>
                     <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
-                        Wybierz drużynę, która twoim zdaniem wygra sezon
+                        {competition.type === "FOOTBALL"
+                            ? "Wybierz drużynę, która twoim zdaniem wygra sezon"
+                            : "Wybierz kierowcę, który twoim zdaniem wygra sezon"}
                     </p>
 
                     <div>
                         <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
-                            Drużyna
+                            {competition.type === "FOOTBALL" ? "Drużyna" : "Kierowca"}
                         </label>
-                        <select
-                            value={selectedTeamId}
-                            onChange={(e) => setSelectedTeamId(e.target.value)}
-                            disabled={predictingWinner}
-                            className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                            <option value="">Wybierz drużynę...</option>
-                            {competition.allTeams.map((team) => (
-                                <option key={team.id} value={team.id}>
-                                    {team.name}
-                                </option>
-                            ))}
-                        </select>
+                        {competition.type === "FOOTBALL" ? (
+                            <select
+                                value={selectedTeamId}
+                                onChange={(e) => setSelectedTeamId(e.target.value)}
+                                disabled={predictingWinner}
+                                className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="">Wybierz drużynę...</option>
+                                {competition.allTeams.map((team) => (
+                                    <option key={team.id} value={team.id}>
+                                        {team.name}
+                                    </option>
+                                ))}
+                            </select>
+                        ) : (
+                            <select
+                                value={selectedDriverId}
+                                onChange={(e) => setSelectedDriverId(e.target.value)}
+                                disabled={predictingWinner}
+                                className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="">Wybierz kierowcę...</option>
+                                {competition.allDrivers.map((driver) => (
+                                    <option key={driver.id} value={driver.id}>
+                                        {driver.name} (#{driver.number})
+                                    </option>
+                                ))}
+                            </select>
+                        )}
                     </div>
 
-                    {selectedTeamId && competition.seasonPrediction?.team?.id === selectedTeamId && (
+                    {selectedTeamId && competition.type === "FOOTBALL" && competition.seasonPrediction?.team?.id === selectedTeamId && (
                         <p className="mt-3 text-sm text-emerald-600 dark:text-emerald-400">
                             ✓ Ta drużyna jest już Twoim typem
                         </p>
                     )}
 
+                    {selectedDriverId && competition.type === "RACING" && competition.seasonPrediction?.driver?.id === selectedDriverId && (
+                        <p className="mt-3 text-sm text-emerald-600 dark:text-emerald-400">
+                            ✓ Ten kierowca jest już Twoim typem
+                        </p>
+                    )}
+
                     <button
                         onClick={handlePredictWinner}
-                        disabled={predictingWinner || !selectedTeamId}
+                        disabled={predictingWinner || !selectedTeamId && !selectedDriverId}
                         className="w-full mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {predictingWinner ? "Zapisywanie..." : "Zapisz predykcję"}
@@ -303,15 +344,17 @@ export default function CompetitionDetailPage() {
                 </div>
             )}
 
-            {isMember && competition.type === "FOOTBALL" && competition.hasMatchStarted && !competition.seasonPrediction && (
+            {isMember && competition.hasMatchStarted && !competition.seasonPrediction && (
                 <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
                     <p className="text-sm text-yellow-800 dark:text-yellow-300">
-                        ⚠️ Pierwszy mecz się już zaczął - nie możesz już obstawiać zwycięzcy sezonu
+                        {competition.type === "FOOTBALL"
+                            ? "⚠️ Pierwszy mecz się już zaczął - nie możesz już obstawiać zwycięzcy sezonu"
+                            : "⚠️ Pierwsza sesja się już zaczęła - nie możesz już obstawiać zwycięzcy sezonu"}
                     </p>
                 </div>
             )}
 
-            {/* Matches - For members who can make predictions */}
+            {/* Matches - For FOOTBALL members */}
             {isMember && competition.type === "FOOTBALL" && competition.matches.length > 0 && (
                 <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800">
                     <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-4">
@@ -322,6 +365,21 @@ export default function CompetitionDetailPage() {
                         className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
                     >
                         Przeglądaj i obstawiaj mecze →
+                    </Link>
+                </div>
+            )}
+
+            {/* Racing Sessions - For RACING members */}
+            {isMember && competition.type === "RACING" && (
+                <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800">
+                    <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-4">
+                        🏁 Sesje wyścigowe
+                    </h3>
+                    <Link
+                        href={`/dashboard/competitions/${competitionId}/racing`}
+                        className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
+                    >
+                        Przeglądaj i obstawiaj sesje →
                     </Link>
                 </div>
             )}
@@ -376,7 +434,7 @@ export default function CompetitionDetailPage() {
                 </div>
             )}
 
-            {/* Admin Actions */}
+            {/* Admin Actions - FOOTBALL */}
             {isAdmin && isOwner && competition.type === "FOOTBALL" && (
                 <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800">
                     <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-4">
@@ -414,7 +472,6 @@ export default function CompetitionDetailPage() {
                             🗑️ Usuń konkurencję
                         </button>
 
-                        {/* Announce season winner button - only if not resolved yet */}
                         {!competition?.winnerResolved && (
                             <Link
                                 href={`/dashboard/competitions/${competitionId}/admin/announce-winner`}
@@ -424,7 +481,62 @@ export default function CompetitionDetailPage() {
                             </Link>
                         )}
 
-                        {/* Show if already resolved */}
+                        {competition?.winnerResolved && (
+                            <div className="w-full px-4 py-3 bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg text-emerald-700 dark:text-emerald-300 font-medium text-center">
+                                ✓ Zwycięzca sezonu już ogłoszony
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Admin Actions - RACING */}
+            {isAdmin && isOwner && competition.type === "RACING" && (
+                <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800">
+                    <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-4">
+                        ⚙️ Panel administratora
+                    </h3>
+                    <div className="flex flex-col flex-wrap sm:flex-row gap-3">
+                        <Link
+                            href={`/dashboard/competitions/${competitionId}/admin/racing/weekends`}
+                            className="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white font-medium rounded-lg transition-colors text-center"
+                        >
+                            🏁 Zarządzaj weekendami
+                        </Link>
+                        <button
+                            onClick={async () => {
+                                if (window.confirm("Na pewno chcesz usunąć tę konkurencję? Ta akcja jest nieodwracalna!")) {
+                                    try {
+                                        const response = await fetch(`/api/competitions/${competitionId}/delete`, {
+                                            method: "DELETE",
+                                        });
+
+                                        if (!response.ok) {
+                                            alert("Błąd podczas usuwania konkurencji");
+                                            return;
+                                        }
+
+                                        router.push("/dashboard/competitions");
+                                    } catch (err) {
+                                        alert("Błąd podczas usuwania konkurencji");
+                                        console.error(err);
+                                    }
+                                }
+                            }}
+                            className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white font-medium rounded-lg transition-colors"
+                        >
+                            🗑️ Usuń konkurencję
+                        </button>
+
+                        {!competition?.winnerResolved && (
+                            <Link
+                                href={`/dashboard/competitions/${competitionId}/admin/racing/season-winner`}
+                                className="block w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 text-white font-medium rounded-lg transition-colors text-center"
+                            >
+                                🏆 Ogłoś zwycięzcę sezonu
+                            </Link>
+                        )}
+
                         {competition?.winnerResolved && (
                             <div className="w-full px-4 py-3 bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg text-emerald-700 dark:text-emerald-300 font-medium text-center">
                                 ✓ Zwycięzca sezonu już ogłoszony

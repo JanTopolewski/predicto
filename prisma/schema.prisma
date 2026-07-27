@@ -25,6 +25,7 @@ model User {
   footballPredictions             FootballPrediction[]
   racingPredictions               RacingPrediction[]
   footballSeasonWinnerPredictions FootballSeasonWinnerPrediction[]
+  racingSeasonWinnerPredictions   RacingSeasonWinnerPrediction[]
 
   @@index([username])
   @@index([email])
@@ -234,7 +235,7 @@ model FootballPrediction {
 }
 
 // ============================================================================
-// FORMULA 1
+// WYŚCIGI (RACING)
 // ============================================================================
 
 model RacingSeason {
@@ -242,8 +243,9 @@ model RacingSeason {
   competitionId String
   createdAt     DateTime @default(now())
 
-  competition Competition     @relation(fields: [competitionId], references: [id], onDelete: Cascade)
-  weekends    RacingWeekend[]
+  competition             Competition                    @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  weekends                RacingWeekend[]
+  seasonWinnerPredictions RacingSeasonWinnerPrediction[]
 
   @@index([competitionId])
 }
@@ -256,9 +258,14 @@ model Driver {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  racingResults     RacingResult[]
-  racingPredictions RacingPrediction[]
-  wildcards         Wildcard[]
+  racingResults             RacingResult[]
+  sessionParticipants       RacingSessionParticipant[]
+  seasonWinnerPredictions   RacingSeasonWinnerPrediction[]
+  racingPredictionFirsts    RacingPrediction[]             @relation("FirstDriver")
+  racingPredictionSeconds   RacingPrediction[]             @relation("SecondDriver")
+  racingPredictionThirds    RacingPrediction[]             @relation("ThirdDriver")
+  racingPredictionWildcards RacingPrediction[]             @relation("WildcardDriver")
+  wildcards                 Wildcard[]
 
   @@index([number])
 }
@@ -281,23 +288,40 @@ model RacingWeekend {
 }
 
 model RacingSession {
-  id        String            @id @default(cuid())
-  weekendId String
-  type      RacingSessionType
-  startTime DateTime
-  resolved  Boolean           @default(false)
-  createdAt DateTime          @default(now())
-  updatedAt DateTime          @updatedAt
+  id             String            @id @default(cuid())
+  weekendId      String
+  type           RacingSessionType
+  name           String
+  startTime      DateTime
+  resolved       Boolean           @default(false)
+  votingClosedAt DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 
-  weekend     RacingWeekend      @relation(fields: [weekendId], references: [id], onDelete: Cascade)
-  results     RacingResult[]
-  predictions RacingPrediction[]
-  wildcards   Wildcard[]
-  auditLogs   AuditLog[]
+  weekend      RacingWeekend              @relation(fields: [weekendId], references: [id], onDelete: Cascade)
+  results      RacingResult[]
+  predictions  RacingPrediction[]
+  participants RacingSessionParticipant[]
+  wildcards    Wildcard[]
+  auditLogs    AuditLog[]
 
   @@index([weekendId])
   @@index([type])
   @@index([startTime])
+}
+
+model RacingSessionParticipant {
+  id        String   @id @default(cuid())
+  sessionId String
+  driverId  String
+  createdAt DateTime @default(now())
+
+  session RacingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  driver  Driver        @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, driverId])
+  @@index([sessionId])
+  @@index([driverId])
 }
 
 enum RacingSessionType {
@@ -305,6 +329,7 @@ enum RacingSessionType {
   PRACTICE2
   PRACTICE3
   QUALIFYING
+  SPRINT_QUALIFYING
   SPRINT
   RACE
 }
@@ -318,7 +343,7 @@ model RacingResult {
   updatedAt DateTime @updatedAt
 
   session RacingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  driver  Driver        @relation(fields: [driverId], references: [id])
+  driver  Driver        @relation(fields: [driverId], references: [id], onDelete: Cascade)
 
   @@unique([sessionId, driverId])
   @@index([sessionId])
@@ -326,26 +351,50 @@ model RacingResult {
 }
 
 model RacingPrediction {
-  id                 String   @id @default(cuid())
-  sessionId          String
-  userId             String
-  firstDriver        String // DriverId
-  secondDriver       String // DriverId
-  thirdDriver        String // DriverId
-  polePosition       String? // DriverId (opcjonalne)
-  wildcardPrediction Int? // pozycja dla wildcard kierowcy
-  points             Int      @default(0)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  id               String   @id @default(cuid())
+  sessionId        String
+  userId           String
+  firstDriverId    String?
+  secondDriverId   String?
+  thirdDriverId    String?
+  wildcardDriverId String?
+  wildcardPosition Int?
+  points           Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  session  RacingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  Driver   Driver?       @relation(fields: [driverId], references: [id])
-  driverId String?
+  session        RacingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstDriver    Driver?       @relation("FirstDriver", fields: [firstDriverId], references: [id], onDelete: SetNull)
+  secondDriver   Driver?       @relation("SecondDriver", fields: [secondDriverId], references: [id], onDelete: SetNull)
+  thirdDriver    Driver?       @relation("ThirdDriver", fields: [thirdDriverId], references: [id], onDelete: SetNull)
+  wildcardDriver Driver?       @relation("WildcardDriver", fields: [wildcardDriverId], references: [id], onDelete: SetNull)
 
   @@unique([sessionId, userId])
   @@index([sessionId])
   @@index([userId])
+  @@index([firstDriverId])
+  @@index([secondDriverId])
+  @@index([thirdDriverId])
+  @@index([wildcardDriverId])
+}
+
+model RacingSeasonWinnerPrediction {
+  id        String   @id @default(cuid())
+  seasonId  String
+  userId    String
+  driverId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  season RacingSeason @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  driver Driver       @relation(fields: [driverId], references: [id], onDelete: Cascade)
+
+  @@unique([seasonId, userId])
+  @@index([seasonId])
+  @@index([userId])
+  @@index([driverId])
 }
 
 model Wildcard {
@@ -358,7 +407,7 @@ model Wildcard {
 
   session RacingSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   weekend RacingWeekend? @relation(fields: [weekendId], references: [id], onDelete: Cascade)
-  driver  Driver         @relation(fields: [driverId], references: [id])
+  driver  Driver         @relation(fields: [driverId], references: [id], onDelete: Cascade)
 
   @@index([sessionId])
   @@index([weekendId])
@@ -371,12 +420,12 @@ model Wildcard {
 
 model AuditLog {
   id         String   @id @default(cuid())
-  action     String // "UPDATE_MATCH_RESULT", "UPDATE_SESSION_RESULT", etc.
+  action     String
   adminId    String
-  entityType String // "FootballMatch", "F1Session"
+  entityType String
   entityId   String
-  oldValues  String? // JSON
-  newValues  String? // JSON
+  oldValues  String?
+  newValues  String?
   createdAt  DateTime @default(now())
 
   match           FootballMatch? @relation(fields: [footballMatchId], references: [id], onDelete: SetNull)
