@@ -30,7 +30,7 @@ export default function LoginPage() {
         }
     }, [searchParams]);
 
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
         setError("");
         setIsLoading(true);

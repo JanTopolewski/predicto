@@ -1,7 +1,7 @@
-
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { NextRequest, NextResponse } from "next/server";
+import {auth} from "@/lib/auth";
+import {prisma} from "@/lib/prisma";
+import bcrypt from "bcryptjs";
+import {NextRequest, NextResponse} from "next/server";
 
 export async function DELETE(
     _request: NextRequest,
@@ -58,20 +58,55 @@ export async function PATCH(
             );
         }
 
-        const { role } = await request.json();
-        const { id } = await params;
-        const userId = id;
+        const body = await request.json();
+        const { role, password } = body;
+        const { id: userId } = await params;
 
-        if (!["USER", "ADMIN"].includes(role)) {
+        const existingUser = await prisma.user.findUnique({
+            where: { id: userId },
+        });
+
+        if (!existingUser) {
             return NextResponse.json(
-                { message: "Nieprawidłowa rola" },
+                { message: "Użytkownik nie istnieje" },
+                { status: 404 }
+            );
+        }
+
+        const dataToUpdate: { role?: "USER" | "ADMIN"; passwordHash?: string } = {};
+
+        if (role !== undefined) {
+            if (!["USER", "ADMIN"].includes(role)) {
+                return NextResponse.json(
+                    { message: "Nieprawidłowa rola" },
+                    { status: 400 }
+                );
+            }
+            dataToUpdate.role = role;
+        }
+
+        if (password !== undefined) {
+            if (typeof password !== "string" || password.trim().length < 8) {
+                return NextResponse.json(
+                    { message: "Nowe hasło musi mieć co najmniej 8 znaków" },
+                    { status: 400 }
+                );
+            }
+
+            const saltRounds = 10;
+            dataToUpdate.passwordHash = await bcrypt.hash(password, saltRounds);
+        }
+
+        if (Object.keys(dataToUpdate).length === 0) {
+            return NextResponse.json(
+                { message: "Brak danych do aktualizacji" },
                 { status: 400 }
             );
         }
 
         const user = await prisma.user.update({
             where: { id: userId },
-            data: { role },
+            data: dataToUpdate,
             select: {
                 id: true,
                 username: true,
@@ -81,8 +116,12 @@ export async function PATCH(
             },
         });
 
+        const successMessage = password
+            ? "Hasło użytkownika zostało zresetowane"
+            : "Rola użytkownika została zaktualizowana";
+
         return NextResponse.json(
-            { message: "Rola użytkownika została zaktualizowana", user },
+            { message: successMessage, user },
             { status: 200 }
         );
     } catch (error) {

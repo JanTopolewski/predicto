@@ -27,9 +27,10 @@ export default function UsersPage() {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [error, setError] = useState("");
+    const [password, setPassword] = useState("");
     const [confirmDialog, setConfirmDialog] = useState<{
         isOpen: boolean;
-        action: "delete" | "promote" | null;
+        action: "delete" | "promote" | "changePassword" | null;
         userId: string;
         username: string;
     }>({
@@ -73,7 +74,7 @@ export default function UsersPage() {
     }, [page]);
 
     const openConfirmDialog = (
-        action: "delete" | "promote",
+        action: "delete" | "promote" | "changePassword",
         userId: string,
         username: string
     ) => {
@@ -92,6 +93,7 @@ export default function UsersPage() {
             userId: "",
             username: "",
         });
+        setPassword("");
     };
 
     const handleDeleteUser = async () => {
@@ -147,11 +149,44 @@ export default function UsersPage() {
         }
     };
 
+    const handlePasswordChange = async () => {
+        setActionLoading(true);
+        try {
+            const response = await fetch(`/api/users/${confirmDialog.userId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ password: password.trim() }),
+            });
+
+            const data = await response.json();
+            if (!response.ok) {
+                setError(data.message || "Błąd podczas awansowania użytkownika");
+                return;
+            }
+
+            if (data.user) {
+                setUsers((prevUsers) =>
+                    prevUsers.map((u) =>
+                        u.id === confirmDialog.userId ? data.user : u
+                    )
+                );
+            }
+            closeConfirmDialog();
+        } catch (err) {
+            setError("Błąd podczas zmiany hasła użytkownika");
+            console.error(err);
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
     const handleConfirm = async () => {
         if (confirmDialog.action === "delete") {
             await handleDeleteUser();
         } else if (confirmDialog.action === "promote") {
             await handlePromoteUser();
+        } else if (confirmDialog.action === "changePassword") {
+            await handlePasswordChange();
         }
     };
 
@@ -233,15 +268,15 @@ export default function UsersPage() {
                                             </p>
                                         </td>
                                         <td className="px-6 py-4">
-                        <span
-                            className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                                user.role === "ADMIN"
-                                    ? "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300"
-                                    : "bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-300"
-                            }`}
-                        >
-                          {user.role === "ADMIN" ? "Administrator" : "Użytkownik"}
-                        </span>
+                                            <span
+                                                className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                                                    user.role === "ADMIN"
+                                                        ? "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300"
+                                                        : "bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-300"
+                                                }`}
+                                            >
+                                              {user.role === "ADMIN" ? "Administrator" : "Użytkownik"}
+                                            </span>
                                         </td>
                                         <td className="px-6 py-4">
                                             <p className="text-sm text-zinc-600 dark:text-zinc-400">
@@ -259,16 +294,24 @@ export default function UsersPage() {
                                                                 user.username
                                                             )
                                                         }
-                                                        className="px-3 py-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white text-sm font-medium rounded transition-colors"
+                                                        className="whitespace-nowrap px-3 py-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white text-sm font-medium rounded transition-colors"
                                                     >
                                                         Awansuj
                                                     </button>
                                                 )}
                                                 <button
                                                     onClick={() =>
+                                                        openConfirmDialog("changePassword", user.id, user.username)
+                                                    }
+                                                    className="whitespace-nowrap px-3 py-1 bg-violet-600 hover:bg-violet-700 dark:bg-violet-700 dark:hover:bg-violet-600 text-white text-sm font-medium rounded transition-colors"
+                                                >
+                                                    Zmień hasło
+                                                </button>
+                                                <button
+                                                    onClick={() =>
                                                         openConfirmDialog("delete", user.id, user.username)
                                                     }
-                                                    className="px-3 py-1 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white text-sm font-medium rounded transition-colors"
+                                                    className="whitespace-nowrap px-3 py-1 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white text-sm font-medium rounded transition-colors"
                                                 >
                                                     Usuń
                                                 </button>
@@ -316,8 +359,20 @@ export default function UsersPage() {
                         <p className="text-zinc-600 dark:text-zinc-400 mb-6">
                             {confirmDialog.action === "delete"
                                 ? `Czy na pewno chcesz usunąć użytkownika "${confirmDialog.username}"? Ta akcja jest nieodwracalna.`
-                                : `Czy na pewno chcesz awansować użytkownika "${confirmDialog.username}" do roli administratora?`}
+                                : confirmDialog.action === "promote"
+                                    ? `Czy na pewno chcesz awansować użytkownika "${confirmDialog.username}" do roli administratora?`
+                                    : `Podaj nowe hasło dla użytkownika "${confirmDialog.username}":`}
                         </p>
+                        {confirmDialog.action === "changePassword" && (
+                            <input
+                                id="password"
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full mb-3 px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-sm"
+                                placeholder="••••••••"
+                            />
+                        )}
                         <div className="flex gap-3 justify-end">
                             <button
                                 onClick={closeConfirmDialog}
@@ -328,18 +383,22 @@ export default function UsersPage() {
                             </button>
                             <button
                                 onClick={() => void handleConfirm()}
-                                disabled={actionLoading}
+                                disabled={actionLoading || (confirmDialog.action === "changePassword" && password.trim().length < 8)}
                                 className={`px-4 py-2 text-white rounded font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                                     confirmDialog.action === "delete"
                                         ? "bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600"
-                                        : "bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600"
+                                        : confirmDialog.action === "promote"
+                                            ? "bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600"
+                                            : "bg-violet-600 hover:bg-violet-700 dark:bg-violet-700 dark:hover:bg-violet-600"
                                 }`}
                             >
                                 {actionLoading
                                     ? "Przetwarzanie..."
                                     : confirmDialog.action === "delete"
                                         ? "Usuń użytkownika"
-                                        : "Awansuj"}
+                                        : confirmDialog.action === "promote"
+                                            ? "Awansuj"
+                                            : "Zmień hasło"}
                             </button>
                         </div>
                     </div>
