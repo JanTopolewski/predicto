@@ -68,22 +68,13 @@ export default function RacingSessionsPage() {
                     setDrivers(driversData.drivers || []);
                 }
 
-                // Fetch sessions
-                const sessionsResponse = await fetch(
-                    `/api/competitions/${competitionId}/racing/sessions`
+                // Fetch sessions for this specific weekend
+                const weekendResponse = await fetch(
+                    `/api/competitions/${competitionId}/racing/weekends/${weekendId}`
                 );
-                if (sessionsResponse.ok) {
-                    const sessionsData = await sessionsResponse.json();
-                    const filtered = sessionsData.sessions.filter(
-                        (s: RacingSession) =>
-                            s.participants.some(
-                                (p) =>
-                                    p.driver.id ===
-                                    sessionsData.sessions[0]?.participants[0]
-                                        ?.driver.id
-                            )
-                    );
-                    setSessions(filtered || []);
+                if (weekendResponse.ok) {
+                    const weekendData = await weekendResponse.json();
+                    setSessions(weekendData.weekend?.sessions || []);
                 }
             } catch (err) {
                 setError("Error loading data");
@@ -94,7 +85,7 @@ export default function RacingSessionsPage() {
         };
 
         fetchData();
-    }, [competitionId]);
+    }, [competitionId, weekendId]);
 
     const handleToggleDriver = (driverId: string) => {
         setFormData((prev) => ({
