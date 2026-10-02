@@ -87,7 +87,6 @@ export async function POST(
             firstDriver,
             secondDriver,
             thirdDriver,
-            wildcardDriverId,
             wildcardPosition,
         } = await request.json();
 
@@ -119,6 +118,7 @@ export async function POST(
                         },
                     },
                 },
+                participants: true,
             },
         });
 
@@ -145,6 +145,9 @@ export async function POST(
                 { status: 400 }
             );
         }
+
+        // Get number of participating drivers
+        const maxPosition = racingSession.participants.length;
 
         // Validate based on session type
         const isPodiumSession = racingSession.type === "SPRINT" || racingSession.type === "RACE";
@@ -173,9 +176,9 @@ export async function POST(
 
         // Wildcard validation (optional but if provided, must have position)
         if (wildcardPosition) {
-            if (!Number.isInteger(wildcardPosition) || wildcardPosition < 1 || wildcardPosition > 20) {
+            if (!Number.isInteger(wildcardPosition) || wildcardPosition < 1 || wildcardPosition > maxPosition) {
                 return NextResponse.json(
-                    { error: "Position must be between 1 and 20" },
+                    { error: `Position must be between 1 and ${maxPosition}` },
                     { status: 400 }
                 );
             }

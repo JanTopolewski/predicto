@@ -359,13 +359,13 @@ export default function RacingPage() {
                                                             </div>
                                                             <div>
                                                                 <label className="text-xs font-semibold text-zinc-900 dark:text-white">
-                                                                    Predicted Finishing Position (1-20)
+                                                                    Predicted Finishing Position
                                                                 </label>
                                                                 <input
                                                                     type="number"
                                                                     min="1"
-                                                                    max="20"
-                                                                    placeholder="Enter position..."
+                                                                    max={racingSession.participants.length}
+                                                                    placeholder={`Enter position (1-${racingSession.participants.length})...`}
                                                                     value={
                                                                         currentPrediction?.sessionId === racingSession.id && currentPrediction.wildcardPosition
                                                                             ? currentPrediction.wildcardPosition
