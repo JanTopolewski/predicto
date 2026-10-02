@@ -48,6 +48,7 @@ export default function RacingSessionsPage() {
         type: "PRACTICE1",
         startTime: "",
         selectedDrivers: [] as string[],
+        wildcardDriverId: "",
     });
 
     useEffect(() => {
@@ -122,6 +123,7 @@ export default function RacingSessionsPage() {
                         name: formData.name,
                         startTime: formData.startTime,
                         participatingDriverIds: formData.selectedDrivers,
+                        wildcardDriverId: formData.wildcardDriverId || null,
                     }),
                 }
             );
@@ -139,6 +141,7 @@ export default function RacingSessionsPage() {
                 type: "PRACTICE1",
                 startTime: "",
                 selectedDrivers: [],
+                wildcardDriverId: "",
             });
             setSuccess("Session created successfully!");
             setTimeout(() => setSuccess(""), 3000);
@@ -257,6 +260,37 @@ export default function RacingSessionsPage() {
                             }
                             className="px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
+                    </div>
+
+                    {/* Wildcard Driver Selection */}
+                    <div>
+                        <h3 className="text-sm font-semibold text-zinc-900 dark:text-white mb-3">
+                            Select Wildcard Driver (Optional)
+                        </h3>
+                        <select
+                            value={formData.wildcardDriverId}
+                            onChange={(e) =>
+                                setFormData({
+                                    ...formData,
+                                    wildcardDriverId: e.target.value,
+                                })
+                            }
+                            className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            <option value="">No wildcard</option>
+                            <option value="RANDOM" className="font-bold text-amber-600">🎲 Random Driver</option>
+                            <option disabled>────────────</option>
+                            {drivers.map((driver) => (
+                                <option key={driver.id} value={driver.id}>
+                                    #{driver.number} {driver.name}
+                                </option>
+                            ))}
+                        </select>
+                        <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-2">
+                            {formData.wildcardDriverId === "RANDOM" 
+                                ? "A random driver will be selected from participants"
+                                : "Players will predict this driver's finishing position"}
+                        </p>
                     </div>
 
                     {/* Driver Selection */}

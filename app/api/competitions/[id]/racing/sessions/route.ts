@@ -23,11 +23,27 @@ export async function POST(
             name,
             startTime,
             participatingDriverIds,
+            wildcardDriverId,
         } = await request.json();
 
         if (!weekendId || !type || !name || !startTime || !participatingDriverIds) {
             return NextResponse.json(
                 { error: "Missing required fields" },
+                { status: 400 }
+            );
+        }
+
+        // Handle wildcard driver selection
+        let finalWildcardDriverId = wildcardDriverId;
+
+        if (wildcardDriverId === "RANDOM") {
+            // Randomly select a driver from participants
+            const randomIndex = Math.floor(Math.random() * participatingDriverIds.length);
+            finalWildcardDriverId = participatingDriverIds[randomIndex];
+        } else if (wildcardDriverId && !participatingDriverIds.includes(wildcardDriverId)) {
+            // Validate wildcard driver if manually provided
+            return NextResponse.json(
+                { error: "Wildcard driver must be a participant" },
                 { status: 400 }
             );
         }
@@ -77,9 +93,19 @@ export async function POST(
                         })),
                     },
                 },
+                ...(finalWildcardDriverId && {
+                    wildcards: {
+                        create: {
+                            driverId: finalWildcardDriverId,
+                        },
+                    },
+                }),
             },
             include: {
                 participants: {
+                    include: { driver: true },
+                },
+                wildcards: {
                     include: { driver: true },
                 },
             },

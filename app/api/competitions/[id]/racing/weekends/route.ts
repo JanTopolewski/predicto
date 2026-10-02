@@ -35,6 +35,9 @@ export async function GET(
                                                 userId: session.user.id,
                                             },
                                         },
+                                        wildcards: {
+                                            include: { driver: true },
+                                        },
                                     },
                                 },
                             },

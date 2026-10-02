@@ -149,10 +149,11 @@ export async function POST(
         // Validate based on session type
         const isPodiumSession = racingSession.type === "SPRINT" || racingSession.type === "RACE";
 
-        if (isPodiumSession) {
+        // Podium validation (optional but if provided, must be complete)
+        if (isPodiumSession && (firstDriver || secondDriver || thirdDriver)) {
             if (!firstDriver || !secondDriver || !thirdDriver) {
                 return NextResponse.json(
-                    { error: "For this session type, podium prediction is required" },
+                    { error: "If providing podium, all three positions are required" },
                     { status: 400 }
                 );
             }
@@ -170,19 +171,28 @@ export async function POST(
             }
         }
 
-        if (!wildcardDriverId || !wildcardPosition) {
+        // Wildcard validation (optional but if provided, must have position)
+        if (wildcardPosition) {
+            if (!Number.isInteger(wildcardPosition) || wildcardPosition < 1 || wildcardPosition > 20) {
+                return NextResponse.json(
+                    { error: "Position must be between 1 and 20" },
+                    { status: 400 }
+                );
+            }
+        }
+
+        // At least one prediction must be provided
+        if (!wildcardPosition && !(isPodiumSession && firstDriver)) {
             return NextResponse.json(
-                { error: "Wildcard driver and position are required" },
+                { error: "Please provide at least wildcard position or podium prediction" },
                 { status: 400 }
             );
         }
 
-        if (!Number.isInteger(wildcardPosition) || wildcardPosition < 1 || wildcardPosition > 20) {
-            return NextResponse.json(
-                { error: "Position must be between 1 and 20" },
-                { status: 400 }
-            );
-        }
+        // Get wildcard driver from session (admin-selected)
+        const sessionWildcard = await prisma.wildcard.findFirst({
+            where: { sessionId },
+        });
 
         const prediction = await prisma.racingPrediction.upsert({
             where: {
@@ -192,20 +202,20 @@ export async function POST(
                 },
             },
             update: {
-                firstDriverId: isPodiumSession ? firstDriver : null,
-                secondDriverId: isPodiumSession ? secondDriver : null,
-                thirdDriverId: isPodiumSession ? thirdDriver : null,
-                wildcardDriverId,
-                wildcardPosition,
+                firstDriverId: isPodiumSession && firstDriver ? firstDriver : null,
+                secondDriverId: isPodiumSession && secondDriver ? secondDriver : null,
+                thirdDriverId: isPodiumSession && thirdDriver ? thirdDriver : null,
+                wildcardDriverId: sessionWildcard?.driverId || null,
+                wildcardPosition: wildcardPosition || null,
             },
             create: {
                 sessionId,
                 userId: session.user.id,
-                firstDriverId: isPodiumSession ? firstDriver : null,
-                secondDriverId: isPodiumSession ? secondDriver : null,
-                thirdDriverId: isPodiumSession ? thirdDriver : null,
-                wildcardDriverId,
-                wildcardPosition,
+                firstDriverId: isPodiumSession && firstDriver ? firstDriver : null,
+                secondDriverId: isPodiumSession && secondDriver ? secondDriver : null,
+                thirdDriverId: isPodiumSession && thirdDriver ? thirdDriver : null,
+                wildcardDriverId: sessionWildcard?.driverId || null,
+                wildcardPosition: wildcardPosition || null,
             },
             include: {
                 firstDriver: true,

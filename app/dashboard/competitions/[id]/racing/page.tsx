@@ -16,6 +16,10 @@ interface RacingSessionParticipant {
     driver: Driver;
 }
 
+interface Wildcard {
+    driver: Driver;
+}
+
 interface RacingSession {
     id: string;
     type: string;
@@ -24,6 +28,7 @@ interface RacingSession {
     resolved: boolean;
     participants: RacingSessionParticipant[];
     predictions: any[];
+    wildcards: Wildcard[];
 }
 
 interface RacingWeekend {
@@ -52,8 +57,7 @@ export default function RacingPage() {
         firstDriver: string;
         secondDriver: string;
         thirdDriver: string;
-        wildcardDriverId: string;
-        wildcardPosition: number;
+        wildcardPosition: number | null;
     } | null>(null);
 
     useEffect(() => {
@@ -87,28 +91,6 @@ export default function RacingPage() {
         fetchWeekends();
     }, [competitionId]);
 
-    const handleSelectWildcard = (
-        sessionId: string,
-        driverId: string,
-        drivers: Driver[]
-    ) => {
-        const selectedDriver = drivers.find((d) => d.id === driverId);
-        if (selectedDriver) {
-            setCurrentPrediction((prev) =>
-                prev && prev.sessionId === sessionId
-                    ? { ...prev, wildcardDriverId: driverId }
-                    : {
-                        sessionId,
-                        firstDriver: "",
-                        secondDriver: "",
-                        thirdDriver: "",
-                        wildcardDriverId: driverId,
-                        wildcardPosition: 1,
-                    }
-            );
-        }
-    };
-
     const handleSubmitPrediction = async (
         sessionId: string,
         sessionType: string,
@@ -130,14 +112,6 @@ export default function RacingPage() {
             return;
         }
 
-        if (
-            !currentPrediction.wildcardDriverId ||
-            !currentPrediction.wildcardPosition
-        ) {
-            setError("Please select wildcard driver and position");
-            return;
-        }
-
         try {
             const response = await fetch(
                 `/api/competitions/${competitionId}/racing/sessions/${sessionId}/predictions`,
@@ -145,19 +119,16 @@ export default function RacingPage() {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        firstDriver: isPodiumSession
+                        firstDriver: isPodiumSession && currentPrediction.firstDriver
                             ? currentPrediction.firstDriver
                             : null,
-                        secondDriver: isPodiumSession
+                        secondDriver: isPodiumSession && currentPrediction.secondDriver
                             ? currentPrediction.secondDriver
                             : null,
-                        thirdDriver: isPodiumSession
+                        thirdDriver: isPodiumSession && currentPrediction.thirdDriver
                             ? currentPrediction.thirdDriver
                             : null,
-                        wildcardDriverId:
-                        currentPrediction.wildcardDriverId,
-                        wildcardPosition:
-                        currentPrediction.wildcardPosition,
+                        wildcardPosition: currentPrediction.wildcardPosition,
                     }),
                 }
             );
@@ -320,27 +291,23 @@ export default function RacingPage() {
                                                                                 onChange={(
                                                                                     e
                                                                                 ) => {
+                                                                                    const field = pos === 1 ? "firstDriver" : pos === 2 ? "secondDriver" : "thirdDriver";
                                                                                     setCurrentPrediction(
                                                                                         (
                                                                                             prev
                                                                                         ) =>
-                                                                                            prev &&
-                                                                                            prev.sessionId ===
-                                                                                            racingSession.id
+                                                                                            prev && prev.sessionId === racingSession.id
                                                                                                 ? {
                                                                                                     ...prev,
-                                                                                                    [pos ===
-                                                                                                    1
-                                                                                                        ? "firstDriver"
-                                                                                                        : pos ===
-                                                                                                        2
-                                                                                                            ? "secondDriver"
-                                                                                                            : "thirdDriver"]:
-                                                                                                    e
-                                                                                                        .target
-                                                                                                        .value,
+                                                                                                    [field]: e.target.value,
                                                                                                 }
-                                                                                                : null
+                                                                                                : {
+                                                                                                    sessionId: racingSession.id,
+                                                                                                    firstDriver: field === "firstDriver" ? e.target.value : "",
+                                                                                                    secondDriver: field === "secondDriver" ? e.target.value : "",
+                                                                                                    thirdDriver: field === "thirdDriver" ? e.target.value : "",
+                                                                                                    wildcardPosition: null,
+                                                                                                }
                                                                                     );
                                                                                 }}
                                                                                 className="w-full px-2 py-1 text-sm rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
@@ -377,91 +344,52 @@ export default function RacingPage() {
                                                         </div>
                                                     )}
 
-                                                    <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                                                        <p className="text-xs font-semibold text-amber-900 dark:text-amber-200 mb-3">
-                                                            WILDCARD DRIVER (2 pts exact, 1 pt ±2 positions):
-                                                        </p>
-                                                        <select
-                                                            value={
-                                                                currentPrediction?.sessionId ===
-                                                                racingSession.id
-                                                                    ? currentPrediction.wildcardDriverId
-                                                                    : ""
-                                                            }
-                                                            onChange={(e) =>
-                                                                handleSelectWildcard(
-                                                                    racingSession.id,
-                                                                    e.target.value,
-                                                                    racingSession.participants.map(
-                                                                        (p) =>
-                                                                            p.driver
-                                                                    )
-                                                                )
-                                                            }
-                                                            className="w-full px-3 py-2 rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
-                                                        >
-                                                            <option value="">
-                                                                Select wildcard driver...
-                                                            </option>
-                                                            {racingSession.participants.map(
-                                                                (p) => (
-                                                                    <option
-                                                                        key={
-                                                                            p
-                                                                                .driver
-                                                                                .id
-                                                                        }
-                                                                        value={
-                                                                            p
-                                                                                .driver
-                                                                                .id
-                                                                        }
-                                                                    >
-                                                                        #{p.driver.number}{" "}
-                                                                        {p.driver.name}
-                                                                    </option>
-                                                                )
-                                                            )}
-                                                        </select>
-
-                                                        {currentPrediction?.sessionId ===
-                                                            racingSession.id && (
-                                                                <div className="mt-3">
-                                                                    <label className="text-xs font-semibold text-zinc-900 dark:text-white">
-                                                                        Predicted Position
-                                                                    </label>
-                                                                    <input
-                                                                        type="number"
-                                                                        min="1"
-                                                                        max="20"
-                                                                        value={
-                                                                            currentPrediction.wildcardPosition
-                                                                        }
-                                                                        onChange={(
-                                                                            e
-                                                                        ) =>
-                                                                            setCurrentPrediction(
-                                                                                (
-                                                                                    prev
-                                                                                ) =>
-                                                                                    prev
-                                                                                        ? {
-                                                                                            ...prev,
-                                                                                            wildcardPosition:
-                                                                                                parseInt(
-                                                                                                    e
-                                                                                                        .target
-                                                                                                        .value
-                                                                                                ),
-                                                                                        }
-                                                                                        : null
-                                                                            )
-                                                                        }
-                                                                        className="w-full px-3 py-2 rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
-                                                                    />
-                                                                </div>
-                                                            )}
-                                                    </div>
+                                                    {racingSession.wildcards && racingSession.wildcards.length > 0 && (
+                                                        <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                                                            <p className="text-xs font-semibold text-amber-900 dark:text-amber-200 mb-3">
+                                                                WILDCARD DRIVER (2 pts exact, 1 pt ±2 positions):
+                                                            </p>
+                                                            <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg mb-3">
+                                                                <p className="text-sm font-bold text-amber-900 dark:text-amber-100">
+                                                                    #{racingSession.wildcards[0].driver.number} {racingSession.wildcards[0].driver.name}
+                                                                </p>
+                                                                <p className="text-xs text-amber-700 dark:text-amber-300">
+                                                                    {racingSession.wildcards[0].driver.team}
+                                                                </p>
+                                                            </div>
+                                                            <div>
+                                                                <label className="text-xs font-semibold text-zinc-900 dark:text-white">
+                                                                    Predicted Finishing Position (1-20)
+                                                                </label>
+                                                                <input
+                                                                    type="number"
+                                                                    min="1"
+                                                                    max="20"
+                                                                    placeholder="Enter position..."
+                                                                    value={
+                                                                        currentPrediction?.sessionId === racingSession.id && currentPrediction.wildcardPosition
+                                                                            ? currentPrediction.wildcardPosition
+                                                                            : ""
+                                                                    }
+                                                                    onChange={(e) => {
+                                                                        const pos = e.target.value ? parseInt(e.target.value) : null;
+                                                                        setCurrentPrediction((prev) =>
+                                                                            prev && prev.sessionId === racingSession.id
+                                                                                ? { ...prev, wildcardPosition: pos }
+                                                                                : {
+                                                                                    sessionId: racingSession.id,
+                                                                                    firstDriver: "",
+                                                                                    secondDriver: "",
+                                                                                    thirdDriver: "",
+                                                                                    wildcardPosition: pos,
+                                                                                }
+                                                                        );
+                                                                    }}
+                                                                    className="w-full px-3 py-2 rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    )}
 
                                                     <button
                                                         onClick={() =>
