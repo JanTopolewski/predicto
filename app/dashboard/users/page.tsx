@@ -159,9 +159,7 @@ export default function UsersPage() {
             });
 
             const data = await response.json();
-            if (!response.ok) {
-                setError(data.message || "Błąd podczas awansowania użytkownika");
-                return;
+setError(data.message || "Błąd podczas zmiany hasła użytkownika");
             }
 
             if (data.user) {
