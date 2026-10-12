@@ -130,6 +130,9 @@ export async function POST(
                 }
             }
 
+            const oldPoints = prediction.points || 0;
+            const pointsDiff = points - oldPoints;
+
             // Update prediction with points
             updates.push(
                 prisma.racingPrediction.update({
@@ -139,21 +142,23 @@ export async function POST(
             );
 
             // Update member points
-            updates.push(
-                prisma.competitionMember.update({
-                    where: {
-                        competitionId_userId: {
-                            competitionId,
-                            userId: prediction.userId,
+            if (pointsDiff !== 0) {
+                updates.push(
+                    prisma.competitionMember.update({
+                        where: {
+                            competitionId_userId: {
+                                competitionId,
+                                userId: prediction.userId,
+                            },
                         },
-                    },
-                    data: {
-                        points: {
-                            increment: points,
+                        data: {
+                            points: {
+                                increment: pointsDiff,
+                            },
                         },
-                    },
-                })
-            );
+                    })
+                );
+            }
         }
 
         // Mark session as resolved

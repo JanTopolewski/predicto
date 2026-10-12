@@ -76,7 +76,6 @@ export async function GET(
             );
         }
 
-        // Pobierz wszystkie drużyny (dla FOOTBALL) na podstawie meczów w sezonie
         const footballSeason = competition.footballSeasons[0];
         let allTeams = [];
 
@@ -97,7 +96,6 @@ export async function GET(
             }
         }
 
-        // Pobierz wszystkich kierowców (dla RACING) na podstawie uczestników sesji
         const racingSeason = competition.racingSeasons[0];
         let allDrivers = [];
 
@@ -118,6 +116,19 @@ export async function GET(
                     },
                     orderBy: { number: "asc" },
                 });
+            }
+        }
+
+        let hasSessionStarted = false;
+        if (racingSeason) {
+            for (const weekend of racingSeason.weekends) {
+                for (const sess of weekend.sessions) {
+                    if (new Date() >= new Date(sess.startTime)) {
+                        hasSessionStarted = true;
+                        break;
+                    }
+                }
+                if (hasSessionStarted) break;
             }
         }
 

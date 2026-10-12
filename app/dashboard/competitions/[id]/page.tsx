@@ -28,13 +28,28 @@ interface Driver {
     number: number;
 }
 
-interface SeasonPrediction {
+interface FootballSeasonPrediction {
     id: string;
-    teamId?: string;
-    driverId?: string;
-    team?: Team;
-    driver?: Driver;
+    teamId?: string | null;
+    team?: Team | null;
+    driver?: never;
+    driverId?: never;
 }
+interface RacingSeasonPrediction {
+    id: string;
+    driverId?: string | null;
+    driver?: Driver | null;
+    team?: never;
+    teamId?: never;
+}
+type SeasonPrediction = FootballSeasonPrediction | RacingSeasonPrediction | {
+    id: string;
+    teamId?: string | null;
+    driverId?: string | null;
+    team?: Team | null;
+    driver?: Driver | null;
+    [key: string]: any;
+};
 
 interface CompetitionDetail {
     id: string;
@@ -85,10 +100,11 @@ export default function CompetitionDetailPage() {
             const data = await response.json();
             setCompetition(data.competition);
 
-            if (data.competition.type === "FOOTBALL" && data.competition.seasonPrediction?.team?.id) {
-                setSelectedTeamId(data.competition.seasonPrediction.team.id);
-            } else if (data.competition.type === "RACING" && data.competition.seasonPrediction?.driver?.id) {
-                setSelectedDriverId(data.competition.seasonPrediction.driver.id);
+            const pred = data.competition.seasonPrediction;
+            if (data.competition.type === "FOOTBALL" && pred?.team?.id) {
+                setSelectedTeamId(pred.team.id);
+            } else if (data.competition.type === "RACING" && pred?.driver?.id) {
+                setSelectedDriverId(pred.driver.id);
             }
         } catch (err) {
             setError("Błąd podczas pobierania konkurencji");
@@ -139,7 +155,7 @@ export default function CompetitionDetailPage() {
 
             setSuccessMessage("✓ Twoja predykcja została zapisana");
             setPredictingWinner(false);
-
+            await fetchCompetition();
             setTimeout(() => setSuccessMessage(""), 3000);
         } catch (err) {
             setError("Błąd podczas zapisywania predykcji");
@@ -276,7 +292,7 @@ export default function CompetitionDetailPage() {
             </div>
 
             {/* Season Winner Prediction - For members and if first match/session didn't start */}
-            {isMember && !isAdmin && !competition.hasMatchStarted && (
+            {isMember && !isAdmin && !competition.hasMatchStarted && !competition.winnerResolved && !competition.seasonPrediction && (
                 <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800">
                     <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-4">
                         {competition.type === "FOOTBALL" ? "🏆 Obstawiaj zwycięzcę sezonu" : "🏆 Obstawiaj zwycięzcę sezonu"}
@@ -322,18 +338,6 @@ export default function CompetitionDetailPage() {
                         )}
                     </div>
 
-                    {selectedTeamId && competition.type === "FOOTBALL" && competition.seasonPrediction?.team?.id === selectedTeamId && (
-                        <p className="mt-3 text-sm text-emerald-600 dark:text-emerald-400">
-                            ✓ Ta drużyna jest już Twoim typem
-                        </p>
-                    )}
-
-                    {selectedDriverId && competition.type === "RACING" && competition.seasonPrediction?.driver?.id === selectedDriverId && (
-                        <p className="mt-3 text-sm text-emerald-600 dark:text-emerald-400">
-                            ✓ Ten kierowca jest już Twoim typem
-                        </p>
-                    )}
-
                     <button
                         onClick={handlePredictWinner}
                         disabled={predictingWinner || !selectedTeamId && !selectedDriverId}
@@ -341,6 +345,20 @@ export default function CompetitionDetailPage() {
                     >
                         {predictingWinner ? "Zapisywanie..." : "Zapisz predykcję"}
                     </button>
+                </div>
+            )}
+
+            {isMember && !isAdmin && competition.seasonPrediction && (
+                <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800">
+                    <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-2">
+                        🏆 Twój typ na zwycięzcę sezonu
+                    </h3>
+                    <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
+                        ✓ Wybrałeś: {competition.type === "FOOTBALL" 
+                            ? (competition.seasonPrediction as any)?.team?.name 
+                            : `${(competition.seasonPrediction as any)?.driver?.name} (#${(competition.seasonPrediction as any)?.driver?.number})`}
+                    </p>
+                    <p className="text-xs text-zinc-500 mt-1">Głos został zarejestrowany i nie można go modyfikować.</p>
                 </div>
             )}
 

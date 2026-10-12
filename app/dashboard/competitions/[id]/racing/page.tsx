@@ -26,6 +26,7 @@ interface RacingSession {
     name: string;
     startTime: string;
     resolved: boolean;
+    votingClosedAt?: string | null; 
     participants: RacingSessionParticipant[];
     predictions: any[];
     wildcards: Wildcard[];
@@ -66,30 +67,27 @@ export default function RacingPage() {
         }
     }, [session, router]);
 
-    useEffect(() => {
-        const fetchWeekends = async () => {
-            try {
-                setLoading(true);
-                const response = await fetch(
-                    `/api/competitions/${competitionId}/racing/weekends`
-                );
-
-                if (!response.ok) {
-                    throw new Error("Failed to fetch weekends");
-                }
-
-                const data = await response.json();
-                setWeekends(data.weekends || []);
-            } catch (err) {
-                setError("Error loading racing weekends");
-                console.error(err);
-            } finally {
-                setLoading(false);
+    const fetchWeekends = React.useCallback(async () => {
+        try {
+            setLoading(true);
+            const response = await fetch(
+                `/api/competitions/${competitionId}/racing/weekends`
+            );
+            if (!response.ok) {
+                throw new Error("Failed to fetch weekends");
             }
-        };
-
-        fetchWeekends();
+            const data = await response.json();
+            setWeekends(data.weekends || []);
+        } catch (err) {
+            setError("Error loading racing weekends");
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
     }, [competitionId]);
+    useEffect(() => {
+        void fetchWeekends();
+    }, [fetchWeekends]);
 
     const handleSubmitPrediction = async (
         sessionId: string,
@@ -141,6 +139,7 @@ export default function RacingPage() {
 
             setSuccess("Prediction saved successfully!");
             setCurrentPrediction(null);
+            await fetchWeekends();
             setTimeout(() => setSuccess(""), 3000);
         } catch (err) {
             setError("Error saving prediction");
@@ -218,6 +217,7 @@ export default function RacingPage() {
 
                             <div className="space-y-6">
                                 {weekend.sessions.map((racingSession) => {
+                                    const existingVote = racingSession.predictions?.[0];
                                     const isPodiumSession =
                                         PODIUM_SESSIONS.includes(
                                             racingSession.type
@@ -247,7 +247,27 @@ export default function RacingPage() {
                                                 )}
                                             </div>
 
-                                            {!isStarted && !racingSession.resolved ? (
+                                            {existingVote ? (
+                                                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg">
+                                                    <p className="text-xs font-bold text-emerald-800 dark:text-emerald-200 uppercase tracking-wide mb-2">
+                                                        ✓ Twój oddany głos na tę sesję:
+                                                    </p>
+                                                    <div className="text-sm text-zinc-800 dark:text-zinc-200 space-y-1">
+                                                        {isPodiumSession && (
+                                                            <div className="flex flex-wrap gap-3">
+                                                                <span>🥇 P1: {racingSession.participants.find(p => p.driver.id === existingVote.firstDriverId)?.driver.name || "—"}</span>
+                                                                <span>🥈 P2: {racingSession.participants.find(p => p.driver.id === existingVote.secondDriverId)?.driver.name || "—"}</span>
+                                                                <span>🥉 P3: {racingSession.participants.find(p => p.driver.id === existingVote.thirdDriverId)?.driver.name || "—"}</span>
+                                                            </div>
+                                                        )}
+                                                        {existingVote.wildcardPosition && (
+                                                            <p className="text-xs text-amber-700 dark:text-amber-300 font-semibold mt-1">
+                                                                🎯 Typowana pozycja Wildcard: P{existingVote.wildcardPosition}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ) : !isStarted && !racingSession.resolved && !racingSession.votingClosedAt ? (
                                                 <div className="space-y-3">
                                                     {isPodiumSession && (
                                                         <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">

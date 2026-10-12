@@ -56,11 +56,50 @@ export async function POST(
             );
         }
 
+        if (competition.winnerResolved) {
+            return NextResponse.json(
+                { error: "Zwycięzca sezonu został już ogłoszony. Głosowanie jest zamknięte." },
+                { status: 400 }
+            );
+        }
+
         let racingSeason = competition.racingSeasons[0];
         if (!racingSeason) {
             racingSeason = await prisma.racingSeason.create({
                 data: { competitionId },
             });
+        }
+
+        const earliestSession = await prisma.racingSession.findFirst({
+            where: {
+                weekend: {
+                    seasonId: racingSeason.id,
+                },
+            },
+            orderBy: {
+                startTime: "asc",
+            },
+        });
+        if (earliestSession && new Date() >= new Date(earliestSession.startTime)) {
+            return NextResponse.json(
+                { error: "Pierwsza sesja sezonu już się rozpoczęła. Nie można już typować zwycięzcy." },
+                { status: 400 }
+            );
+        }
+
+        const existingPrediction = await prisma.racingSeasonWinnerPrediction.findUnique({
+            where: {
+                seasonId_userId: {
+                    seasonId: racingSeason.id,
+                    userId: session.user.id,
+                },
+            },
+        });
+        if (existingPrediction) {
+            return NextResponse.json(
+                { error: "Już oddałeś głos na zwycięzcę sezonu. Nie można zmienić typu." },
+                { status: 400 }
+            );
         }
 
         const driver = await prisma.driver.findUnique({
@@ -75,17 +114,8 @@ export async function POST(
         }
 
         const prediction =
-            await prisma.racingSeasonWinnerPrediction.upsert({
-                where: {
-                    seasonId_userId: {
-                        seasonId: racingSeason.id,
-                        userId: session.user.id,
-                    },
-                },
-                update: {
-                    driverId,
-                },
-                create: {
+            await prisma.racingSeasonWinnerPrediction.create({
+                data: {
                     seasonId: racingSeason.id,
                     userId: session.user.id,
                     driverId,
