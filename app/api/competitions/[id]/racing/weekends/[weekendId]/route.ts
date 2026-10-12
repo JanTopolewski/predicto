@@ -55,6 +55,16 @@ export async function GET(
                                 driver: true,
                             },
                         },
+                        results: {
+                            include: {
+                                driver: true,
+                            },
+                        },
+                        wildcards: {
+                            include: {
+                                driver: true,
+                            },
+                        },
                     },
                     orderBy: {
                         startTime: "asc",

@@ -132,6 +132,13 @@ export async function POST(
             );
         }
 
+        if (racingSession.resolved) {
+            return NextResponse.json(
+                { error: "Sesja została już rozliczona" },
+                { status: 400 }
+            );
+        }
+
         if (racingSession.votingClosedAt && isTimePassed(racingSession.votingClosedAt)) {
             return NextResponse.json(
                 { error: "Voting for this session is closed" },
