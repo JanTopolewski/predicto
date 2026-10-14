@@ -153,6 +153,16 @@ export async function DELETE(
             );
         }
 
+        if (racingSession.resolved) {
+            return NextResponse.json(
+                {
+                    error:
+                        "Nie można usunąć sesji, która została już rozliczona i posiada naliczone punkty.",
+                },
+                { status: 400 }
+            );
+        }
+
         await prisma.racingSession.delete({
             where: { id: sessionId },
         });

@@ -158,12 +158,36 @@ export async function DELETE(
 
         const team = await prisma.team.findUnique({
             where: { id },
+            include: {
+                _count: {
+                    select: {
+                        homeMatches: true,
+                        awayMatches: true,
+                        seasonWinnerPredictions: true,
+                    },
+                },
+            },
         });
 
         if (!team) {
             return NextResponse.json(
                 { message: "Drużyna nie znaleziona" },
                 { status: 404 }
+            );
+        }
+
+        const isUsed =
+            team._count.homeMatches > 0 ||
+            team._count.awayMatches > 0 ||
+            team._count.seasonWinnerPredictions > 0;
+
+        if (isUsed) {
+            return NextResponse.json(
+                {
+                    message:
+                        "Nie można usunąć drużyny, która bierze udział w meczach lub posiada zarejestrowane głosy na zwycięzcę sezonu.",
+                },
+                { status: 409 }
             );
         }
 

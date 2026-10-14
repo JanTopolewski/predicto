@@ -125,6 +125,16 @@ export async function DELETE(
             );
         }
 
+        if (match.resolved) {
+            return NextResponse.json(
+                {
+                    error:
+                        "Nie można usunąć meczu, który został już rozliczony i posiada naliczone punkty.",
+                },
+                { status: 400 }
+            );
+        }
+
         await prisma.footballMatch.delete({
             where: { id: matchId },
         });
