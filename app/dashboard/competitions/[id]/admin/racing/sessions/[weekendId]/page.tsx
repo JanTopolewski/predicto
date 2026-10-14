@@ -113,12 +113,19 @@ export default function RacingSessionsPage() {
         setError("");
         setSuccess("");
 
+        const isPodiumType = formData.type === "SPRINT" || formData.type === "RACE";
+
         if (
             !formData.name ||
             !formData.startTime ||
             formData.selectedDrivers.length === 0
         ) {
             setError("All fields are required and select at least one driver");
+            return;
+        }
+
+        if (!isPodiumType && !formData.wildcardDriverId) {
+            setError("Kierowca Wildcard jest wymagany dla tej sesji (brak podium)");
             return;
         }
 
@@ -189,76 +196,113 @@ export default function RacingSessionsPage() {
     setIsSubmittingResults(true);
     setError("");
     setSuccess("");
-    const isPodiumSession = racingSession.type === "SPRINT" || racingSession.type === "RACE";
-    const resultsPayload: { driverId: string; position: number }[] = [];
-    if (isPodiumSession) {
-        if (!firstDriverId || !secondDriverId || !thirdDriverId) {
-            setError("Wybierz kierowców dla pozycji 1, 2 i 3");
-            setIsSubmittingResults(false);
-            return;
-        }
-        if (firstDriverId === secondDriverId || firstDriverId === thirdDriverId || secondDriverId === thirdDriverId) {
-            setError("Miejsca na podium muszą zajmować różni kierowcy");
-            setIsSubmittingResults(false);
-            return;
-        }
-        resultsPayload.push({ driverId: firstDriverId, position: 1 });
-        resultsPayload.push({ driverId: secondDriverId, position: 2 });
-        resultsPayload.push({ driverId: thirdDriverId, position: 3 });
-    }
-    const wildcard = racingSession.wildcards?.[0];
-    const maxPos = racingSession.participants.length;
-    if (wildcard && wildcardPosition) {
-        const pos = parseInt(wildcardPosition);
-        if (isNaN(pos) || pos < 1 || pos > maxPos) {
-            setError(`Pozycja Wildcard musi być liczbą od 1 do ${maxPos}`);
-            setIsSubmittingResults(false);
-            return;
-        }
-        const existingIdx = resultsPayload.findIndex(r => r.driverId === wildcard.driverId);
-        if (existingIdx >= 0) {
-            resultsPayload[existingIdx].position = pos;
-        } else {
-            resultsPayload.push({ driverId: wildcard.driverId, position: pos });
-        }
-    }
-    try {
-        const saveRes = await fetch(
-            `/api/competitions/${competitionId}/racing/sessions/${racingSession.id}/results`,
-            {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ results: resultsPayload }),
+        const isPodiumSession = racingSession.type === "SPRINT" || racingSession.type === "RACE";
+        const wildcard = racingSession.wildcards?.[0];
+        const resultsPayload: { driverId: string; position: number }[] = [];
+
+        // Jeśli sesja nie jest podium i nie ma wildcarda (np. zwykły trening bez typów), wystarczy oznaczyć ją jako zakończoną
+        if (!isPodiumSession && !wildcard) {
+            try {
+                const patchRes = await fetch(
+                    `/api/competitions/${competitionId}/racing/sessions/${racingSession.id}`,
+                    {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ votingClosedAt: new Date().toISOString() }),
+                    }
+                );
+                if (!patchRes.ok) throw new Error("Błąd zamykania sesji");
+
+                setSuccess("✓ Sesja oznaczona jako zakończona!");
+                setResolvingSessionId(null);
+                const weekendResponse = await fetch(
+                    `/api/competitions/${competitionId}/racing/weekends/${weekendId}`
+                );
+                if (weekendResponse.ok) {
+                    const weekendData = await weekendResponse.json();
+                    setSessions(weekendData.weekend?.sessions || []);
+                }
+            } catch (err: any) {
+                setError(err.message || "Wystąpił błąd");
+            } finally {
+                setIsSubmittingResults(false);
             }
-        );
-        if (!saveRes.ok) {
-            const data = await saveRes.json();
-            throw new Error(data.error || "Błąd zapisu wyników");
+            return;
         }
-        const calcRes = await fetch(
-            `/api/competitions/${competitionId}/racing/sessions/${racingSession.id}/calculate-points`,
-            { method: "POST" }
-        );
-        if (!calcRes.ok) {
-            const data = await calcRes.json();
-            throw new Error(data.error || "Błąd podliczania punktów");
+
+        if (isPodiumSession) {
+            if (!firstDriverId || !secondDriverId || !thirdDriverId) {
+                setError("Wybierz kierowców dla pozycji 1, 2 i 3");
+                setIsSubmittingResults(false);
+                return;
+            }
+            if (firstDriverId === secondDriverId || firstDriverId === thirdDriverId || secondDriverId === thirdDriverId) {
+                setError("Miejsca na podium muszą zajmować różni kierowcy");
+                setIsSubmittingResults(false);
+                return;
+            }
+            resultsPayload.push({ driverId: firstDriverId, position: 1 });
+            resultsPayload.push({ driverId: secondDriverId, position: 2 });
+            resultsPayload.push({ driverId: thirdDriverId, position: 3 });
         }
-        setSuccess("✓ Wyniki zatwierdzone, głosowanie zablokowane i punkty podliczone!");
-        setResolvingSessionId(null);
-        
-        const weekendResponse = await fetch(
-            `/api/competitions/${competitionId}/racing/weekends/${weekendId}`
-        );
-        if (weekendResponse.ok) {
-            const weekendData = await weekendResponse.json();
-            setSessions(weekendData.weekend?.sessions || []);
+
+        const maxPos = racingSession.participants.length;
+        if (wildcard && wildcardPosition) {
+            const pos = parseInt(wildcardPosition);
+            if (isNaN(pos) || pos < 1 || pos > maxPos) {
+                setError(`Pozycja Wildcard musi być liczbą od 1 do ${maxPos}`);
+                setIsSubmittingResults(false);
+                return;
+            }
+            const existingIdx = resultsPayload.findIndex((r) => r.driverId === wildcard.driverId);
+            if (existingIdx >= 0) {
+                resultsPayload[existingIdx].position = pos;
+            } else {
+                resultsPayload.push({ driverId: wildcard.driverId, position: pos });
+            }
         }
-    } catch (err: any) {
-        setError(err.message || "Wystąpił błąd");
-    } finally {
-        setIsSubmittingResults(false);
-    }
-};
+
+        try {
+            const saveRes = await fetch(
+                `/api/competitions/${competitionId}/racing/sessions/${racingSession.id}/results`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ results: resultsPayload }),
+                }
+            );
+
+            if (!saveRes.ok) {
+                const data = await saveRes.json();
+                throw new Error(data.error || "Błąd zapisu wyników");
+            }
+
+            const calcRes = await fetch(
+                `/api/competitions/${competitionId}/racing/sessions/${racingSession.id}/calculate-points`,
+                { method: "POST" }
+            );
+
+            if (!calcRes.ok) {
+                const data = await calcRes.json();
+                throw new Error(data.error || "Błąd podliczania punktów");
+            }
+
+            setSuccess("✓ Wyniki zatwierdzone, głosowanie zablokowane i punkty podliczone!");
+            setResolvingSessionId(null);
+
+            const weekendResponse = await fetch(
+                `/api/competitions/${competitionId}/racing/weekends/${weekendId}`
+            );
+            if (weekendResponse.ok) {
+                const weekendData = await weekendResponse.json();
+                setSessions(weekendData.weekend?.sessions || []);
+            }
+        } catch (err: any) {
+            setError(err.message || "Wystąpił błąd");
+        } finally {
+            setIsSubmittingResults(false);
+        }
+    };
 
     if (!session?.user?.id) {
         return (
@@ -351,7 +395,7 @@ export default function RacingSessionsPage() {
                     {/* Wildcard Driver Selection */}
                     <div>
                         <h3 className="text-sm font-semibold text-zinc-900 dark:text-white mb-3">
-                            Select Wildcard Driver (Optional)
+                            Select Wildcard Driver {formData.type === "SPRINT" || formData.type === "RACE" ? "(Optional)" : "(Required for this session)"}
                         </h3>
                         <select
                             value={formData.wildcardDriverId}
@@ -363,7 +407,11 @@ export default function RacingSessionsPage() {
                             }
                             className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
-                            <option value="">No wildcard</option>
+                            {(formData.type === "SPRINT" || formData.type === "RACE") ? (
+                                <option value="">No wildcard</option>
+                            ) : (
+                                <option value="" disabled>Wybierz kierowcę Wildcard (wymagany)</option>
+                            )}
                             <option value="RANDOM" className="font-bold text-amber-600">🎲 Random Driver</option>
                             <option disabled>────────────</option>
                             {drivers.map((driver) => (

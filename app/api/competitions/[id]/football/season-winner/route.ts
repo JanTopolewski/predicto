@@ -56,11 +56,50 @@ export async function POST(
             );
         }
 
+        if (competition.winnerResolved) {
+            return NextResponse.json(
+                { error: "Zwycięzca sezonu został już ogłoszony. Głosowanie jest zamknięte." },
+                { status: 400 }
+            );
+        }
+
         let footballSeason = competition.footballSeasons[0];
         if (!footballSeason) {
             footballSeason = await prisma.footballSeason.create({
                 data: { competitionId },
             });
+        }
+
+        const earliestMatch = await prisma.footballMatch.findFirst({
+            where: { seasonId: footballSeason.id },
+            orderBy: { kickoff: "asc" },
+        });
+
+        if (
+            footballSeason.hasMatchStarted ||
+            (earliestMatch && new Date() >= new Date(earliestMatch.kickoff))
+        ) {
+            return NextResponse.json(
+                { error: "Pierwszy mecz sezonu już się rozpoczął. Nie można już typować zwycięzcy." },
+                { status: 400 }
+            );
+        }
+
+        const existingPrediction =
+            await prisma.footballSeasonWinnerPrediction.findUnique({
+                where: {
+                    seasonId_userId: {
+                        seasonId: footballSeason.id,
+                        userId: session.user.id,
+                    },
+                },
+            });
+
+        if (existingPrediction) {
+            return NextResponse.json(
+                { error: "Już oddałeś głos na zwycięzcę sezonu. Nie można zmienić typu." },
+                { status: 400 }
+            );
         }
 
         const team = await prisma.team.findUnique({
@@ -74,18 +113,23 @@ export async function POST(
             );
         }
 
+        const isTeamInSeason = await prisma.footballMatch.findFirst({
+            where: {
+                seasonId: footballSeason.id,
+                OR: [{ homeTeamId: teamId }, { awayTeamId: teamId }],
+            },
+        });
+
+        if (!isTeamInSeason) {
+            return NextResponse.json(
+                { error: "Wybrana drużyna nie bierze udziału w rozgrywkach tego sezonu" },
+                { status: 400 }
+            );
+        }
+
         const prediction =
-            await prisma.footballSeasonWinnerPrediction.upsert({
-                where: {
-                    seasonId_userId: {
-                        seasonId: footballSeason.id,
-                        userId: session.user.id,
-                    },
-                },
-                update: {
-                    teamId,
-                },
-                create: {
+            await prisma.footballSeasonWinnerPrediction.create({
+                data: {
                     seasonId: footballSeason.id,
                     userId: session.user.id,
                     teamId,

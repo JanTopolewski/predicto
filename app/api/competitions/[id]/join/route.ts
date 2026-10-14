@@ -30,6 +30,13 @@ export async function POST(
             );
         }
 
+        if (!competition.isPublic) {
+            return NextResponse.json(
+                { message: "Ta liga jest prywatna. Wymagany jest kod zaproszenia." },
+                { status: 403 }
+            );
+        }
+
         const existingMember = await prisma.competitionMember.findUnique({
             where: {
                 competitionId_userId: {

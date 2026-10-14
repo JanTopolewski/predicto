@@ -33,6 +33,18 @@ export async function POST(
             );
         }
 
+        const isPodiumSession = type === "SPRINT" || type === "RACE";
+
+        // Dla sesji bez podium (treningi, kwalifikacje) kierowca Wildcard jest obowiązkowy
+        if (!isPodiumSession && !wildcardDriverId) {
+            return NextResponse.json(
+                {
+                    error: "Kierowca Wildcard jest wymagany dla sesji treningowych i kwalifikacyjnych (brak podium)",
+                },
+                { status: 400 }
+            );
+        }
+
         // Handle wildcard driver selection
         let finalWildcardDriverId = wildcardDriverId;
 

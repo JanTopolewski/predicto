@@ -179,6 +179,22 @@ export async function POST(
                     { status: 400 }
                 );
             }
+
+            // Verify drivers actually participate in this session
+            const participantDriverIds = new Set(
+                racingSession.participants.map((p) => p.driverId)
+            );
+
+            if (
+                !participantDriverIds.has(firstDriver) ||
+                !participantDriverIds.has(secondDriver) ||
+                !participantDriverIds.has(thirdDriver)
+            ) {
+                return NextResponse.json(
+                    { error: "Podium drivers must participate in this session" },
+                    { status: 400 }
+                );
+            }
         }
 
         // Wildcard validation (optional but if provided, must have position)

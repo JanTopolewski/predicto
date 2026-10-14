@@ -81,53 +81,74 @@ export async function POST(
             );
         }
 
+        const isTeamInSeason = await prisma.footballMatch.findFirst({
+            where: {
+                seasonId: season.id,
+                OR: [{ homeTeamId: winningTeamId }, { awayTeamId: winningTeamId }],
+            },
+        });
+
+        if (!isTeamInSeason) {
+            return NextResponse.json(
+                { error: "Wybrana drużyna nie bierze udziału w rozgrywkach tego sezonu" },
+                { status: 400 }
+            );
+        }
+
         const scoringRules = await prisma.competitionScoring.findUnique({
             where: { competitionId },
         });
 
         const seasonWinnerPoints = scoringRules?.seasonWinnerPoints || 10;
-
-        const updates = [];
-
-        for (const prediction of season.seasonWinnerPredictions) {
-            if (prediction.teamId === winningTeamId) {
-                updates.push(
-                    prisma.competitionMember.update({
-                        where: {
-                            competitionId_userId: {
-                                competitionId,
-                                userId: prediction.userId,
-                            },
-                        },
-                        data: {
-                            points: {
-                                increment: seasonWinnerPoints,
-                            },
-                        },
-                    })
-                );
-            }
-        }
-
-        updates.push(
-            prisma.competition.update({
-                where: { id: competitionId },
-                data: { winnerResolved: true },
-            })
+        const matchingPredictions = season.seasonWinnerPredictions.filter(
+            (p) => p.teamId === winningTeamId
         );
 
-        await Promise.all(updates);
+        // Atomic guard & transaction: ensure only one request can set winnerResolved and award points
+        await prisma.$transaction(async (tx) => {
+            const updateResult = await tx.competition.updateMany({
+                where: {
+                    id: competitionId,
+                    winnerResolved: false,
+                },
+                data: { winnerResolved: true },
+            });
+
+            if (updateResult.count === 0) {
+                throw new Error("ALREADY_RESOLVED");
+            }
+
+            for (const prediction of matchingPredictions) {
+                await tx.competitionMember.update({
+                    where: {
+                        competitionId_userId: {
+                            competitionId,
+                            userId: prediction.userId,
+                        },
+                    },
+                    data: {
+                        points: {
+                            increment: seasonWinnerPoints,
+                        },
+                    },
+                });
+            }
+        });
 
         return NextResponse.json({
             message: "Season winner announced successfully",
             winningTeamId,
             winningTeamName: team.name,
-            playersRewarded: season.seasonWinnerPredictions.filter(
-                (p) => p.teamId === winningTeamId
-            ).length,
+            playersRewarded: matchingPredictions.length,
             pointsAwarded: seasonWinnerPoints,
         });
-    } catch (error) {
+    } catch (error: any) {
+        if (error?.message === "ALREADY_RESOLVED") {
+            return NextResponse.json(
+                { error: "Season winner already announced" },
+                { status: 400 }
+            );
+        }
         console.error("Error announcing season winner:", error);
         return NextResponse.json(
             { error: "Internal server error" },

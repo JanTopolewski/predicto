@@ -65,15 +65,25 @@ export async function POST(
         }
 
         const maxPosition = racingSession.participants.length;
-        const driverIds = new Set(racingSession.participants.map((p) => p.driverId));
+        const participantDriverIds = new Set(racingSession.participants.map((p) => p.driverId));
+        const seenDriverIds = new Set<string>();
+        const seenPositions = new Set<number>();
 
         for (const item of results) {
-            if (!driverIds.has(item.driverId)) {
+            if (!participantDriverIds.has(item.driverId)) {
                 return NextResponse.json(
                     { error: `Kierowca o ID ${item.driverId} nie uczestniczy w tej sesji` },
                     { status: 400 }
                 );
             }
+            if (seenDriverIds.has(item.driverId)) {
+                return NextResponse.json(
+                    { error: `Kierowca o ID ${item.driverId} został podany więcej niż raz` },
+                    { status: 400 }
+                );
+            }
+            seenDriverIds.add(item.driverId);
+
             if (
                 !Number.isInteger(item.position) ||
                 item.position < 1 ||
@@ -84,6 +94,13 @@ export async function POST(
                     { status: 400 }
                 );
             }
+            if (seenPositions.has(item.position)) {
+                return NextResponse.json(
+                    { error: `Pozycja P${item.position} została przypisana więcej niż jednemu kierowcy` },
+                    { status: 400 }
+                );
+            }
+            seenPositions.add(item.position);
         }
 
         await prisma.$transaction(async (tx) => {

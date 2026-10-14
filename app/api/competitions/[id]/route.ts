@@ -132,6 +132,16 @@ export async function GET(
             }
         }
 
+        let hasMatchStarted = false;
+        if (footballSeason) {
+            for (const match of footballSeason.matches) {
+                if (new Date() >= new Date(match.kickoff)) {
+                    hasMatchStarted = true;
+                    break;
+                }
+            }
+        }
+
         return NextResponse.json({
             competition: {
                 id: competition.id,
@@ -152,7 +162,7 @@ export async function GET(
                 seasonPrediction: competition.type === "FOOTBALL"
                     ? competition.footballSeasons[0]?.seasonWinnerPredictions[0] || null
                     : competition.racingSeasons[0]?.seasonWinnerPredictions[0] || null,
-                hasMatchStarted: footballSeason?.hasMatchStarted || false,
+                hasMatchStarted: competition.type === "FOOTBALL" ? hasMatchStarted : hasSessionStarted,
                 winnerResolved: competition.winnerResolved,
             },
         });

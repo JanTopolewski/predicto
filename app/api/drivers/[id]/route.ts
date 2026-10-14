@@ -166,12 +166,44 @@ export async function DELETE(
 
         const driver = await prisma.driver.findUnique({
             where: { id },
+            include: {
+                _count: {
+                    select: {
+                        sessionParticipants: true,
+                        racingResults: true,
+                        wildcards: true,
+                        seasonWinnerPredictions: true,
+                        racingPredictionFirsts: true,
+                        racingPredictionSeconds: true,
+                        racingPredictionThirds: true,
+                    },
+                },
+            },
         });
 
         if (!driver) {
             return NextResponse.json(
                 { message: "Kierowca nie znaleziony" },
                 { status: 404 }
+            );
+        }
+
+        const isUsed =
+            driver._count.sessionParticipants > 0 ||
+            driver._count.racingResults > 0 ||
+            driver._count.wildcards > 0 ||
+            driver._count.seasonWinnerPredictions > 0 ||
+            driver._count.racingPredictionFirsts > 0 ||
+            driver._count.racingPredictionSeconds > 0 ||
+            driver._count.racingPredictionThirds > 0;
+
+        if (isUsed) {
+            return NextResponse.json(
+                {
+                    message:
+                        "Nie można usunąć kierowcy, który bierze udział w sesjach wyścigowych lub posiada przypisane wyniki/predykcje.",
+                },
+                { status: 409 }
             );
         }
 

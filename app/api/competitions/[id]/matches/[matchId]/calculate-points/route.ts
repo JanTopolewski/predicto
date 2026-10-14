@@ -88,6 +88,9 @@ export async function POST(
                 points = winnerPoints;
             }
 
+            const oldPoints = prediction.points || 0;
+            const pointsDiff = points - oldPoints;
+
             updates.push(
                 prisma.footballPrediction.update({
                     where: { id: prediction.id },
@@ -95,21 +98,23 @@ export async function POST(
                 })
             );
 
-            updates.push(
-                prisma.competitionMember.update({
-                    where: {
-                        competitionId_userId: {
-                            competitionId,
-                            userId: prediction.userId,
+            if (pointsDiff !== 0) {
+                updates.push(
+                    prisma.competitionMember.update({
+                        where: {
+                            competitionId_userId: {
+                                competitionId,
+                                userId: prediction.userId,
+                            },
                         },
-                    },
-                    data: {
-                        points: {
-                            increment: points,
+                        data: {
+                            points: {
+                                increment: pointsDiff,
+                            },
                         },
-                    },
-                })
-            );
+                    })
+                );
+            }
         }
 
         await Promise.all(updates);

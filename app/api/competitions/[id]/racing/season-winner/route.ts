@@ -113,6 +113,24 @@ export async function POST(
             );
         }
 
+        const isDriverInSeason = await prisma.racingSessionParticipant.findFirst({
+            where: {
+                driverId,
+                session: {
+                    weekend: {
+                        seasonId: racingSeason.id,
+                    },
+                },
+            },
+        });
+
+        if (!isDriverInSeason) {
+            return NextResponse.json(
+                { error: "Wybrany kierowca nie bierze udziału w sesjach tego sezonu" },
+                { status: 400 }
+            );
+        }
+
         const prediction =
             await prisma.racingSeasonWinnerPrediction.create({
                 data: {

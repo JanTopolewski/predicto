@@ -81,53 +81,78 @@ export async function POST(
             );
         }
 
+        const isDriverInSeason = await prisma.racingSessionParticipant.findFirst({
+            where: {
+                driverId,
+                session: {
+                    weekend: {
+                        seasonId: season.id,
+                    },
+                },
+            },
+        });
+
+        if (!isDriverInSeason) {
+            return NextResponse.json(
+                { error: "Wybrany kierowca nie bierze udziału w sesjach tego sezonu" },
+                { status: 400 }
+            );
+        }
+
         const scoringRules = await prisma.competitionScoring.findUnique({
             where: { competitionId },
         });
 
         const seasonWinnerPoints = scoringRules?.seasonWinnerPoints || 10;
-
-        const updates = [];
-
-        for (const prediction of season.seasonWinnerPredictions) {
-            if (prediction.driverId === driverId) {
-                updates.push(
-                    prisma.competitionMember.update({
-                        where: {
-                            competitionId_userId: {
-                                competitionId,
-                                userId: prediction.userId,
-                            },
-                        },
-                        data: {
-                            points: {
-                                increment: seasonWinnerPoints,
-                            },
-                        },
-                    })
-                );
-            }
-        }
-
-        updates.push(
-            prisma.competition.update({
-                where: { id: competitionId },
-                data: { winnerResolved: true },
-            })
+        const matchingPredictions = season.seasonWinnerPredictions.filter(
+            (p) => p.driverId === driverId
         );
 
-        await Promise.all(updates);
+        // Atomic guard & transaction: ensure only one request can set winnerResolved and award points
+        await prisma.$transaction(async (tx) => {
+            const updateResult = await tx.competition.updateMany({
+                where: {
+                    id: competitionId,
+                    winnerResolved: false,
+                },
+                data: { winnerResolved: true },
+            });
+
+            if (updateResult.count === 0) {
+                throw new Error("ALREADY_RESOLVED");
+            }
+
+            for (const prediction of matchingPredictions) {
+                await tx.competitionMember.update({
+                    where: {
+                        competitionId_userId: {
+                            competitionId,
+                            userId: prediction.userId,
+                        },
+                    },
+                    data: {
+                        points: {
+                            increment: seasonWinnerPoints,
+                        },
+                    },
+                });
+            }
+        });
 
         return NextResponse.json({
             message: "Season winner announced successfully",
             driverId,
             driverName: driver.name,
-            playersRewarded: season.seasonWinnerPredictions.filter(
-                (p) => p.driverId === driverId
-            ).length,
+            playersRewarded: matchingPredictions.length,
             pointsAwarded: seasonWinnerPoints,
         });
-    } catch (error) {
+    } catch (error: any) {
+        if (error?.message === "ALREADY_RESOLVED") {
+            return NextResponse.json(
+                { error: "Season winner already announced" },
+                { status: 400 }
+            );
+        }
         console.error("Error announcing season winner:", error);
         return NextResponse.json(
             { error: "Internal server error" },

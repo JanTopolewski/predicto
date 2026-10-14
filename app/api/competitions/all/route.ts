@@ -88,28 +88,31 @@ export async function GET(_request: NextRequest) {
         });
 
         const allCompetitions = [
-            ...competitionMembers.map((member) => ({
-                id: member.competition.id,
-                name: member.competition.name,
-                type: member.competition.type,
-                season: member.competition.season,
-                points: member.points,
-                memberCount: member.competition._count.members,
-                inviteCode: member.competition.inviteCode,
-                isPublic: member.competition.isPublic,
-                isMember: true,
-                createdBy: member.competition.createdBy,
-                canSeeInviteCode: false,
-                startDate: member.competition.startDate.toISOString(),
-                endDate: member.competition.endDate.toISOString(),
-            })),
+            ...competitionMembers.map((member) => {
+                const canSeeInviteCode = member.competition.createdBy === session.user.id;
+                return {
+                    id: member.competition.id,
+                    name: member.competition.name,
+                    type: member.competition.type,
+                    season: member.competition.season,
+                    points: member.points,
+                    memberCount: member.competition._count.members,
+                    inviteCode: canSeeInviteCode ? member.competition.inviteCode : null,
+                    isPublic: member.competition.isPublic,
+                    isMember: true,
+                    createdBy: member.competition.createdBy,
+                    canSeeInviteCode,
+                    startDate: member.competition.startDate.toISOString(),
+                    endDate: member.competition.endDate.toISOString(),
+                };
+            }),
             ...publicCompetitions.map((comp) => ({
                 id: comp.id,
                 name: comp.name,
                 type: comp.type,
                 season: comp.season,
                 memberCount: comp._count.members,
-                inviteCode: comp.inviteCode,
+                inviteCode: null,
                 isPublic: comp.isPublic,
                 isMember: false,
                 createdBy: comp.createdBy,

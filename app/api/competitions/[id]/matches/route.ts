@@ -97,13 +97,6 @@ export async function POST(
             },
         });
 
-        if (!footballSeason.hasMatchStarted) {
-            await prisma.footballSeason.update({
-                where: { id: footballSeason.id },
-                data: { hasMatchStarted: true },
-            });
-        }
-
         return NextResponse.json({ match }, { status: 201 });
     } catch (error) {
         console.error("Error creating match:", error);
@@ -122,6 +115,13 @@ export async function GET(
         const session = await auth();
         const competitionId = (await params).id;
 
+        if (!session?.user?.id) {
+            return NextResponse.json(
+                { error: "Unauthorized" },
+                { status: 401 }
+            );
+        }
+
         const competition = await prisma.competition.findUnique({
             where: { id: competitionId },
             include: {
@@ -133,7 +133,7 @@ export async function GET(
                                 awayTeam: true,
                                 predictions: {
                                     where: {
-                                        userId: session?.user?.id || "",
+                                        userId: session.user.id,
                                     },
                                 },
                             },
@@ -146,11 +146,33 @@ export async function GET(
             },
         });
 
-        if (!competition) {
+        if (!competition || competition.type !== "FOOTBALL") {
             return NextResponse.json(
-                { error: "Competition not found" },
+                { error: "Competition not found or is not a football competition" },
                 { status: 404 }
             );
+        }
+
+        // Allow if user is admin/owner of this competition OR a member
+        const isAdminOwner =
+            session.user.role === "ADMIN" && competition.createdBy === session.user.id;
+
+        if (!isAdminOwner) {
+            const member = await prisma.competitionMember.findUnique({
+                where: {
+                    competitionId_userId: {
+                        competitionId,
+                        userId: session.user.id,
+                    },
+                },
+            });
+
+            if (!member) {
+                return NextResponse.json(
+                    { error: "You are not a member of this competition" },
+                    { status: 403 }
+                );
+            }
         }
 
         const matches = competition.footballSeasons[0]?.matches || [];

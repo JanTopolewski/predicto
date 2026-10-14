@@ -59,7 +59,8 @@ export default function LoginPage() {
             }
 
             if (result?.ok) {
-                router.push("/dashboard");
+                const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+                router.push(callbackUrl);
             }
         } catch (_err) {
             setError("Coś poszło nie tak");
