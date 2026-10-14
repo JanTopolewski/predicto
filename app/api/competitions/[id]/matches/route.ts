@@ -71,7 +71,7 @@ export async function POST(
             );
         }
 
-        let footballSeason = competition.footballSeasons[0];
+        let footballSeason: { id: string } | undefined = competition.footballSeasons[0];
         if (!footballSeason) {
             footballSeason = await prisma.footballSeason.create({
                 data: {

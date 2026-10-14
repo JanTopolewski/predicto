@@ -77,7 +77,7 @@ export async function GET(
         }
 
         const footballSeason = competition.footballSeasons[0];
-        let allTeams = [];
+        let allTeams: Awaited<ReturnType<typeof prisma.team.findMany>> = [];
 
         if (footballSeason) {
             const teamIds = new Set<string>();
@@ -97,7 +97,7 @@ export async function GET(
         }
 
         const racingSeason = competition.racingSeasons[0];
-        let allDrivers = [];
+        let allDrivers: Awaited<ReturnType<typeof prisma.driver.findMany>> = [];
 
         if (racingSeason) {
             const driverIds = new Set<string>();
