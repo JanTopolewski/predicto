@@ -75,10 +75,7 @@ export async function POST(
             orderBy: { kickoff: "asc" },
         });
 
-        if (
-            footballSeason.hasMatchStarted ||
-            (earliestMatch && new Date() >= new Date(earliestMatch.kickoff))
-        ) {
+        if (earliestMatch && new Date() >= new Date(earliestMatch.kickoff)) {
             return NextResponse.json(
                 { error: "Pierwszy mecz sezonu już się rozpoczął. Nie można już typować zwycięzcy." },
                 { status: 400 }

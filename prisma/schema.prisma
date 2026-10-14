@@ -139,7 +139,6 @@ model FootballSeason {
   id              String   @id @default(cuid())
   competitionId   String
   createdAt       DateTime @default(now())
-  hasMatchStarted Boolean  @default(false)
 
   competition             Competition                      @relation(fields: [competitionId], references: [id], onDelete: Cascade)
   matches                 FootballMatch[]
