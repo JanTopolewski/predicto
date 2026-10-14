@@ -4,7 +4,8 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Team, Driver } from "@/types/team";
+import { Team } from "@/types/team";
+import { Driver } from "@/types/driver";
 
 type EntityType = "team" | "driver";
 

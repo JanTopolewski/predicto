@@ -28,28 +28,13 @@ interface Driver {
     number: number;
 }
 
-interface FootballSeasonPrediction {
-    id: string;
-    teamId?: string | null;
-    team?: Team | null;
-    driver?: never;
-    driverId?: never;
-}
-interface RacingSeasonPrediction {
-    id: string;
-    driverId?: string | null;
-    driver?: Driver | null;
-    team?: never;
-    teamId?: never;
-}
-type SeasonPrediction = FootballSeasonPrediction | RacingSeasonPrediction | {
+interface SeasonPrediction {
     id: string;
     teamId?: string | null;
     driverId?: string | null;
     team?: Team | null;
     driver?: Driver | null;
-    [key: string]: any;
-};
+}
 
 interface CompetitionDetail {
     id: string;
@@ -355,8 +340,8 @@ export default function CompetitionDetailPage() {
                     </h3>
                     <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
                         ✓ Wybrałeś: {competition.type === "FOOTBALL" 
-                            ? (competition.seasonPrediction as any)?.team?.name 
-                            : `${(competition.seasonPrediction as any)?.driver?.name} (#${(competition.seasonPrediction as any)?.driver?.number})`}
+                            ? competition.seasonPrediction.team?.name 
+                            : `${competition.seasonPrediction.driver?.name} (#${competition.seasonPrediction.driver?.number})`}
                     </p>
                     <p className="text-xs text-zinc-500 mt-1">Głos został zarejestrowany i nie można go modyfikować.</p>
                 </div>

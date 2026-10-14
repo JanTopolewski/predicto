@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import { Driver } from "@/types/team";
+import { Driver } from "@/types/driver";
 
 export default function EditDriverPage() {
     const { data: session } = useSession();
