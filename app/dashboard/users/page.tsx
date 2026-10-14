@@ -159,7 +159,9 @@ export default function UsersPage() {
             });
 
             const data = await response.json();
-setError(data.message || "Błąd podczas zmiany hasła użytkownika");
+            if (!response.ok) {
+                setError(data.message || "Błąd podczas zmiany hasła użytkownika");
+                return;
             }
 
             if (data.user) {
