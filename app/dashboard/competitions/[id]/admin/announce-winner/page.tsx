@@ -1,0 +1,181 @@
+"use client";
+
+import React, { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import Link from "next/link";
+
+interface Team {
+    id: string;
+    name: string;
+}
+
+interface CompetitionDetail {
+    id: string;
+    name: string;
+    type: string;
+    allTeams: Team[];
+}
+
+export default function AnnounceWinnerPage() {
+    const params = useParams();
+    const router = useRouter();
+    const { data: session } = useSession();
+    const [competition, setCompetition] = useState<CompetitionDetail | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+    const [selectedTeamId, setSelectedTeamId] = useState("");
+    const [announcing, setAnnouncing] = useState(false);
+
+    const competitionId = params.id as string;
+
+    useEffect(() => {
+        const fetchCompetition = async () => {
+            try {
+                setLoading(true);
+                const response = await fetch(`/api/competitions/${competitionId}`);
+
+                if (!response.ok) {
+                    throw new Error("Nie można pobrać konkurencji");
+                }
+
+                const data = await response.json();
+                setCompetition(data.competition);
+            } catch (err) {
+                setError("Błąd podczas pobierania konkurencji");
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        void fetchCompetition();
+    }, [competitionId]);
+
+    const handleAnnounceWinner = async () => {
+        if (!selectedTeamId) {
+            setError("Wybierz drużynę");
+            return;
+        }
+
+        setError("");
+        setAnnouncing(true);
+
+        try {
+            const response = await fetch(
+                `/api/competitions/${competitionId}/football/season-winner/announce`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ winningTeamId: selectedTeamId }),
+                }
+            );
+
+            if (!response.ok) {
+                const data = await response.json();
+                setError(data.error || "Błąd podczas ogłaszania zwycięzcy");
+                setAnnouncing(false);
+                return;
+            }
+
+            setTimeout(() => {
+                router.push(`/dashboard/competitions/${competitionId}`);
+            }, 1000);
+        } catch (err) {
+            setError("Błąd podczas ogłaszania zwycięzcy");
+            console.error(err);
+            setAnnouncing(false);
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <p className="text-zinc-600 dark:text-zinc-400">Ładowanie konkurencji...</p>
+            </div>
+        );
+    }
+
+    if (error || !competition) {
+        return (
+            <div className="space-y-4">
+                <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                    <p className="text-sm text-red-700 dark:text-red-400">
+                        {error || "Nie znaleziono konkurencji"}
+                    </p>
+                </div>
+                <Link
+                    href={`/dashboard/competitions/${competitionId}`}
+                    className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
+                >
+                    Wróć
+                </Link>
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-6">
+            {/* Header */}
+            <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 sm:p-8 border border-zinc-200 dark:border-zinc-800">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white">
+                            🏆 Ogłoś zwycięzcę sezonu
+                        </h2>
+                        <p className="text-sm sm:text-base text-zinc-600 dark:text-zinc-400 mt-2">
+                            {competition.name}
+                        </p>
+                    </div>
+                    <Link
+                        href={`/dashboard/competitions/${competitionId}`}
+                        className="px-4 sm:px-6 py-2.5 sm:py-2 bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-900 dark:text-white font-medium rounded-lg transition-colors text-center text-sm sm:text-base"
+                    >
+                        Wróć
+                    </Link>
+                </div>
+            </div>
+
+            {/* Error Message */}
+            {error && (
+                <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                    <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
+                </div>
+            )}
+
+            {/* Form */}
+            <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800">
+                <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-4">
+                    Wybierz drużynę, która wygra sezon
+                </h3>
+
+                <div className="mb-6">
+                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
+                        Drużyna
+                    </label>
+                    <select
+                        value={selectedTeamId}
+                        onChange={(e) => setSelectedTeamId(e.target.value)}
+                        disabled={announcing}
+                        className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                        <option value="">Wybierz drużynę...</option>
+                        {competition.allTeams.map((team) => (
+                            <option key={team.id} value={team.id}>
+                                {team.name}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
+                <button
+                    onClick={handleAnnounceWinner}
+                    disabled={announcing || !selectedTeamId}
+                    className="w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {announcing ? "Ogłaszanie..." : "🏆 Ogłoś zwycięzcę"}
+                </button>
+            </div>
+        </div>
+    );
+}
