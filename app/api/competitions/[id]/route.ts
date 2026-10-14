@@ -162,7 +162,7 @@ export async function GET(
                 seasonPrediction: competition.type === "FOOTBALL"
                     ? competition.footballSeasons[0]?.seasonWinnerPredictions[0] || null
                     : competition.racingSeasons[0]?.seasonWinnerPredictions[0] || null,
-                hasMatchStarted: competition.type === "FOOTBALL" ? hasMatchStarted : hasSessionStarted,
+                hasStarted: competition.type === "FOOTBALL" ? hasMatchStarted : hasSessionStarted,
                 winnerResolved: competition.winnerResolved,
             },
         });

@@ -68,7 +68,7 @@ interface CompetitionDetail {
     allTeams: Team[];
     allDrivers: Driver[];
     seasonPrediction: SeasonPrediction | null;
-    hasMatchStarted: boolean;
+    hasStarted: boolean;
     winnerResolved: boolean;
 }
 
@@ -292,10 +292,10 @@ export default function CompetitionDetailPage() {
             </div>
 
             {/* Season Winner Prediction - For members and if first match/session didn't start */}
-            {isMember && !isAdmin && !competition.hasMatchStarted && !competition.winnerResolved && !competition.seasonPrediction && (
+            {isMember && !isAdmin && !competition.hasStarted && !competition.winnerResolved && !competition.seasonPrediction && (
                 <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800">
                     <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-4">
-                        {competition.type === "FOOTBALL" ? "🏆 Obstawiaj zwycięzcę sezonu" : "🏆 Obstawiaj zwycięzcę sezonu"}
+                        🏆 Obstawiaj zwycięzcę sezonu
                     </h3>
                     <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
                         {competition.type === "FOOTBALL"
@@ -362,7 +362,7 @@ export default function CompetitionDetailPage() {
                 </div>
             )}
 
-            {isMember && competition.hasMatchStarted && !competition.seasonPrediction && (
+            {isMember && competition.hasStarted && !competition.seasonPrediction && (
                 <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
                     <p className="text-sm text-yellow-800 dark:text-yellow-300">
                         {competition.type === "FOOTBALL"
