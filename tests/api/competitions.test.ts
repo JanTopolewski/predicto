@@ -8,21 +8,21 @@ import { asAdmin, asAnon, asUser, ctx, db, jsonReq } from "../helpers";
 const byId = () => joinById(jsonReq(undefined), ctx({ id: "c1" }));
 const byCode = (body: unknown) => joinByCode(jsonReq(body));
 
-describe("dołączanie do konkurencji", () => {
-    it("401 bez sesji", async () => {
+describe("joining a competition", () => {
+    it("returns 401 without a session", async () => {
         asAnon();
         expect((await byId()).status).toBe(401);
         expect((await byCode({ inviteCode: "ABC" })).status).toBe(401);
     });
 
-    it("SECURITY: prywatnej konkurencji nie można dołączyć przez id (tylko kodem)", async () => {
+    it("SECURITY: a private competition cannot be joined by id (invite code only)", async () => {
         asUser();
         db.competition.findUnique.mockResolvedValue({ id: "c1", isPublic: false });
         expect((await byId()).status).toBe(403);
         expect(db.competitionMember.create).not.toHaveBeenCalled();
     });
 
-    it("publiczna: dołącza z 0 punktów, a ponowne dołączenie to 409", async () => {
+    it("public: joins with 0 points, joining again returns 409", async () => {
         asUser("user1");
         db.competition.findUnique.mockResolvedValue({ id: "c1", isPublic: true });
         db.competitionMember.findUnique.mockResolvedValue(null);
@@ -37,13 +37,13 @@ describe("dołączanie do konkurencji", () => {
         expect((await byId()).status).toBe(409);
     });
 
-    it("404 dla nieistniejącej konkurencji", async () => {
+    it("returns 404 for a non-existent competition", async () => {
         asUser();
         db.competition.findUnique.mockResolvedValue(null);
         expect((await byId()).status).toBe(404);
     });
 
-    it("kod zaproszenia jest niewrażliwy na wielkość liter", async () => {
+    it("the invite code is case-insensitive", async () => {
         asUser();
         db.competition.findUnique.mockResolvedValue({ id: "c1" });
         db.competitionMember.findUnique.mockResolvedValue(null);
@@ -51,33 +51,33 @@ describe("dołączanie do konkurencji", () => {
         expect(db.competition.findUnique.mock.calls[0][0].where).toEqual({ inviteCode: "ABC123" });
     });
 
-    it("zły kod => 404, brak kodu => 400", async () => {
+    it("wrong code => 404, missing code => 400", async () => {
         asUser();
         db.competition.findUnique.mockResolvedValue(null);
         expect((await byCode({ inviteCode: "ZLY" })).status).toBe(404);
         expect((await byCode({})).status).toBe(400);
     });
 
-    // BUG: inviteCode niebędący stringiem rzuca TypeError (.toUpperCase) -> 500 zamiast 400.
-    it.fails("BUG: inviteCode nie-string daje 400", async () => {
+    // BUG: a non-string inviteCode throws a TypeError (.toUpperCase) -> 500 instead of 400.
+    it.fails("BUG: a non-string inviteCode returns 400", async () => {
         asUser();
         expect((await byCode({ inviteCode: { $ne: "" } })).status).toBe(400);
     });
 });
 
-describe("GET /api/competitions/[id] - izolacja danych", () => {
+describe("GET /api/competitions/[id] - data isolation", () => {
     const comp = (over = {}) => ({
         id: "c1",
         type: "FOOTBALL",
         createdBy: "owner",
-        members: [{ userId: "member1", points: 5, user: { username: "m", passwordHash: "SEKRET" } }],
+        members: [{ userId: "member1", points: 5, user: { username: "Łukasz", passwordHash: "SEKRET" } }],
         footballSeasons: [],
         racingSeasons: [],
         ...over,
     });
     const get = () => getCompetition(jsonReq(undefined, "GET") as never, ctx({ id: "c1" }));
 
-    it("403 dla anonima i dla nie-członka", async () => {
+    it("returns 403 for anonymous and for a non-member", async () => {
         db.competition.findUnique.mockResolvedValue(comp());
         asAnon();
         expect((await get()).status).toBe(403);
@@ -85,7 +85,7 @@ describe("GET /api/competitions/[id] - izolacja danych", () => {
         expect((await get()).status).toBe(403);
     });
 
-    it("członek widzi ranking, ale bez wrażliwych pól użytkowników", async () => {
+    it("a member sees the ranking but no sensitive user fields", async () => {
         db.competition.findUnique.mockResolvedValue(comp());
         asUser("member1");
         const res = await get();
@@ -99,7 +99,7 @@ describe("GET /api/competitions/[id] - izolacja danych", () => {
 describe("DELETE /api/competitions/[id]/delete", () => {
     const del = () => deleteCompetition(jsonReq(undefined, "DELETE") as never, ctx({ id: "c1" }));
 
-    it("403: anonim, user, obcy admin", async () => {
+    it("returns 403: anonymous, regular user, foreign admin", async () => {
         asAnon();
         expect((await del()).status).toBe(403);
         asUser("owner");
@@ -110,11 +110,10 @@ describe("DELETE /api/competitions/[id]/delete", () => {
         expect(db.competition.delete).not.toHaveBeenCalled();
     });
 
-    it("twórca-admin usuwa konkurencję", async () => {
+    it("the creator-admin deletes the competition", async () => {
         asAdmin("owner");
         db.competition.findUnique.mockResolvedValue({ id: "c1", createdBy: "owner" });
         expect((await del()).status).toBe(200);
         expect(db.competition.delete).toHaveBeenCalledWith({ where: { id: "c1" } });
     });
 });
-

@@ -32,7 +32,7 @@ describe("racing season-winner announce", () => {
         db.competition.updateMany.mockResolvedValue({ count: 1 });
     }
 
-    it("403: anonim, user, obcy admin", async () => {
+    it("returns 403: anonymous, regular user, foreign admin", async () => {
         asAnon();
         expect((await call()).status).toBe(403);
         asUser();
@@ -43,7 +43,7 @@ describe("racing season-winner announce", () => {
         expect(db.competitionMember.update).not.toHaveBeenCalled();
     });
 
-    it("nagradza dokładnie tych, którzy trafili zwycięzcę (domyślnie 10 pkt)", async () => {
+    it("rewards exactly those who guessed the winner (default 10 pts)", async () => {
         setup();
         const res = await call();
         expect(res.status).toBe(200);
@@ -52,21 +52,21 @@ describe("racing season-winner announce", () => {
         expect(updates.every((u) => u.data.points.increment === 10)).toBe(true);
     });
 
-    it("400 przy ponownym ogłoszeniu (flaga winnerResolved)", async () => {
+    it("returns 400 on a repeated announcement (winnerResolved flag)", async () => {
         setup({ winnerResolved: true });
         expect((await call()).status).toBe(400);
         expect(db.competitionMember.update).not.toHaveBeenCalled();
     });
 
-    it("wyścig równoległych żądań: przegrany request nie dolicza punktów drugi raz", async () => {
+    it("concurrent requests: the losing request does not award points a second time", async () => {
         setup();
-        db.competition.updateMany.mockResolvedValue({ count: 0 }); // ktoś był pierwszy
+        db.competition.updateMany.mockResolvedValue({ count: 0 }); // someone else was first
         const res = await call();
         expect(res.status).toBe(400);
         expect(db.competitionMember.update).not.toHaveBeenCalled();
     });
 
-    it("400 gdy kierowca nie jedzie w tym sezonie, 400 bez driverId", async () => {
+    it("returns 400 when the driver is not in this season / without driverId", async () => {
         setup();
         db.racingSessionParticipant.findFirst.mockResolvedValue(null);
         expect((await call()).status).toBe(400);
@@ -87,17 +87,17 @@ describe("racing session results (admin)", () => {
         });
     }
 
-    it("403 dla nie-admina", async () => {
+    it("returns 403 for a non-admin", async () => {
         asUser();
         expect((await call({ results: [{ driverId: "A", position: 1 }] })).status).toBe(403);
     });
 
     it.each([
-        ["brak wyników", { results: [] }],
-        ["nie-tablica", { results: "A" }],
-        ["kierowca spoza sesji", { results: [{ driverId: "Z", position: 1 }] }],
+        ["no results", { results: [] }],
+        ["not an array", { results: "A" }],
+        ["driver not in the session", { results: [{ driverId: "Z", position: 1 }] }],
         [
-            "duplikat kierowcy",
+            "duplicate driver",
             {
                 results: [
                     { driverId: "A", position: 1 },
@@ -106,7 +106,7 @@ describe("racing session results (admin)", () => {
             },
         ],
         [
-            "duplikat pozycji",
+            "duplicate position",
             {
                 results: [
                     { driverId: "A", position: 1 },
@@ -114,17 +114,17 @@ describe("racing session results (admin)", () => {
                 ],
             },
         ],
-        ["pozycja 0", { results: [{ driverId: "A", position: 0 }] }],
-        ["pozycja > liczba kierowców", { results: [{ driverId: "A", position: 4 }] }],
-        ["pozycja ułamkowa", { results: [{ driverId: "A", position: 1.5 }] }],
-    ])("400: %s - nic nie jest zapisane", async (_n, body) => {
+        ["position 0", { results: [{ driverId: "A", position: 0 }] }],
+        ["position above the driver count", { results: [{ driverId: "A", position: 4 }] }],
+        ["fractional position", { results: [{ driverId: "A", position: 1.5 }] }],
+    ])("returns 400: %s - nothing is saved", async (_n, body) => {
         setup();
         expect((await call(body)).status).toBe(400);
         expect(db.racingResult.createMany).not.toHaveBeenCalled();
         expect(db.racingResult.deleteMany).not.toHaveBeenCalled();
     });
 
-    it("zapisuje wyniki w transakcji (zastępuje stare) i zamyka głosowanie", async () => {
+    it("saves results in a transaction (replacing old ones) and closes voting", async () => {
         setup();
         const res = await call({
             results: [
@@ -141,4 +141,3 @@ describe("racing session results (admin)", () => {
         expect(calls(db.racingSession.update)[0].data.votingClosedAt).toBeInstanceOf(Date);
     });
 });
-

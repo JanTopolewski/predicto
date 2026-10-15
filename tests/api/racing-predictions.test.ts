@@ -26,23 +26,23 @@ const ok = { firstDriver: "A", secondDriver: "B", thirdDriver: "C" };
 const upserted = () => db.racingPrediction.upsert.mock.calls[0][0];
 
 describe("POST racing predictions", () => {
-    it("401 bez sesji", async () => {
+    it("returns 401 without a session", async () => {
         asAnon();
         expect((await call(ok)).status).toBe(401);
     });
 
-    it("403 dla nie-członka", async () => {
+    it("returns 403 for a non-member", async () => {
         setup();
         db.competitionMember.findUnique.mockResolvedValue(null);
         expect((await call(ok)).status).toBe(403);
     });
 
-    it("404 dla sesji z innej konkurencji", async () => {
+    it("returns 404 for a session from another competition", async () => {
         setup({ weekend: { season: { competition: { id: "inna" } } } });
         expect((await call(ok)).status).toBe(404);
     });
 
-    it("zapisuje poprawne podium dla użytkownika z sesji", async () => {
+    it("saves a valid podium for the session user", async () => {
         setup();
         expect((await call(ok)).status).toBe(201);
         expect(upserted().create).toMatchObject({
@@ -54,38 +54,38 @@ describe("POST racing predictions", () => {
     });
 
     it.each([
-        ["rozliczona sesja", { resolved: true }],
-        ["rozpoczęta sesja", { startTime: PAST() }],
-        ["zamknięte głosowanie", { votingClosedAt: PAST() }],
-    ])("400: %s", async (_n, over) => {
+        ["resolved session", { resolved: true }],
+        ["started session", { startTime: PAST() }],
+        ["closed voting", { votingClosedAt: PAST() }],
+    ])("returns 400: %s", async (_n, over) => {
         setup(over);
         expect((await call(ok)).status).toBe(400);
         expect(db.racingPrediction.upsert).not.toHaveBeenCalled();
     });
 
     it.each([
-        ["niekompletne podium", { firstDriver: "A", secondDriver: "B" }],
-        ["ten sam kierowca dwa razy", { firstDriver: "A", secondDriver: "A", thirdDriver: "C" }],
-        ["kierowca spoza sesji", { firstDriver: "A", secondDriver: "B", thirdDriver: "ZZZ" }],
-        ["pusty typ", {}],
-        ["wildcard poza zakresem (0 → brak, 5 > liczba kierowców)", { wildcardPosition: 5 }],
-        ["wildcard ułamkowy", { wildcardPosition: 1.5 }],
-        ["wildcard ujemny", { wildcardPosition: -1 }],
-        ["wildcard jako string", { wildcardPosition: "2" }],
-    ])("400: %s", async (_n, body) => {
+        ["incomplete podium", { firstDriver: "A", secondDriver: "B" }],
+        ["same driver twice", { firstDriver: "A", secondDriver: "A", thirdDriver: "C" }],
+        ["driver not in the session", { firstDriver: "A", secondDriver: "B", thirdDriver: "ZZZ" }],
+        ["empty prediction", {}],
+        ["wildcard position above the driver count", { wildcardPosition: 5 }],
+        ["fractional wildcard position", { wildcardPosition: 1.5 }],
+        ["negative wildcard position", { wildcardPosition: -1 }],
+        ["wildcard position as a string", { wildcardPosition: "2" }],
+    ])("returns 400: %s", async (_n, body) => {
         setup();
         expect((await call(body)).status).toBe(400);
         expect(db.racingPrediction.upsert).not.toHaveBeenCalled();
     });
 
-    it("kierowca wildcard pochodzi z sesji (ustawia admin), nie z body", async () => {
+    it("takes the wildcard driver from the session (admin-chosen), not from the body", async () => {
         setup();
         await call({ ...ok, wildcardPosition: 2, wildcardDriver: "A", wildcardDriverId: "A" });
         expect(upserted().create.wildcardDriverId).toBe("D");
         expect(upserted().create.wildcardPosition).toBe(2);
     });
 
-    it("sesja bez podium (kwalifikacje): pola podium są zerowane, wildcard działa", async () => {
+    it("non-podium session (qualifying): podium fields are nulled, wildcard works", async () => {
         setup({ type: "QUALIFYING" });
         expect((await call({ ...ok, wildcardPosition: 3 })).status).toBe(201);
         expect(upserted().create).toMatchObject({
@@ -96,9 +96,8 @@ describe("POST racing predictions", () => {
         });
     });
 
-    it("kwalifikacje: samo podium bez wildcard jest odrzucone", async () => {
+    it("qualifying: a podium without a wildcard is rejected", async () => {
         setup({ type: "QUALIFYING" });
         expect((await call(ok)).status).toBe(400);
     });
 });
-

@@ -34,16 +34,16 @@ const pred = (homeGoals: number, awayGoals: number, points = 0): P => ({
 
 const awarded = () => calls(db.footballPrediction.update)[0]?.data.points;
 
-describe("football calculate-points: reguły punktacji", () => {
+describe("football calculate-points: scoring rules", () => {
     it.each([
-        // wynik 2:1
-        [2, 1, 3, "dokładny wynik"],
-        [3, 0, 1, "trafiony zwycięzca gospodarzy"],
-        [1, 0, 1, "trafiony zwycięzca gospodarzy"],
-        [0, 0, 0, "remis przy zwycięstwie gospodarzy"],
-        [1, 2, 0, "zwycięzca przeciwny"],
-        [0, 3, 0, "zwycięzca przeciwny"],
-    ])("wynik 2:1, typ %i:%i => %i pkt (%s)", async (h, a, expected) => {
+        // actual result 2:1
+        [2, 1, 3, "exact score"],
+        [3, 0, 1, "correct home win"],
+        [1, 0, 1, "correct home win"],
+        [0, 0, 0, "draw predicted for a home win"],
+        [1, 2, 0, "opposite winner"],
+        [0, 3, 0, "opposite winner"],
+    ])("actual 2:1, prediction %i:%i => %i pts (%s)", async (h, a, expected) => {
         setup({ homeGoals: 2, awayGoals: 1 }, [pred(h, a)]);
         await call();
         expect(awarded()).toBe(expected);
@@ -55,58 +55,58 @@ describe("football calculate-points: reguły punktacji", () => {
         [3, 3, 1],
         [1, 0, 0],
         [0, 1, 0],
-    ])("wynik 1:1 (remis), typ %i:%i => %i pkt", async (h, a, expected) => {
+    ])("actual 1:1 (draw), prediction %i:%i => %i pts", async (h, a, expected) => {
         setup({ homeGoals: 1, awayGoals: 1 }, [pred(h, a)]);
         await call();
         expect(awarded()).toBe(expected);
     });
 
-    it("0:0 trafione dokładnie daje exact, nie exact+winner", async () => {
+    it("an exact 0:0 gives exact points, not exact + winner", async () => {
         setup({ homeGoals: 0, awayGoals: 0 }, [pred(0, 0)]);
         await call();
         expect(awarded()).toBe(3);
     });
 
-    it("używa reguł punktacji konkurencji", async () => {
+    it("uses the competition's scoring rules", async () => {
         setup({ homeGoals: 2, awayGoals: 1 }, [pred(2, 1)], { exactScorePoints: 7, winnerPoints: 4 });
         await call();
         expect(awarded()).toBe(7);
     });
 
-    // BUG: `scoringRules?.x || 3` - wartość 0 jest traktowana jak brak i zamieniana na domyślną.
-    it.fails("BUG: skonfigurowane 0 pkt za zwycięzcę nie wraca do domyślnej 1", async () => {
+    // BUG: `scoringRules?.x || 3` - a configured 0 is treated as missing and replaced by the default.
+    it.fails("BUG: configured 0 winner points does not fall back to the default 1", async () => {
         setup({ homeGoals: 2, awayGoals: 1 }, [pred(3, 0)], { exactScorePoints: 3, winnerPoints: 0 });
         await call();
         expect(awarded()).toBe(0);
     });
 });
 
-describe("football calculate-points: ranking użytkowników (CompetitionMember.points)", () => {
+describe("football calculate-points: member ranking (CompetitionMember.points)", () => {
     const memberIncrements = () =>
         calls(db.competitionMember.update).map((c) => c.data.points.increment);
 
-    it("dolicza punkty do członka", async () => {
+    it("adds points to the member", async () => {
         setup({ homeGoals: 2, awayGoals: 1 }, [pred(2, 1)]);
         await call();
         expect(memberIncrements()).toEqual([3]);
     });
 
-    it("ponowne przeliczenie jest idempotentne (brak podwójnego naliczenia)", async () => {
+    it("recalculation is idempotent (no double-counting)", async () => {
         setup({ homeGoals: 2, awayGoals: 1 }, [pred(2, 1, 3)]);
         await call();
         expect(db.competitionMember.update).not.toHaveBeenCalled();
     });
 
-    it("po korekcie wyniku odejmuje wcześniej przyznane punkty", async () => {
-        // admin poprawił wynik na 0:0, wcześniej typ 2:1 dostał 3 pkt
+    it("subtracts previously awarded points after a result correction", async () => {
+        // admin corrected the result to 0:0, the 2:1 prediction previously got 3 pts
         setup({ homeGoals: 0, awayGoals: 0 }, [pred(2, 1, 3)]);
         await call();
         expect(memberIncrements()).toEqual([-3]);
     });
 });
 
-describe("football calculate-points: autoryzacja i stan", () => {
-    it("403 bez sesji / dla zwykłego użytkownika", async () => {
+describe("football calculate-points: authorization and state", () => {
+    it("returns 403 without a session / for a regular user", async () => {
         asAnon();
         expect((await call()).status).toBe(403);
         asUser();
@@ -114,21 +114,21 @@ describe("football calculate-points: autoryzacja i stan", () => {
         expect(db.footballMatch.findUnique).not.toHaveBeenCalled();
     });
 
-    it("403 dla admina, który nie jest twórcą konkurencji", async () => {
+    it("returns 403 for an admin who is not the competition creator", async () => {
         setup({ homeGoals: 1, awayGoals: 0 }, [pred(1, 0)]);
         asAdmin("inny-admin");
         expect((await call()).status).toBe(403);
         expect(db.footballPrediction.update).not.toHaveBeenCalled();
     });
 
-    it("404 gdy mecz z innej konkurencji", async () => {
+    it("returns 404 when the match belongs to another competition", async () => {
         setup({ homeGoals: 1, awayGoals: 0 }, [], null, {
             season: { competitionId: "inna", competition: { createdBy: "admin1" } },
         });
         expect((await call()).status).toBe(404);
     });
 
-    it("400 gdy wynik nie został ustawiony", async () => {
+    it("returns 400 when the result has not been set", async () => {
         setup({ homeGoals: null, awayGoals: null, resolved: false }, [pred(1, 0)], null, {
             resolved: false,
         });
@@ -136,4 +136,3 @@ describe("football calculate-points: autoryzacja i stan", () => {
         expect(db.footballPrediction.update).not.toHaveBeenCalled();
     });
 });
-

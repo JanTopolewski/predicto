@@ -4,7 +4,7 @@ import { asAdmin, asAnon, asUser, calls, ctx, db } from "../helpers";
 
 const call = () => POST(new Request("http://x") as never, ctx({ id: "c1", sessionId: "s1" }));
 
-// Wynik: A=P1, B=P2, C=P3, D=P4
+// Result: A=P1, B=P2, C=P3, D=P4
 const RESULTS = ["A", "B", "C", "D"].map((driverId, i) => ({ driverId, position: i + 1 }));
 
 type Pred = Partial<{
@@ -40,25 +40,25 @@ const awarded = () => calls(db.racingPrediction.update)[0].data.points;
 
 describe("racing calculate-points: podium (RACE / SPRINT)", () => {
     it.each([
-        ["A", "B", "C", 9, "komplet dokładnie"],
-        ["A", "B", "D", 6, "2 dokładnie, 3. poza podium"],
-        ["B", "A", "C", 5, "zamienione P1/P2 (1+1) + P3 dokładnie (3)"],
-        ["D", "A", "B", 2, "kierowca z podium na złym miejscu liczy się, P4 nie"],
-        ["D", "X", "Y", 0, "nic nie trafione"],
-    ])("typ %s-%s-%s => %i pkt (%s)", async (a, b, c, expected) => {
+        ["A", "B", "C", 9, "all three exact"],
+        ["A", "B", "D", 6, "two exact, third outside the podium"],
+        ["B", "A", "C", 5, "P1/P2 swapped (1+1) + P3 exact (3)"],
+        ["D", "A", "B", 2, "podium drivers in wrong places count, P4 does not"],
+        ["D", "X", "Y", 0, "nothing correct"],
+    ])("prediction %s-%s-%s => %i pts (%s)", async (a, b, c, expected) => {
         setup([podium(a, b, c)]);
         await call();
         expect(awarded()).toBe(expected);
     });
 
-    it("SPRINT jest punktowany jak wyścig", async () => {
+    it("SPRINT is scored like a race", async () => {
         setup([podium("A", "B", "C")], { type: "SPRINT" });
         await call();
         expect(awarded()).toBe(9);
     });
 
     it.each(["QUALIFYING", "PRACTICE1", "SPRINT_QUALIFYING"])(
-        "%s ignoruje podium (tylko wildcard)",
+        "%s ignores the podium (wildcard only)",
         async (type) => {
             setup([podium("A", "B", "C")], { type });
             await call();
@@ -66,13 +66,13 @@ describe("racing calculate-points: podium (RACE / SPRINT)", () => {
         }
     );
 
-    it("niekompletne podium nie daje punktów", async () => {
+    it("an incomplete podium gives no points", async () => {
         setup([{ firstDriverId: "A", secondDriverId: "B" }]);
         await call();
         expect(awarded()).toBe(0);
     });
 
-    it("używa reguł punktacji konkurencji", async () => {
+    it("uses the competition's scoring rules", async () => {
         setup([podium("A", "B", "C")], { rules: { podiumExactPoints: 5, podiumAnyPoints: 2 } });
         await call();
         expect(awarded()).toBe(15);
@@ -81,30 +81,30 @@ describe("racing calculate-points: podium (RACE / SPRINT)", () => {
 
 describe("racing calculate-points: wildcard", () => {
     it.each([
-        [4, 2, "dokładna pozycja"],
-        [2, 1, "różnica 2 miejsc => połowa"],
-        [6, 1, "różnica 2 miejsc w drugą stronę"],
-        [1, 0, "różnica 3 miejsc"],
-    ])("D jest P4, typ pozycji %i => %i pkt (%s)", async (wildcardPosition, expected) => {
+        [4, 2, "exact position"],
+        [2, 1, "off by 2 => half points"],
+        [6, 1, "off by 2 in the other direction"],
+        [1, 0, "off by 3"],
+    ])("D finishes P4, predicted position %i => %i pts (%s)", async (wildcardPosition, expected) => {
         setup([{ wildcardDriverId: "D", wildcardPosition }], { type: "QUALIFYING" });
         await call();
         expect(awarded()).toBe(expected);
     });
 
-    it("kierowca bez wyniku (nie ukończył) nie daje punktów", async () => {
+    it("a driver without a result (did not finish) gives no points", async () => {
         setup([{ wildcardDriverId: "Z", wildcardPosition: 4 }], { type: "QUALIFYING" });
         await call();
         expect(awarded()).toBe(0);
     });
 
-    it("podium + wildcard sumują się", async () => {
+    it("podium and wildcard points add up", async () => {
         setup([{ ...podium("A", "B", "C"), wildcardDriverId: "D", wildcardPosition: 4 }]);
         await call();
         expect(awarded()).toBe(11);
     });
 
-    // BUG: `|| 2` zamienia skonfigurowane 0 na domyślne 2.
-    it.fails("BUG: wildcardPoints=0 nie wraca do domyślnej 2", async () => {
+    // BUG: `|| 2` replaces a configured 0 with the default 2.
+    it.fails("BUG: wildcardPoints=0 does not fall back to the default 2", async () => {
         setup([{ wildcardDriverId: "D", wildcardPosition: 4 }], {
             type: "QUALIFYING",
             rules: { wildcardPoints: 0 },
@@ -114,27 +114,27 @@ describe("racing calculate-points: wildcard", () => {
     });
 });
 
-describe("racing calculate-points: stan i autoryzacja", () => {
-    it("oznacza sesję jako rozliczoną i dolicza punkty członkom", async () => {
+describe("racing calculate-points: state and authorization", () => {
+    it("marks the session as resolved and adds points to members", async () => {
         setup([podium("A", "B", "C")]);
         await call();
         expect(calls(db.racingSession.update)[0].data).toEqual({ resolved: true });
         expect(calls(db.competitionMember.update)[0].data.points.increment).toBe(9);
     });
 
-    it("jest idempotentne - brak zmian rankingu przy ponownym przeliczeniu", async () => {
+    it("is idempotent - no ranking change on recalculation", async () => {
         setup([{ ...podium("A", "B", "C"), points: 9 }]);
         await call();
         expect(db.competitionMember.update).not.toHaveBeenCalled();
     });
 
-    it("400 gdy brak wyników", async () => {
+    it("returns 400 when there are no results", async () => {
         setup([podium("A", "B", "C")], { results: [] });
         expect((await call()).status).toBe(400);
         expect(db.racingPrediction.update).not.toHaveBeenCalled();
     });
 
-    it("403 dla anonima, usera i obcego admina", async () => {
+    it("returns 403 for anonymous, regular user and foreign admin", async () => {
         asAnon();
         expect((await call()).status).toBe(403);
         asUser();
@@ -144,7 +144,7 @@ describe("racing calculate-points: stan i autoryzacja", () => {
         expect((await call()).status).toBe(403);
     });
 
-    it("404 gdy sesja z innej konkurencji", async () => {
+    it("returns 404 when the session belongs to another competition", async () => {
         setup([]);
         db.racingSession.findUnique.mockResolvedValue({
             weekend: { season: { competition: { id: "inna", createdBy: "admin1" } } },
@@ -152,4 +152,3 @@ describe("racing calculate-points: stan i autoryzacja", () => {
         expect((await call()).status).toBe(404);
     });
 });
-

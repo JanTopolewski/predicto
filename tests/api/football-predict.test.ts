@@ -20,7 +20,7 @@ function setup(matchOverrides: Record<string, unknown> = {}) {
 }
 
 describe("POST football predict", () => {
-    it("401 bez sesji", async () => {
+    it("returns 401 without a session", async () => {
         asAnon();
         expect((await call({ homeGoals: 1, awayGoals: 0 })).status).toBe(401);
         expect(db.footballPrediction.upsert).not.toHaveBeenCalled();
@@ -34,41 +34,41 @@ describe("POST football predict", () => {
         [{ homeGoals: 1.5, awayGoals: 0 }],
         [{ homeGoals: "2", awayGoals: 0 }],
         [{ homeGoals: null, awayGoals: 0 }],
-    ])("400 dla nieprawidłowego typu %j", async (body) => {
+    ])("returns 400 for invalid goals %j", async (body) => {
         setup();
         expect((await call(body)).status).toBe(400);
         expect(db.footballPrediction.upsert).not.toHaveBeenCalled();
     });
 
-    it("dopuszcza wartości graniczne 0 i 20", async () => {
+    it("accepts boundary values 0 and 20", async () => {
         setup();
         expect((await call({ homeGoals: 0, awayGoals: 20 })).status).toBe(201);
     });
 
-    it("403 dla nie-członka konkurencji", async () => {
+    it("returns 403 for a non-member of the competition", async () => {
         setup();
         db.competitionMember.findUnique.mockResolvedValue(null);
         expect((await call({ homeGoals: 1, awayGoals: 1 })).status).toBe(403);
     });
 
-    it("404 gdy mecz należy do innej konkurencji (IDOR)", async () => {
+    it("returns 404 when the match belongs to another competition (IDOR)", async () => {
         setup({ season: { competitionId: "INNA" } });
         expect((await call({ homeGoals: 1, awayGoals: 1 })).status).toBe(404);
         expect(db.footballPrediction.upsert).not.toHaveBeenCalled();
     });
 
-    it("400 po rozpoczęciu meczu", async () => {
+    it("returns 400 after kickoff", async () => {
         setup({ kickoff: PAST() });
         expect((await call({ homeGoals: 1, awayGoals: 1 })).status).toBe(400);
         expect(db.footballPrediction.upsert).not.toHaveBeenCalled();
     });
 
-    it("400 po zamknięciu głosowania, nawet jeśli mecz jeszcze się nie zaczął", async () => {
+    it("returns 400 once voting is closed, even before kickoff", async () => {
         setup({ votingClosedAt: PAST() });
         expect((await call({ homeGoals: 1, awayGoals: 1 })).status).toBe(400);
     });
 
-    it("zapisuje typ na użytkownika z sesji, ignoruje userId z body", async () => {
+    it("saves the prediction for the session user and ignores userId from the body", async () => {
         setup();
         const res = await call({ homeGoals: 2, awayGoals: 1, userId: "ofiara" });
         expect(res.status).toBe(201);
@@ -78,10 +78,9 @@ describe("POST football predict", () => {
         expect(arg.create).not.toHaveProperty("points");
     });
 
-    // BUG: brak sprawdzenia statusu meczu - można typować mecz odwołany/przełożony/zakończony.
-    it.fails("BUG: odrzuca typ na mecz CANCELLED", async () => {
+    // BUG: match status is not checked - predictions are accepted for cancelled/postponed matches.
+    it.fails("BUG: rejects a prediction for a CANCELLED match", async () => {
         setup({ status: "CANCELLED" });
         expect((await call({ homeGoals: 1, awayGoals: 1 })).status).toBe(400);
     });
 });
-
