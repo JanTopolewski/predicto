@@ -23,6 +23,11 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      
+      - name: Update npm
+        run: |
+          npm install --global npm@11.6.2
+          npm --version
 
       - name: Debug checkout
         run: |
