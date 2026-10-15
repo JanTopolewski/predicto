@@ -78,9 +78,15 @@ describe("POST football predict", () => {
         expect(arg.create).not.toHaveProperty("points");
     });
 
-    // BUG: match status is not checked - predictions are accepted for cancelled/postponed matches.
-    it.fails("BUG: rejects a prediction for a CANCELLED match", async () => {
-        setup({ status: "CANCELLED" });
+    it.each([
+        ["CANCELLED", { status: "CANCELLED" }],
+        ["POSTPONED", { status: "POSTPONED" }],
+        ["FINISHED", { status: "FINISHED" }],
+        ["IN_PROGRESS", { status: "IN_PROGRESS" }],
+        ["resolved match", { resolved: true }],
+    ])("rejects predictions for a non-SCHEDULED or resolved match (%s)", async (_name, overrides) => {
+        setup(overrides);
         expect((await call({ homeGoals: 1, awayGoals: 1 })).status).toBe(400);
+        expect(db.footballPrediction.upsert).not.toHaveBeenCalled();
     });
 });

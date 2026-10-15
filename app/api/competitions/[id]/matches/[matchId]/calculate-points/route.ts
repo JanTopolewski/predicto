@@ -63,8 +63,8 @@ export async function POST(
             where: { competitionId },
         });
 
-        const exactScorePoints = scoringRules?.exactScorePoints || 3;
-        const winnerPoints = scoringRules?.winnerPoints || 1;
+        const exactScorePoints = scoringRules?.exactScorePoints ?? 3;
+        const winnerPoints = scoringRules?.winnerPoints ?? 1;
 
         const actualResult = match.homeGoals - match.awayGoals;
 

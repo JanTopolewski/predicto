@@ -34,6 +34,25 @@ export async function POST(
             );
         }
 
+        const parsedKickoff = new Date(kickoff);
+        if (isNaN(parsedKickoff.getTime())) {
+            return NextResponse.json(
+                { error: "Invalid kickoff date format" },
+                { status: 400 }
+            );
+        }
+
+        let parsedPredictedEndTime: Date | null = null;
+        if (predictedEndTime) {
+            parsedPredictedEndTime = new Date(predictedEndTime);
+            if (isNaN(parsedPredictedEndTime.getTime())) {
+                return NextResponse.json(
+                    { error: "Invalid predicted end time format" },
+                    { status: 400 }
+                );
+            }
+        }
+
         const competition = await prisma.competition.findUnique({
             where: { id: competitionId },
             include: {
@@ -85,10 +104,8 @@ export async function POST(
                 seasonId: footballSeason.id,
                 homeTeamId,
                 awayTeamId,
-                kickoff: new Date(kickoff),
-                predictedEndTime: predictedEndTime
-                    ? new Date(predictedEndTime)
-                    : null,
+                kickoff: parsedKickoff,
+                predictedEndTime: parsedPredictedEndTime,
                 status: "SCHEDULED",
             },
             include: {

@@ -61,6 +61,16 @@ export async function PATCH(
 
         // Update participants if provided
         if (participatingDriverIds && Array.isArray(participatingDriverIds)) {
+            if (racingSession.resolved) {
+                return NextResponse.json(
+                    {
+                        error:
+                            "Nie można modyfikować listy uczestników sesji, która została już rozliczona.",
+                    },
+                    { status: 400 }
+                );
+            }
+
             await prisma.racingSessionParticipant.deleteMany({
                 where: { sessionId },
             });

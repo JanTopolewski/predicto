@@ -58,10 +58,10 @@ describe("joining a competition", () => {
         expect((await byCode({})).status).toBe(400);
     });
 
-    // BUG: a non-string inviteCode throws a TypeError (.toUpperCase) -> 500 instead of 400.
-    it.fails("BUG: a non-string inviteCode returns 400", async () => {
+    it("a non-string inviteCode returns 400", async () => {
         asUser();
         expect((await byCode({ inviteCode: { $ne: "" } })).status).toBe(400);
+        expect((await byCode({ inviteCode: 12345 })).status).toBe(400);
     });
 });
 

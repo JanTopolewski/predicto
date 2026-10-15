@@ -24,6 +24,45 @@ export async function PATCH(
         const { homeGoals, awayGoals, status, votingClosedAt } =
             await request.json();
 
+        if (homeGoals !== undefined) {
+            if (!Number.isInteger(homeGoals) || homeGoals < 0 || homeGoals > 50) {
+                return NextResponse.json(
+                    { error: "Invalid home goals" },
+                    { status: 400 }
+                );
+            }
+        }
+
+        if (awayGoals !== undefined) {
+            if (!Number.isInteger(awayGoals) || awayGoals < 0 || awayGoals > 50) {
+                return NextResponse.json(
+                    { error: "Invalid away goals" },
+                    { status: 400 }
+                );
+            }
+        }
+
+        if (status !== undefined) {
+            const validStatuses = ["SCHEDULED", "IN_PROGRESS", "FINISHED", "POSTPONED", "CANCELLED"];
+            if (!validStatuses.includes(status)) {
+                return NextResponse.json(
+                    { error: "Invalid match status" },
+                    { status: 400 }
+                );
+            }
+        }
+
+        let parsedVotingClosedAt: Date | undefined = undefined;
+        if (votingClosedAt !== undefined) {
+            parsedVotingClosedAt = new Date(votingClosedAt);
+            if (isNaN(parsedVotingClosedAt.getTime())) {
+                return NextResponse.json(
+                    { error: "Invalid votingClosedAt date format" },
+                    { status: 400 }
+                );
+            }
+        }
+
         const match = await prisma.footballMatch.findUnique({
             where: { id: matchId },
             include: {
@@ -57,8 +96,8 @@ export async function PATCH(
                 ...(homeGoals !== undefined && { homeGoals }),
                 ...(awayGoals !== undefined && { awayGoals }),
                 ...(status && { status }),
-                ...(votingClosedAt && {
-                    votingClosedAt: new Date(votingClosedAt),
+                ...(parsedVotingClosedAt && {
+                    votingClosedAt: parsedVotingClosedAt,
                 }),
                 ...(homeGoals !== undefined &&
                     awayGoals !== undefined && { resolved: true }),

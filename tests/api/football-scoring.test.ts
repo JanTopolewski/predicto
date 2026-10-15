@@ -73,8 +73,7 @@ describe("football calculate-points: scoring rules", () => {
         expect(awarded()).toBe(7);
     });
 
-    // BUG: `scoringRules?.x || 3` - a configured 0 is treated as missing and replaced by the default.
-    it.fails("BUG: configured 0 winner points does not fall back to the default 1", async () => {
+    it("configured 0 winner points does not fall back to the default 1", async () => {
         setup({ homeGoals: 2, awayGoals: 1 }, [pred(3, 0)], { exactScorePoints: 3, winnerPoints: 0 });
         await call();
         expect(awarded()).toBe(0);

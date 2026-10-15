@@ -63,19 +63,19 @@ describe("POST /api/competitions", () => {
         expect(a).not.toBe(b);
     });
 
-    // BUG: no validation of type / dates - values reach Prisma and cause a 500 (or an end date before the start date).
-    it.fails("BUG: an unknown competition type returns 400", async () => {
+    it("an unknown competition type returns 400", async () => {
         asAdmin();
         db.user.findUnique.mockResolvedValue({ role: "ADMIN" });
-        db.competition.create.mockRejectedValue(new Error("Invalid enum value"));
         expect((await call({ ...body, type: "TENNIS" })).status).toBe(400);
+        expect(db.competition.create).not.toHaveBeenCalled();
     });
 
-    it.fails("BUG: an end date earlier than the start date returns 400", async () => {
+    it("an end date earlier than the start date returns 400", async () => {
         asAdmin();
         db.user.findUnique.mockResolvedValue({ role: "ADMIN" });
         db.competition.create.mockImplementation(async ({ data }: any) => data);
         expect((await call({ ...body, startDate: "2027-05-30", endDate: "2026-08-01" })).status).toBe(400);
+        expect(db.competition.create).not.toHaveBeenCalled();
     });
 });
 
@@ -228,11 +228,10 @@ describe("POST /api/competitions/[id]/matches (create match)", () => {
         expect(db.footballMatch.create.mock.calls[0][0].data.seasonId).toBe("new-season");
     });
 
-    // BUG: kickoff is not validated - "not-a-date" becomes an Invalid Date and fails in Prisma (500).
-    it.fails("BUG: an invalid kickoff returns 400", async () => {
+    it("an invalid kickoff returns 400", async () => {
         setup();
-        db.footballMatch.create.mockRejectedValue(new Error("Invalid Date"));
         expect((await call({ ...valid, kickoff: "not-a-date" })).status).toBe(400);
+        expect(db.footballMatch.create).not.toHaveBeenCalled();
     });
 });
 

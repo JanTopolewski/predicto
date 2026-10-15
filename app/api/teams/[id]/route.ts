@@ -81,7 +81,14 @@ export async function PUT(
 
         const { name, shortName } = await request.json();
 
-        if (!name || !shortName) {
+        if (
+            !name ||
+            !shortName ||
+            typeof name !== "string" ||
+            typeof shortName !== "string" ||
+            !name.trim() ||
+            !shortName.trim()
+        ) {
             return NextResponse.json(
                 { message: "Nazwa i skrót są wymagane" },
                 { status: 400 }
@@ -99,8 +106,10 @@ export async function PUT(
             );
         }
 
+        const trimmedShortName = shortName.trim().toUpperCase();
+
         const shortnameExists = await prisma.team.findUnique({
-            where: { shortName: shortName.toUpperCase() },
+            where: { shortName: trimmedShortName },
         });
 
         if (shortnameExists && shortnameExists.id !== id) {
@@ -113,8 +122,8 @@ export async function PUT(
         const updatedTeam = await prisma.team.update({
             where: { id },
             data: {
-                name,
-                shortName: shortName.toUpperCase(),
+                name: name.trim(),
+                shortName: trimmedShortName,
             },
         });
 

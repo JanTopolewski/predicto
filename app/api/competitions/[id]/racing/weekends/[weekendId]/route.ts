@@ -118,6 +118,11 @@ export async function DELETE(
                         competition: true,
                     },
                 },
+                sessions: {
+                    select: {
+                        resolved: true,
+                    },
+                },
             },
         });
 
@@ -132,6 +137,17 @@ export async function DELETE(
             return NextResponse.json(
                 { error: "Only competition creator can delete weekends" },
                 { status: 403 }
+            );
+        }
+
+        const hasResolvedSession = weekend.sessions.some((s) => s.resolved);
+        if (hasResolvedSession) {
+            return NextResponse.json(
+                {
+                    error:
+                        "Nie można usunąć weekendu, w którym znajdują się już rozliczone sesje z naliczonymi punktami.",
+                },
+                { status: 400 }
             );
         }
 

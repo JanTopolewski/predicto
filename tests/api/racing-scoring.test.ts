@@ -103,8 +103,7 @@ describe("racing calculate-points: wildcard", () => {
         expect(awarded()).toBe(11);
     });
 
-    // BUG: `|| 2` replaces a configured 0 with the default 2.
-    it.fails("BUG: wildcardPoints=0 does not fall back to the default 2", async () => {
+    it("wildcardPoints=0 does not fall back to the default 2", async () => {
         setup([{ wildcardDriverId: "D", wildcardPosition: 4 }], {
             type: "QUALIFYING",
             rules: { wildcardPoints: 0 },

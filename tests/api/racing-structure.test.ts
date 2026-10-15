@@ -104,9 +104,7 @@ describe("racing weekends", () => {
             expect((await del()).status).toBe(200);
         });
 
-        // BUG: DELETE session refuses resolved sessions, but deleting the whole weekend cascades through
-        // them anyway - predictions disappear while the points already added to the ranking stay.
-        it.fails("BUG: a weekend with a resolved session cannot be deleted", async () => {
+        it("a weekend with a resolved session cannot be deleted", async () => {
             asAdmin("owner");
             db.racingWeekend.findUnique.mockResolvedValue({
                 sessions: [{ resolved: true }],
@@ -194,17 +192,16 @@ describe("POST racing sessions (create)", () => {
         expect(created().wildcards.create.driverId).toBe("C");
     });
 
-    // BUG: participatingDriverIds is used (.includes/.length) before it is validated as an array.
-    it.fails("BUG: a non-array participatingDriverIds returns 400", async () => {
+    it("a non-array participatingDriverIds returns 400", async () => {
         setup();
         expect((await call({ ...base, wildcardDriverId: "A", participatingDriverIds: { a: 1 } })).status).toBe(400);
+        expect(db.racingSession.create).not.toHaveBeenCalled();
     });
 
-    // BUG: the session type is not validated against the enum - an unknown type causes a Prisma error (500).
-    it.fails("BUG: an unknown session type returns 400", async () => {
+    it("an unknown session type returns 400", async () => {
         setup();
-        db.racingSession.create.mockRejectedValue(new Error("Invalid enum value"));
         expect((await call({ ...base, type: "WARMUP", wildcardDriverId: "A" })).status).toBe(400);
+        expect(db.racingSession.create).not.toHaveBeenCalled();
     });
 });
 
@@ -285,8 +282,7 @@ describe("PATCH / DELETE racing session", () => {
         expect((await del()).status).toBe(200);
     });
 
-    // BUG: participants of an already resolved session can be replaced, which breaks the scored results.
-    it.fails("BUG: PATCH of participants on a resolved session returns 400", async () => {
+    it("PATCH of participants on a resolved session returns 400", async () => {
         asAdmin("owner");
         db.racingSession.findUnique.mockResolvedValue(session({ resolved: true }));
         db.racingSession.update.mockImplementation(async ({ data }: any) => data);

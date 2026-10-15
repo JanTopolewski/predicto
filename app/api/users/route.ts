@@ -14,8 +14,11 @@ export async function GET(request: NextRequest) {
         }
 
         const searchParams = request.nextUrl.searchParams;
-        const page = Math.max(1, parseInt(searchParams.get("page") || "1"));
-        const limit = Math.min(100, parseInt(searchParams.get("limit") || "10"));
+        const rawPage = parseInt(searchParams.get("page") || "1", 10);
+        const page = isNaN(rawPage) || rawPage < 1 ? 1 : rawPage;
+
+        const rawLimit = parseInt(searchParams.get("limit") || "10", 10);
+        const limit = isNaN(rawLimit) || rawLimit < 1 ? 10 : Math.min(100, rawLimit);
 
         const skip = (page - 1) * limit;
 

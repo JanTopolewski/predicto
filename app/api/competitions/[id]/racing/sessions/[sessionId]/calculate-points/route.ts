@@ -73,9 +73,9 @@ export async function POST(
             where: { competitionId },
         });
 
-        const podiumExactPoints = scoringRules?.podiumExactPoints || 3;
-        const podiumAnyPoints = scoringRules?.podiumAnyPoints || 1;
-        const wildcardPoints = scoringRules?.wildcardPoints || 2;
+        const podiumExactPoints = scoringRules?.podiumExactPoints ?? 3;
+        const podiumAnyPoints = scoringRules?.podiumAnyPoints ?? 1;
+        const wildcardPoints = scoringRules?.wildcardPoints ?? 2;
 
         const isPodiumSession = racingSession.type === "SPRINT" || racingSession.type === "RACE";
 

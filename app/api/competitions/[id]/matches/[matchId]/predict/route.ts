@@ -75,6 +75,20 @@ export async function POST(
             );
         }
 
+        if (match.resolved) {
+            return NextResponse.json(
+                { error: "Match has already been resolved" },
+                { status: 400 }
+            );
+        }
+
+        if (match.status !== "SCHEDULED") {
+            return NextResponse.json(
+                { error: `Cannot predict a match with status ${match.status}` },
+                { status: 400 }
+            );
+        }
+
         if (match.votingClosedAt && isTimePassed(match.votingClosedAt)) {
             return NextResponse.json(
                 { error: "Voting for this match is closed" },

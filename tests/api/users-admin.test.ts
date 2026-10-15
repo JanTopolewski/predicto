@@ -79,11 +79,11 @@ describe("PATCH /api/users/[id]", () => {
         expect(data).not.toHaveProperty("password");
     });
 
-    // BUG: an admin can demote themselves (the system may be left without any admin).
-    it.fails("BUG: an admin cannot remove their own ADMIN role", async () => {
+    it("an admin cannot remove their own ADMIN role", async () => {
         asAdmin("admin1");
         db.user.findUnique.mockResolvedValue({ id: "admin1" });
         expect((await patch("admin1", { role: "USER" })).status).toBe(400);
+        expect(db.user.update).not.toHaveBeenCalled();
     });
 });
 
@@ -112,8 +112,7 @@ describe("GET /api/users", () => {
         expect(body.totalPages).toBe(5);
     });
 
-    // BUG: limit=abc / 0 / negative reaches Prisma as NaN / 0 / a negative number.
-    it.fails.each(["abc", "0", "-5"])("BUG: limit=%s results in a safe value > 0", async (limit) => {
+    it.each(["abc", "0", "-5"])("limit=%s results in a safe value > 0", async (limit) => {
         asAdmin();
         db.user.findMany.mockResolvedValue([]);
         db.user.count.mockResolvedValue(0);

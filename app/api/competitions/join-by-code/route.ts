@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
 
         const { inviteCode } = await request.json();
 
-        if (!inviteCode) {
+        if (!inviteCode || typeof inviteCode !== "string" || !inviteCode.trim()) {
             return NextResponse.json(
                 { message: "Kod dostępu jest wymagany" },
                 { status: 400 }
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
         }
 
         const competition = await prisma.competition.findUnique({
-            where: { inviteCode: inviteCode.toUpperCase() },
+            where: { inviteCode: inviteCode.trim().toUpperCase() },
         });
 
         if (!competition) {

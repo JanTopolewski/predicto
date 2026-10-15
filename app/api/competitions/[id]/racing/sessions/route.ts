@@ -33,6 +33,29 @@ export async function POST(
             );
         }
 
+        const validSessionTypes = [
+            "PRACTICE1",
+            "PRACTICE2",
+            "PRACTICE3",
+            "QUALIFYING",
+            "SPRINT_QUALIFYING",
+            "SPRINT",
+            "RACE",
+        ];
+        if (!validSessionTypes.includes(type)) {
+            return NextResponse.json(
+                { error: "Nieprawidłowy typ sesji" },
+                { status: 400 }
+            );
+        }
+
+        if (!Array.isArray(participatingDriverIds) || participatingDriverIds.length === 0) {
+            return NextResponse.json(
+                { error: "At least one driver must participate" },
+                { status: 400 }
+            );
+        }
+
         const isPodiumSession = type === "SPRINT" || type === "RACE";
 
         // Dla sesji bez podium (treningi, kwalifikacje) kierowca Wildcard jest obowiązkowy
@@ -56,13 +79,6 @@ export async function POST(
             // Validate wildcard driver if manually provided
             return NextResponse.json(
                 { error: "Wildcard driver must be a participant" },
-                { status: 400 }
-            );
-        }
-
-        if (!Array.isArray(participatingDriverIds) || participatingDriverIds.length === 0) {
-            return NextResponse.json(
-                { error: "At least one driver must participate" },
                 { status: 400 }
             );
         }

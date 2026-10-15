@@ -221,10 +221,11 @@ describe("teams", () => {
         expect((await updateTeam(req({ name: "A", shortName: "b" }, "PUT"), idCtx)).status).toBe(200);
     });
 
-    // BUG: shortName is assumed to be a string - a number/object makes `.toUpperCase()` throw -> 500 instead of 400.
-    it.fails("BUG: a non-string shortName returns 400", async () => {
+    it("a non-string shortName returns 400", async () => {
         withDbRole("ADMIN");
         expect((await createTeam(req({ name: "Legia", shortName: 123 }))).status).toBe(400);
+        expect((await createTeam(req({ name: "Legia", shortName: { id: "test" } }))).status).toBe(400);
+        expect((await updateTeam(req({ name: "Legia", shortName: 123 }, "PUT"), idCtx)).status).toBe(400);
     });
 });
 

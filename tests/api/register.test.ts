@@ -57,21 +57,18 @@ describe("POST /api/auth/register", () => {
         expect(db.user.create.mock.calls[0][0].data.role).toBe("USER");
     });
 
-    // BUG: concurrent registration of the same email -> unique violation (P2002) returns 500 instead of 409.
-    it.fails("BUG: a registration race returns 409, not 500", async () => {
+    it("a registration race returns 409, not 500", async () => {
         db.user.findFirst.mockResolvedValue(null);
         db.user.create.mockRejectedValue({ code: "P2002" });
         expect((await call(valid)).status).toBe(409);
     });
 
-    // BUG: a non-string password (e.g. a number) passes the length check and makes bcrypt throw -> 500.
-    it.fails("BUG: a non-string password returns 400", async () => {
+    it("a non-string password returns 400", async () => {
         db.user.findFirst.mockResolvedValue(null);
         expect((await call({ ...valid, password: 12345678 })).status).toBe(400);
     });
 
-    // BUG: email is case-sensitive, so Jan@x.pl and jan@x.pl can be two separate accounts.
-    it.fails("BUG: email is normalized to lowercase", async () => {
+    it("email is normalized to lowercase", async () => {
         db.user.findFirst.mockResolvedValue(null);
         db.user.create.mockImplementation(async ({ data }: any) => ({ id: "u1", ...data }));
         await call({ ...valid, email: "Zaneta@Test.PL" });

@@ -56,8 +56,7 @@ describe("PATCH football match (admin)", () => {
         expect(db.footballMatch.update.mock.calls[0][0].data.resolved).toBeUndefined();
     });
 
-    // BUG: no score validation - negative/fractional/text values reach the database (Prisma throws a 500 or garbage is stored).
-    it.fails.each([[-1], [1.5], ["abc"], [999]])("BUG: rejects invalid goals %j", async (goals) => {
+    it.each([[-1], [1.5], ["abc"], [999]])("rejects invalid goals %j", async (goals) => {
         setup();
         const res = await patch({ homeGoals: goals, awayGoals: 0 });
         expect(res.status).toBe(400);
