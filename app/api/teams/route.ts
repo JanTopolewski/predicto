@@ -64,15 +64,24 @@ export async function POST(request: NextRequest) {
 
         const { name, shortName } = await request.json();
 
-        if (!name || !shortName) {
+        if (
+            !name ||
+            !shortName ||
+            typeof name !== "string" ||
+            typeof shortName !== "string" ||
+            !name.trim() ||
+            !shortName.trim()
+        ) {
             return NextResponse.json(
                 { message: "Nazwa i skrót są wymagane" },
                 { status: 400 }
             );
         }
 
+        const trimmedShortName = shortName.trim().toUpperCase();
+
         const existingTeam = await prisma.team.findUnique({
-            where: { shortName: shortName.toUpperCase() },
+            where: { shortName: trimmedShortName },
         });
 
         if (existingTeam) {
@@ -84,8 +93,8 @@ export async function POST(request: NextRequest) {
 
         const team = await prisma.team.create({
             data: {
-                name,
-                shortName: shortName.toUpperCase(),
+                name: name.trim(),
+                shortName: trimmedShortName,
             },
         });
 

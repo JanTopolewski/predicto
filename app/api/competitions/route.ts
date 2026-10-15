@@ -92,6 +92,30 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        if (!["FOOTBALL", "RACING"].includes(type)) {
+            return NextResponse.json(
+                { message: "Nieprawidłowy typ konkurencji" },
+                { status: 400 }
+            );
+        }
+
+        const parsedStartDate = new Date(startDate);
+        const parsedEndDate = new Date(endDate);
+
+        if (isNaN(parsedStartDate.getTime()) || isNaN(parsedEndDate.getTime())) {
+            return NextResponse.json(
+                { message: "Nieprawidłowy format daty" },
+                { status: 400 }
+            );
+        }
+
+        if (parsedEndDate < parsedStartDate) {
+            return NextResponse.json(
+                { message: "Data zakończenia nie może być wcześniejsza niż data rozpoczęcia" },
+                { status: 400 }
+            );
+        }
+
         const inviteCode = nanoid(10).toUpperCase();
 
         const competition = await prisma.competition.create({
@@ -99,8 +123,8 @@ export async function POST(request: NextRequest) {
                 name,
                 type,
                 season,
-                startDate: new Date(startDate),
-                endDate: new Date(endDate),
+                startDate: parsedStartDate,
+                endDate: parsedEndDate,
                 isPublic: isPublic ?? true,
                 inviteCode,
                 createdBy: session.user.id,

@@ -13,6 +13,27 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        if (
+            typeof username !== "string" ||
+            typeof email !== "string" ||
+            typeof password !== "string"
+        ) {
+            return NextResponse.json(
+                { message: "Nieprawidłowy format danych" },
+                { status: 400 }
+            );
+        }
+
+        const normalizedUsername = username.trim();
+        const normalizedEmail = email.trim().toLowerCase();
+
+        if (!normalizedUsername || !normalizedEmail) {
+            return NextResponse.json(
+                { message: "Wszystkie pola są wymagane" },
+                { status: 400 }
+            );
+        }
+
         if (password.length < 8) {
             return NextResponse.json(
                 { message: "Hasło musi mieć co najmniej 8 znaków" },
@@ -22,7 +43,10 @@ export async function POST(request: NextRequest) {
 
         const existingUser = await prisma.user.findFirst({
             where: {
-                OR: [{ email }, { username }],
+                OR: [
+                    { email: { equals: normalizedEmail, mode: "insensitive" } },
+                    { username: normalizedUsername },
+                ],
             },
         });
 
@@ -30,7 +54,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json(
                 {
                     message:
-                        existingUser.email === email
+                        existingUser.email.toLowerCase() === normalizedEmail
                             ? "Email już jest zarejestrowany"
                             : "Nazwa użytkownika jest już zajęta",
                 },
@@ -43,8 +67,8 @@ export async function POST(request: NextRequest) {
 
         const user = await prisma.user.create({
             data: {
-                username,
-                email,
+                username: normalizedUsername,
+                email: normalizedEmail,
                 passwordHash,
                 role: "USER",
             },
@@ -61,7 +85,13 @@ export async function POST(request: NextRequest) {
             },
             { status: 201 }
         );
-    } catch (error) {
+    } catch (error: any) {
+        if (error?.code === "P2002") {
+            return NextResponse.json(
+                { message: "Email lub nazwa użytkownika jest już zajęta" },
+                { status: 409 }
+            );
+        }
         console.error("Registration error:", error);
         return NextResponse.json(
             { message: "Błąd serwera" },

@@ -82,6 +82,14 @@ export async function PATCH(
                     { status: 400 }
                 );
             }
+
+            if (session.user?.id === userId && role === "USER") {
+                return NextResponse.json(
+                    { message: "Nie możesz odebrać sobie uprawnień administratora" },
+                    { status: 400 }
+                );
+            }
+
             dataToUpdate.role = role;
         }
 

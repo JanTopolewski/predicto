@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { isTimePassed } from "@/lib/timeUtils";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function PATCH(
@@ -23,6 +24,49 @@ export async function PATCH(
         const { id: competitionId, matchId } = await params;
         const { homeGoals, awayGoals, status, votingClosedAt } =
             await request.json();
+
+        if (homeGoals !== undefined) {
+            if (!Number.isInteger(homeGoals) || homeGoals < 0 || homeGoals > 50) {
+                return NextResponse.json(
+                    { error: "Invalid home goals" },
+                    { status: 400 }
+                );
+            }
+        }
+
+        if (awayGoals !== undefined) {
+            if (!Number.isInteger(awayGoals) || awayGoals < 0 || awayGoals > 50) {
+                return NextResponse.json(
+                    { error: "Invalid away goals" },
+                    { status: 400 }
+                );
+            }
+        }
+
+        if (status !== undefined) {
+            const validStatuses = ["SCHEDULED", "IN_PROGRESS", "FINISHED", "POSTPONED", "CANCELLED"];
+            if (!validStatuses.includes(status)) {
+                return NextResponse.json(
+                    { error: "Invalid match status" },
+                    { status: 400 }
+                );
+            }
+        }
+
+        let parsedVotingClosedAt: Date | null | undefined = undefined;
+        if (votingClosedAt !== undefined) {
+            if (votingClosedAt === null) {
+                parsedVotingClosedAt = null;
+            } else {
+                parsedVotingClosedAt = new Date(votingClosedAt);
+                if (isNaN(parsedVotingClosedAt.getTime())) {
+                    return NextResponse.json(
+                        { error: "Invalid votingClosedAt date format" },
+                        { status: 400 }
+                    );
+                }
+            }
+        }
 
         const match = await prisma.footballMatch.findUnique({
             where: { id: matchId },
@@ -51,14 +95,29 @@ export async function PATCH(
             );
         }
 
+        if (parsedVotingClosedAt !== undefined) {
+            if (match.resolved) {
+                return NextResponse.json(
+                    { error: "Nie można modyfikować czasu głosowania dla rozliczonego meczu" },
+                    { status: 400 }
+                );
+            }
+            if (match.kickoff && isTimePassed(match.kickoff)) {
+                return NextResponse.json(
+                    { error: "Nie można modyfikować czasu głosowania po rozpoczęciu meczu" },
+                    { status: 400 }
+                );
+            }
+        }
+
         const updatedMatch = await prisma.footballMatch.update({
             where: { id: matchId },
             data: {
                 ...(homeGoals !== undefined && { homeGoals }),
                 ...(awayGoals !== undefined && { awayGoals }),
                 ...(status && { status }),
-                ...(votingClosedAt && {
-                    votingClosedAt: new Date(votingClosedAt),
+                ...(parsedVotingClosedAt !== undefined && {
+                    votingClosedAt: parsedVotingClosedAt,
                 }),
                 ...(homeGoals !== undefined &&
                     awayGoals !== undefined && { resolved: true }),
