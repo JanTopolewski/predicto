@@ -27,12 +27,15 @@ describe("timeUtils - prediction lock boundary", () => {
 
 describe("PATCH football match (admin)", () => {
     const patch = (body: unknown) => PATCH(jsonReq(body, "PATCH"), ctx({ id: "c1", matchId: "m1" }));
-    function setup() {
+    function setup(over: Record<string, unknown> = {}) {
         asAdmin("owner");
         db.footballMatch.findUnique.mockResolvedValue({
             id: "m1",
+            kickoff: new Date(Date.now() + 24 * 60 * 60 * 1000),
+            resolved: false,
             season: { competitionId: "c1", competition: { createdBy: "owner" } },
             predictions: [],
+            ...over,
         });
         db.footballMatch.update.mockImplementation(async (a: any) => a.data);
     }
@@ -60,6 +63,44 @@ describe("PATCH football match (admin)", () => {
         setup();
         const res = await patch({ homeGoals: goals, awayGoals: 0 });
         expect(res.status).toBe(400);
+        expect(db.footballMatch.update).not.toHaveBeenCalled();
+    });
+
+    it("allows resetting votingClosedAt to null before match kickoff to reopen voting", async () => {
+        setup({ votingClosedAt: new Date(Date.now() - 3600 * 1000) });
+        const res = await patch({ votingClosedAt: null });
+        expect(res.status).toBe(200);
+        expect(db.footballMatch.update.mock.calls[0][0].data.votingClosedAt).toBeNull();
+    });
+
+    it("parses valid votingClosedAt date", async () => {
+        setup();
+        const dateStr = "2026-05-01T10:00:00.000Z";
+        const res = await patch({ votingClosedAt: dateStr });
+        expect(res.status).toBe(200);
+        expect(db.footballMatch.update.mock.calls[0][0].data.votingClosedAt).toEqual(new Date(dateStr));
+    });
+
+    it("rejects invalid votingClosedAt date format", async () => {
+        setup();
+        const res = await patch({ votingClosedAt: "not-a-date" });
+        expect(res.status).toBe(400);
+        expect(db.footballMatch.update).not.toHaveBeenCalled();
+    });
+
+    it("rejects modifying votingClosedAt when match is already resolved", async () => {
+        setup({ resolved: true });
+        const res = await patch({ votingClosedAt: null });
+        expect(res.status).toBe(400);
+        expect((await res.json()).error).toMatch(/rozliczonego meczu/);
+        expect(db.footballMatch.update).not.toHaveBeenCalled();
+    });
+
+    it("rejects modifying votingClosedAt when match has already started", async () => {
+        setup({ kickoff: new Date(Date.now() - 60 * 1000) });
+        const res = await patch({ votingClosedAt: null });
+        expect(res.status).toBe(400);
+        expect((await res.json()).error).toMatch(/po rozpoczęciu meczu/);
         expect(db.footballMatch.update).not.toHaveBeenCalled();
     });
 });

@@ -231,6 +231,7 @@ describe("PATCH / DELETE racing session", () => {
     const session = (over: Record<string, unknown> = {}) => ({
         id: "s1",
         resolved: false,
+        startTime: new Date(Date.now() + 24 * 60 * 60 * 1000),
         weekend: { season: { competition: { id: "c1", createdBy: "owner" } } },
         participants: [],
         ...over,
@@ -288,6 +289,26 @@ describe("PATCH / DELETE racing session", () => {
         db.racingSession.update.mockImplementation(async ({ data }: any) => data);
         expect((await patch({ participatingDriverIds: ["A"] })).status).toBe(400);
         expect(db.racingSessionParticipant.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it("PATCH rejects modifying votingClosedAt when racing session is resolved", async () => {
+        asAdmin("owner");
+        db.racingSession.findUnique.mockResolvedValue(session({ resolved: true }));
+        const res = await patch({ votingClosedAt: null });
+        expect(res.status).toBe(400);
+        expect((await res.json()).error).toMatch(/rozliczonej sesji/);
+        expect(db.racingSession.update).not.toHaveBeenCalled();
+    });
+
+    it("PATCH rejects modifying votingClosedAt when racing session has already started", async () => {
+        asAdmin("owner");
+        db.racingSession.findUnique.mockResolvedValue(
+            session({ startTime: new Date(Date.now() - 60 * 1000) })
+        );
+        const res = await patch({ votingClosedAt: null });
+        expect(res.status).toBe(400);
+        expect((await res.json()).error).toMatch(/po rozpoczęciu sesji/);
+        expect(db.racingSession.update).not.toHaveBeenCalled();
     });
 });
 

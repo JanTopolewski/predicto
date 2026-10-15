@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { isTimePassed } from "@/lib/timeUtils";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function PATCH(
@@ -52,14 +53,18 @@ export async function PATCH(
             }
         }
 
-        let parsedVotingClosedAt: Date | undefined = undefined;
+        let parsedVotingClosedAt: Date | null | undefined = undefined;
         if (votingClosedAt !== undefined) {
-            parsedVotingClosedAt = new Date(votingClosedAt);
-            if (isNaN(parsedVotingClosedAt.getTime())) {
-                return NextResponse.json(
-                    { error: "Invalid votingClosedAt date format" },
-                    { status: 400 }
-                );
+            if (votingClosedAt === null) {
+                parsedVotingClosedAt = null;
+            } else {
+                parsedVotingClosedAt = new Date(votingClosedAt);
+                if (isNaN(parsedVotingClosedAt.getTime())) {
+                    return NextResponse.json(
+                        { error: "Invalid votingClosedAt date format" },
+                        { status: 400 }
+                    );
+                }
             }
         }
 
@@ -90,13 +95,28 @@ export async function PATCH(
             );
         }
 
+        if (parsedVotingClosedAt !== undefined) {
+            if (match.resolved) {
+                return NextResponse.json(
+                    { error: "Nie można modyfikować czasu głosowania dla rozliczonego meczu" },
+                    { status: 400 }
+                );
+            }
+            if (match.kickoff && isTimePassed(match.kickoff)) {
+                return NextResponse.json(
+                    { error: "Nie można modyfikować czasu głosowania po rozpoczęciu meczu" },
+                    { status: 400 }
+                );
+            }
+        }
+
         const updatedMatch = await prisma.footballMatch.update({
             where: { id: matchId },
             data: {
                 ...(homeGoals !== undefined && { homeGoals }),
                 ...(awayGoals !== undefined && { awayGoals }),
                 ...(status && { status }),
-                ...(parsedVotingClosedAt && {
+                ...(parsedVotingClosedAt !== undefined && {
                     votingClosedAt: parsedVotingClosedAt,
                 }),
                 ...(homeGoals !== undefined &&

@@ -68,10 +68,18 @@ describe("POST /api/auth/register", () => {
         expect((await call({ ...valid, password: 12345678 })).status).toBe(400);
     });
 
-    it("email is normalized to lowercase", async () => {
+    it("email is normalized to lowercase and checked case-insensitively", async () => {
         db.user.findFirst.mockResolvedValue(null);
         db.user.create.mockImplementation(async ({ data }: any) => ({ id: "u1", ...data }));
         await call({ ...valid, email: "Zaneta@Test.PL" });
+        expect(db.user.findFirst).toHaveBeenCalledWith({
+            where: {
+                OR: [
+                    { email: { equals: "zaneta@test.pl", mode: "insensitive" } },
+                    { username: valid.username },
+                ],
+            },
+        });
         expect(db.user.create.mock.calls[0][0].data.email).toBe("zaneta@test.pl");
     });
 });

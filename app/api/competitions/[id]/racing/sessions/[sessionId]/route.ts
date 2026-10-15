@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { isTimePassed } from "@/lib/timeUtils";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function PATCH(
@@ -83,13 +84,41 @@ export async function PATCH(
             });
         }
 
+        let parsedVotingClosedAt: Date | null | undefined = undefined;
+        if (votingClosedAt !== undefined) {
+            if (racingSession.resolved) {
+                return NextResponse.json(
+                    { error: "Nie można modyfikować czasu głosowania dla rozliczonej sesji" },
+                    { status: 400 }
+                );
+            }
+            if (racingSession.startTime && isTimePassed(racingSession.startTime)) {
+                return NextResponse.json(
+                    { error: "Nie można modyfikować czasu głosowania po rozpoczęciu sesji" },
+                    { status: 400 }
+                );
+            }
+
+            if (votingClosedAt === null) {
+                parsedVotingClosedAt = null;
+            } else {
+                parsedVotingClosedAt = new Date(votingClosedAt);
+                if (isNaN(parsedVotingClosedAt.getTime())) {
+                    return NextResponse.json(
+                        { error: "Invalid votingClosedAt date format" },
+                        { status: 400 }
+                    );
+                }
+            }
+        }
+
         const updatedSession = await prisma.racingSession.update({
             where: { id: sessionId },
             data: {
                 ...(name && { name }),
                 ...(startTime && { startTime: new Date(startTime) }),
-                ...(votingClosedAt && {
-                    votingClosedAt: new Date(votingClosedAt),
+                ...(parsedVotingClosedAt !== undefined && {
+                    votingClosedAt: parsedVotingClosedAt,
                 }),
             },
             include: {
