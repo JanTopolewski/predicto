@@ -86,7 +86,7 @@ export async function POST(
                     400,
                     "POSITION_OUT_OF_RANGE",
                     `Position must be between 1 and ${maxPosition}`,
-                    { maxPosition }
+                    { max: maxPosition }
                 );
             }
             if (seenPositions.has(item.position)) {
