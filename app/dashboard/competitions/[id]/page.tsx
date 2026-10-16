@@ -4,6 +4,9 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
+import { useTranslations, useLocale } from "next-intl";
+import { useApiError } from "@/lib/useApiError";
+import { Locale } from "@/i18n/config";
 
 interface Match {
     id: string;
@@ -69,6 +72,11 @@ export default function CompetitionDetailPage() {
     const [predictingWinner, setPredictingWinner] = useState(false);
     const [successMessage, setSuccessMessage] = useState("");
 
+    const t = useTranslations("competitions");
+    const tCommon = useTranslations("common");
+    const apiError = useApiError();
+    const locale = useLocale() as Locale;
+
     const competitionId = params.id as string;
     const isMember = competition?.members.some(m => m.id === session?.user?.id);
     const isAdmin = session?.user?.role === "ADMIN";
@@ -79,7 +87,9 @@ export default function CompetitionDetailPage() {
             const response = await fetch(`/api/competitions/${competitionId}`);
 
             if (!response.ok) {
-                throw new Error("Nie można pobrać konkurencji");
+                const data = await response.json();
+                setError(apiError(data));
+                return;
             }
 
             const data = await response.json();
@@ -92,10 +102,10 @@ export default function CompetitionDetailPage() {
                 setSelectedDriverId(pred.driver.id);
             }
         } catch (err) {
-            setError("Błąd podczas pobierania konkurencji");
+            setError(apiError());
             console.error(err);
         }
-    }, [competitionId]);
+    }, [competitionId, apiError]);
 
     useEffect(() => {
         const loadCompetition = async () => {
@@ -111,7 +121,7 @@ export default function CompetitionDetailPage() {
         const selectedId = competition?.type === "FOOTBALL" ? selectedTeamId : selectedDriverId;
 
         if (!selectedId) {
-            setError(competition?.type === "FOOTBALL" ? "Wybierz drużynę" : "Wybierz kierowcę");
+            setError(competition?.type === "FOOTBALL" ? t("seasonWinner.selectTeam") : t("seasonWinner.selectDriver"));
             return;
         }
 
@@ -131,26 +141,27 @@ export default function CompetitionDetailPage() {
                 body: JSON.stringify({ [bodyKey]: selectedId }),
             });
 
+            const data = await response.json();
+
             if (!response.ok) {
-                const data = await response.json();
-                setError(data.error || "Błąd podczas zapisywania predykcji");
+                setError(apiError(data));
                 setPredictingWinner(false);
                 return;
             }
 
-            setSuccessMessage("✓ Twoja predykcja została zapisana");
+            setSuccessMessage(`✓ ${t("seasonWinner.predictionSaved")}`);
             setPredictingWinner(false);
             await fetchCompetition();
             setTimeout(() => setSuccessMessage(""), 3000);
         } catch (err) {
-            setError("Błąd podczas zapisywania predykcji");
+            setError(apiError());
             console.error(err);
             setPredictingWinner(false);
         }
     };
 
     const getCompetitionTypeLabel = (type: string) => {
-        return type === "FOOTBALL" ? "Piłka nożna" : "Wyścigi";
+        return type === "FOOTBALL" ? tCommon("football") : tCommon("racing");
     };
 
     const getRankingWithTies = (members: Array<{ id: string; username: string; points: number }>) => {
@@ -187,7 +198,7 @@ export default function CompetitionDetailPage() {
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
-                <p className="text-zinc-600 dark:text-zinc-400">Ładowanie konkurencji...</p>
+                <p className="text-zinc-600 dark:text-zinc-400">{tCommon("loading")}</p>
             </div>
         );
     }
@@ -197,14 +208,14 @@ export default function CompetitionDetailPage() {
             <div className="space-y-4">
                 <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                     <p className="text-sm text-red-700 dark:text-red-400">
-                        {error || "Nie znaleziono konkurencji"}
+                        {error || t("details.notFound")}
                     </p>
                 </div>
                 <Link
                     href="/dashboard/competitions"
                     className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
                 >
-                    Wróć do listy
+                    {t("details.backToList")}
                 </Link>
             </div>
         );
@@ -222,14 +233,14 @@ export default function CompetitionDetailPage() {
                             {competition.name}
                         </h2>
                         <p className="text-sm sm:text-base text-zinc-600 dark:text-zinc-400 mt-2">
-                            {getCompetitionTypeLabel(competition.type)} • Sezon {competition.season}
+                            {getCompetitionTypeLabel(competition.type)} • {tCommon("season")} {competition.season}
                         </p>
                     </div>
                     <Link
                         href="/dashboard/competitions"
                         className="px-4 sm:px-6 py-2.5 sm:py-2 bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-900 dark:text-white font-medium rounded-lg transition-colors text-center text-sm sm:text-base"
                     >
-                        Wróć
+                        {tCommon("back")}
                     </Link>
                 </div>
             </div>
@@ -251,10 +262,10 @@ export default function CompetitionDetailPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800">
                     <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mb-1">
-                        Data rozpoczęcia
+                        {t("startDate")}
                     </p>
                     <p className="text-lg sm:text-xl font-semibold text-zinc-900 dark:text-white">
-                        {new Date(competition.startDate).toLocaleDateString("pl-PL", {
+                        {new Date(competition.startDate).toLocaleDateString(locale, {
                             year: "numeric",
                             month: "long",
                             day: "numeric",
@@ -264,10 +275,10 @@ export default function CompetitionDetailPage() {
 
                 <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800">
                     <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mb-1">
-                        Data zakończenia
+                        {t("endDate")}
                     </p>
                     <p className="text-lg sm:text-xl font-semibold text-zinc-900 dark:text-white">
-                        {new Date(competition.endDate).toLocaleDateString("pl-PL", {
+                        {new Date(competition.endDate).toLocaleDateString(locale, {
                             year: "numeric",
                             month: "long",
                             day: "numeric",
@@ -280,17 +291,15 @@ export default function CompetitionDetailPage() {
             {isMember && !isAdmin && !competition.hasStarted && !competition.winnerResolved && !competition.seasonPrediction && (
                 <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800">
                     <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-4">
-                        🏆 Obstawiaj zwycięzcę sezonu
+                        🏆 {t("seasonWinner.title")}
                     </h3>
                     <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
-                        {competition.type === "FOOTBALL"
-                            ? "Wybierz drużynę, która twoim zdaniem wygra sezon"
-                            : "Wybierz kierowcę, który twoim zdaniem wygra sezon"}
+                        {t("seasonWinner.description")}
                     </p>
 
                     <div>
                         <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
-                            {competition.type === "FOOTBALL" ? "Drużyna" : "Kierowca"}
+                            {competition.type === "FOOTBALL" ? t("seasonWinner.selectTeam") : t("seasonWinner.selectDriver")}
                         </label>
                         {competition.type === "FOOTBALL" ? (
                             <select
@@ -299,7 +308,7 @@ export default function CompetitionDetailPage() {
                                 disabled={predictingWinner}
                                 className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                             >
-                                <option value="">Wybierz drużynę...</option>
+                                <option value="">{t("seasonWinner.selectTeam")}</option>
                                 {competition.allTeams.map((team) => (
                                     <option key={team.id} value={team.id}>
                                         {team.name}
@@ -313,7 +322,7 @@ export default function CompetitionDetailPage() {
                                 disabled={predictingWinner}
                                 className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                             >
-                                <option value="">Wybierz kierowcę...</option>
+                                <option value="">{t("seasonWinner.selectDriver")}</option>
                                 {competition.allDrivers.map((driver) => (
                                     <option key={driver.id} value={driver.id}>
                                         {driver.name} (#{driver.number})
@@ -328,7 +337,7 @@ export default function CompetitionDetailPage() {
                         disabled={predictingWinner || !selectedTeamId && !selectedDriverId}
                         className="w-full mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        {predictingWinner ? "Zapisywanie..." : "Zapisz predykcję"}
+                        {predictingWinner ? t("seasonWinner.saving") : t("seasonWinner.savePrediction")}
                     </button>
                 </div>
             )}
@@ -336,23 +345,21 @@ export default function CompetitionDetailPage() {
             {isMember && !isAdmin && competition.seasonPrediction && (
                 <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800">
                     <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-2">
-                        🏆 Twój typ na zwycięzcę sezonu
+                        🏆 {t("seasonWinner.yourPick")}
                     </h3>
                     <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
-                        ✓ Wybrałeś: {competition.type === "FOOTBALL" 
+                        ✓ {competition.type === "FOOTBALL" 
                             ? competition.seasonPrediction.team?.name 
                             : `${competition.seasonPrediction.driver?.name} (#${competition.seasonPrediction.driver?.number})`}
                     </p>
-                    <p className="text-xs text-zinc-500 mt-1">Głos został zarejestrowany i nie można go modyfikować.</p>
+                    <p className="text-xs text-zinc-500 mt-1">{t("seasonWinner.pickRegistered")}</p>
                 </div>
             )}
 
             {isMember && competition.hasStarted && !competition.seasonPrediction && (
                 <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
                     <p className="text-sm text-yellow-800 dark:text-yellow-300">
-                        {competition.type === "FOOTBALL"
-                            ? "⚠️ Pierwszy mecz się już zaczął - nie możesz już obstawiać zwycięzcy sezonu"
-                            : "⚠️ Pierwsza sesja się już zaczęła - nie możesz już obstawiać zwycięzcy sezonu"}
+                        ⚠️ {t("seasonWinner.seasonAlreadyStarted")}
                     </p>
                 </div>
             )}
@@ -361,13 +368,13 @@ export default function CompetitionDetailPage() {
             {isMember && competition.type === "FOOTBALL" && competition.matches.length > 0 && (
                 <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800">
                     <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-4">
-                        ⚽ Mecze
+                        ⚽ {t("details.matchesTitle")}
                     </h3>
                     <Link
                         href={`/dashboard/competitions/${competitionId}/matches`}
                         className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
                     >
-                        Przeglądaj i obstawiaj mecze →
+                        {t("details.browseMatches")}
                     </Link>
                 </div>
             )}
@@ -376,13 +383,13 @@ export default function CompetitionDetailPage() {
             {isMember && competition.type === "RACING" && (
                 <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800">
                     <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-4">
-                        🏁 Sesje wyścigowe
+                        🏁 {t("details.racingTitle")}
                     </h3>
                     <Link
                         href={`/dashboard/competitions/${competitionId}/racing`}
                         className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
                     >
-                        Przeglądaj i obstawiaj sesje →
+                        {t("details.browseRacing")}
                     </Link>
                 </div>
             )}
@@ -391,14 +398,14 @@ export default function CompetitionDetailPage() {
                 <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg overflow-hidden border border-zinc-200 dark:border-zinc-800">
                     <div className="p-6 border-b border-zinc-200 dark:border-zinc-800">
                         <h3 className="text-xl font-bold text-zinc-900 dark:text-white">
-                            Ranking
+                            {t("ranking")}
                         </h3>
                     </div>
 
                     {competition.members.length === 0 ? (
                         <div className="p-8 text-center">
                             <p className="text-zinc-600 dark:text-zinc-400">
-                                Brak członków w konkurencji
+                                {t("details.noMembers")}
                             </p>
                         </div>
                     ) : (
@@ -422,12 +429,12 @@ export default function CompetitionDetailPage() {
                                             }`}
                                         >
                                             {member.username}
-                                            {member.username === session?.user?.name && " (Ty)"}
+                                            {member.username === session?.user?.name && ` ${t("details.youIndicator")}`}
                                         </p>
                                     </div>
                                     <div className="text-right">
                                         <p className="text-lg font-semibold text-zinc-900 dark:text-white">
-                                            {member.points} pkt
+                                            {member.points} {tCommon("pointsShort")}
                                         </p>
                                     </div>
                                 </div>
@@ -441,38 +448,39 @@ export default function CompetitionDetailPage() {
             {isAdmin && isOwner && competition.type === "FOOTBALL" && (
                 <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800">
                     <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-4">
-                        ⚙️ Panel administratora
+                        ⚙️ {t("details.adminPanel")}
                     </h3>
                     <div className="flex flex-col flex-wrap sm:flex-row gap-3">
                         <Link
                             href={`/dashboard/competitions/${competitionId}/admin/matches`}
                             className="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white font-medium rounded-lg transition-colors text-center"
                         >
-                            ⚽ Zarządzaj meczami
+                            ⚽ {t("details.manageMatches")}
                         </Link>
                         <button
                             onClick={async () => {
-                                if (window.confirm("Na pewno chcesz usunąć tę konkurencję? Ta akcja jest nieodwracalna!")) {
+                                if (window.confirm(t("details.deleteConfirm"))) {
                                     try {
                                         const response = await fetch(`/api/competitions/${competitionId}/delete`, {
                                             method: "DELETE",
                                         });
 
                                         if (!response.ok) {
-                                            alert("Błąd podczas usuwania konkurencji");
+                                            const data = await response.json();
+                                            alert(apiError(data));
                                             return;
                                         }
 
                                         router.push("/dashboard/competitions");
                                     } catch (err) {
-                                        alert("Błąd podczas usuwania konkurencji");
+                                        alert(apiError());
                                         console.error(err);
                                     }
                                 }
                             }}
                             className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white font-medium rounded-lg transition-colors"
                         >
-                            🗑️ Usuń konkurencję
+                            🗑️ {t("details.deleteCompetition")}
                         </button>
 
                         {!competition?.winnerResolved && (
@@ -480,13 +488,13 @@ export default function CompetitionDetailPage() {
                                 href={`/dashboard/competitions/${competitionId}/admin/announce-winner`}
                                 className="block w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 text-white font-medium rounded-lg transition-colors text-center"
                             >
-                                🏆 Ogłoś zwycięzcę sezonu
+                                🏆 {t("details.announceWinner")}
                             </Link>
                         )}
 
                         {competition?.winnerResolved && (
                             <div className="w-full px-4 py-3 bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg text-emerald-700 dark:text-emerald-300 font-medium text-center">
-                                ✓ Zwycięzca sezonu już ogłoszony
+                                ✓ {t("details.winnerAlreadyAnnounced")}
                             </div>
                         )}
                     </div>
@@ -497,38 +505,39 @@ export default function CompetitionDetailPage() {
             {isAdmin && isOwner && competition.type === "RACING" && (
                 <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800">
                     <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-4">
-                        ⚙️ Panel administratora
+                        ⚙️ {t("details.adminPanel")}
                     </h3>
                     <div className="flex flex-col flex-wrap sm:flex-row gap-3">
                         <Link
                             href={`/dashboard/competitions/${competitionId}/admin/racing/weekends`}
                             className="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white font-medium rounded-lg transition-colors text-center"
                         >
-                            🏁 Zarządzaj weekendami
+                            🏁 {t("details.manageWeekends")}
                         </Link>
                         <button
                             onClick={async () => {
-                                if (window.confirm("Na pewno chcesz usunąć tę konkurencję? Ta akcja jest nieodwracalna!")) {
+                                if (window.confirm(t("details.deleteConfirm"))) {
                                     try {
                                         const response = await fetch(`/api/competitions/${competitionId}/delete`, {
                                             method: "DELETE",
                                         });
 
                                         if (!response.ok) {
-                                            alert("Błąd podczas usuwania konkurencji");
+                                            const data = await response.json();
+                                            alert(apiError(data));
                                             return;
                                         }
 
                                         router.push("/dashboard/competitions");
                                     } catch (err) {
-                                        alert("Błąd podczas usuwania konkurencji");
+                                        alert(apiError());
                                         console.error(err);
                                     }
                                 }
                             }}
                             className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white font-medium rounded-lg transition-colors"
                         >
-                            🗑️ Usuń konkurencję
+                            🗑️ {t("details.deleteCompetition")}
                         </button>
 
                         {!competition?.winnerResolved && (
@@ -536,13 +545,13 @@ export default function CompetitionDetailPage() {
                                 href={`/dashboard/competitions/${competitionId}/admin/racing/season-winner`}
                                 className="block w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 text-white font-medium rounded-lg transition-colors text-center"
                             >
-                                🏆 Ogłoś zwycięzcę sezonu
+                                🏆 {t("details.announceWinner")}
                             </Link>
                         )}
 
                         {competition?.winnerResolved && (
                             <div className="w-full px-4 py-3 bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg text-emerald-700 dark:text-emerald-300 font-medium text-center">
-                                ✓ Zwycięzca sezonu już ogłoszony
+                                ✓ {t("details.winnerAlreadyAnnounced")}
                             </div>
                         )}
                     </div>

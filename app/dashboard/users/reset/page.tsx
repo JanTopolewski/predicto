@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { getApiErrorMessage } from "@/lib/apiErrors";
+import { useApiError } from "@/lib/useApiError";
 
 export default function ChangePasswordPage() {
     const router = useRouter();
@@ -18,6 +18,7 @@ export default function ChangePasswordPage() {
     const t = useTranslations("auth.reset");
     const tCommon = useTranslations("common");
     const tErrors = useTranslations("apiErrors");
+    const apiError = useApiError();
 
     const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -26,7 +27,7 @@ export default function ChangePasswordPage() {
         setIsLoading(true);
 
         if (!currentPassword || !newPassword || !confirmPassword) {
-            setError(tErrors("missingFields"));
+            setError(tErrors("MISSING_FIELDS"));
             setIsLoading(false);
             return;
         }
@@ -58,7 +59,7 @@ export default function ChangePasswordPage() {
             const data = await response.json();
 
             if (!response.ok) {
-                setError(getApiErrorMessage(tErrors, data.message || "Error changing password"));
+                setError(apiError(data));
                 setIsLoading(false);
                 return;
             }

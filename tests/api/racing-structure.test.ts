@@ -296,7 +296,7 @@ describe("PATCH / DELETE racing session", () => {
         db.racingSession.findUnique.mockResolvedValue(session({ resolved: true }));
         const res = await patch({ votingClosedAt: null });
         expect(res.status).toBe(400);
-        expect((await res.json()).error).toMatch(/rozliczonej sesji/);
+        expect((await res.json()).code).toBe("CANNOT_MODIFY_RESOLVED_SESSION");
         expect(db.racingSession.update).not.toHaveBeenCalled();
     });
 
@@ -307,7 +307,7 @@ describe("PATCH / DELETE racing session", () => {
         );
         const res = await patch({ votingClosedAt: null });
         expect(res.status).toBe(400);
-        expect((await res.json()).error).toMatch(/po rozpoczęciu sesji/);
+        expect((await res.json()).code).toBe("CANNOT_MODIFY_PAST_SESSION");
         expect(db.racingSession.update).not.toHaveBeenCalled();
     });
 });

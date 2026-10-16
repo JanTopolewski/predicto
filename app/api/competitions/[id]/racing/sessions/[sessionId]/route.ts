@@ -80,14 +80,14 @@ export async function PATCH(
                 return apiError(
                     400,
                     "CANNOT_MODIFY_RESOLVED_SESSION",
-                    "Cannot modify voting time for an already resolved session (nie można modyfikować czasu głosowania dla rozliczonej sesji)"
+                    "Cannot modify voting time for an already resolved session"
                 );
             }
             if (racingSession.startTime && isTimePassed(racingSession.startTime)) {
                 return apiError(
                     400,
                     "CANNOT_MODIFY_PAST_SESSION",
-                    "Cannot modify voting time after session has started (nie można modyfikować czasu głosowania po rozpoczęciu sesji)"
+                    "Cannot modify voting time after session has started"
                 );
             }
 

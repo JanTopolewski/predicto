@@ -5,10 +5,10 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { getApiErrorMessage } from "@/lib/apiErrors";
+import { useApiError } from "@/lib/useApiError";
 
 export default function CreateCompetitionPage() {
-    const { data: session } = useSession();
+    const { data: session, status } = useSession();
     const router = useRouter();
     const [name, setName] = useState("");
     const [type, setType] = useState("FOOTBALL");
@@ -22,12 +22,13 @@ export default function CreateCompetitionPage() {
     const t = useTranslations("competitions.create");
     const tCommon = useTranslations("common");
     const tErrors = useTranslations("apiErrors");
+    const apiError = useApiError();
 
     useEffect(() => {
-        if (session && session.user?.role !== "ADMIN") {
+        if (status === "authenticated" && session?.user?.role !== "ADMIN") {
             router.push("/dashboard");
         }
-    }, [session, router]);
+    }, [session, status, router]);
 
     const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -36,13 +37,13 @@ export default function CreateCompetitionPage() {
 
         try {
             if (!name || !startDate || !endDate) {
-                setError(tErrors("missingFields"));
+                setError(tErrors("MISSING_FIELDS"));
                 setIsLoading(false);
                 return;
             }
 
             if (new Date(startDate) >= new Date(endDate)) {
-                setError(tErrors("endDateBeforeStart"));
+                setError(tErrors("END_DATE_BEFORE_START"));
                 setIsLoading(false);
                 return;
             }
@@ -63,20 +64,20 @@ export default function CreateCompetitionPage() {
             const data = await response.json();
 
             if (!response.ok) {
-                setError(getApiErrorMessage(tErrors, data.message || "Failed to create competition"));
+                setError(apiError(data));
                 setIsLoading(false);
                 return;
             }
 
             router.push("/dashboard/competitions");
         } catch (err) {
-            setError(tErrors("internalError"));
+            setError(apiError());
             console.error(err);
             setIsLoading(false);
         }
     };
 
-    if (session?.user?.role !== "ADMIN") {
+    if (status === "loading" || session?.user?.role !== "ADMIN") {
         return null;
     }
 

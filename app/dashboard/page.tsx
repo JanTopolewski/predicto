@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { getApiErrorMessage } from "@/lib/apiErrors";
+import { useApiError } from "@/lib/useApiError";
 
 interface Competition {
     id: string;
@@ -27,7 +27,7 @@ export default function DashboardPage() {
 
     const t = useTranslations("dashboard");
     const tCommon = useTranslations("common");
-    const tErrors = useTranslations("apiErrors");
+    const apiError = useApiError();
 
     useEffect(() => {
         const fetchCompetitions = async () => {
@@ -36,13 +36,15 @@ export default function DashboardPage() {
                 const response = await fetch("/api/competitions");
 
                 if (!response.ok) {
-                    throw new Error("Failed to fetch competitions");
+                    const data = await response.json();
+                    setError(apiError(data));
+                    return;
                 }
 
                 const data: ApiResponse = await response.json();
                 setCompetitions(data.competitions || []);
             } catch (err) {
-                setError(getApiErrorMessage(tErrors, "Błąd podczas pobierania konkurencji"));
+                setError(apiError());
                 console.error(err);
             } finally {
                 setLoading(false);
@@ -52,7 +54,7 @@ export default function DashboardPage() {
         if (session?.user?.id) {
             void fetchCompetitions();
         }
-    }, [session?.user?.id, tErrors]);
+    }, [session?.user?.id, apiError]);
 
     const getCompetitionTypeLabel = (type: string) => {
         return type === "FOOTBALL" ? tCommon("football") : tCommon("racing");

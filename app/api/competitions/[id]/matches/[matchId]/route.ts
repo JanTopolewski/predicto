@@ -80,14 +80,14 @@ export async function PATCH(
                 return apiError(
                     400,
                     "CANNOT_MODIFY_RESOLVED_MATCH",
-                    "Cannot modify voting time for an already resolved match (nie można modyfikować czasu głosowania dla rozliczonego meczu)"
+                    "Cannot modify voting time for an already resolved match"
                 );
             }
             if (match.kickoff && isTimePassed(match.kickoff)) {
                 return apiError(
                     400,
                     "CANNOT_MODIFY_PAST_MATCH",
-                    "Cannot modify voting time after match has started (nie można modyfikować czasu głosowania po rozpoczęciu meczu)"
+                    "Cannot modify voting time after match has started"
                 );
             }
         }

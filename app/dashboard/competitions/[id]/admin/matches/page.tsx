@@ -4,6 +4,9 @@ import React, { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslations, useLocale } from "next-intl";
+import { useApiError } from "@/lib/useApiError";
+import { Locale } from "@/i18n/config";
 
 interface Team {
     id: string;
@@ -25,7 +28,7 @@ interface Match {
 }
 
 export default function AdminMatchesPage() {
-    const { data: session } = useSession();
+    const { data: session, status } = useSession();
     const params = useParams();
     const router = useRouter();
     const competitionId = params.id as string;
@@ -51,11 +54,17 @@ export default function AdminMatchesPage() {
     const [isUpdating, setIsUpdating] = useState(false);
     const [isCalculating, setIsCalculating] = useState("");
 
+    const t = useTranslations("matches.admin");
+    const tCommon = useTranslations("common");
+    const tErrors = useTranslations("apiErrors");
+    const apiError = useApiError();
+    const locale = useLocale() as Locale;
+
     useEffect(() => {
-        if (session?.user?.role !== "ADMIN") {
+        if (status === "authenticated" && session?.user?.role !== "ADMIN") {
             router.push("/dashboard");
         }
-    }, [session, router]);
+    }, [session, status, router]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -67,8 +76,15 @@ export default function AdminMatchesPage() {
                     fetch("/api/teams/sorted"),
                 ]);
 
-                if (!matchesRes.ok || !teamsRes.ok) {
-                    throw new Error("Failed to fetch data");
+                if (!matchesRes.ok) {
+                    const data = await matchesRes.json();
+                    setError(apiError(data));
+                    return;
+                }
+                if (!teamsRes.ok) {
+                    const data = await teamsRes.json();
+                    setError(apiError(data));
+                    return;
                 }
 
                 const matchesData = await matchesRes.json();
@@ -77,7 +93,7 @@ export default function AdminMatchesPage() {
                 setMatches(matchesData.matches || []);
                 setTeams(teamsData.teams || []);
             } catch (err) {
-                setError("Błąd podczas pobierania danych");
+                setError(apiError());
                 console.error(err);
             } finally {
                 setLoading(false);
@@ -85,7 +101,7 @@ export default function AdminMatchesPage() {
         };
 
         void fetchData();
-    }, [competitionId]);
+    }, [competitionId, apiError]);
 
     const handleCreateMatch = async (e: React.SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -95,13 +111,13 @@ export default function AdminMatchesPage() {
 
         try {
             if (!homeTeamId || !awayTeamId || !kickoff) {
-                setError("Wszystkie pola są wymagane");
+                setError(tErrors("MISSING_FIELDS"));
                 setIsCreating(false);
                 return;
             }
 
             if (homeTeamId === awayTeamId) {
-                setError("Wybierz różne drużyny");
+                setError(t("teamsMustDiffer"));
                 setIsCreating(false);
                 return;
             }
@@ -122,16 +138,16 @@ export default function AdminMatchesPage() {
                 }
             );
 
+            const data = await response.json();
+
             if (!response.ok) {
-                const data = await response.json();
-                setError(data.error || "Błąd podczas tworzenia meczu");
+                setError(apiError(data));
                 setIsCreating(false);
                 return;
             }
 
-            const data = await response.json();
             setMatches([...matches, data.match]);
-            setSuccessMessage("✓ Mecz został utworzony");
+            setSuccessMessage(`✓ ${t("matchCreated")}`);
 
             // Reset form
             setHomeTeamId("");
@@ -143,7 +159,7 @@ export default function AdminMatchesPage() {
 
             setTimeout(() => setSuccessMessage(""), 3000);
         } catch (err) {
-            setError("Błąd podczas tworzenia meczu");
+            setError(apiError());
             console.error(err);
             setIsCreating(false);
         }
@@ -151,7 +167,7 @@ export default function AdminMatchesPage() {
 
     const handleUpdateMatch = async (matchId: string) => {
         if (editHomeGoals === "" || editAwayGoals === "") {
-            setError("Wpisz wynik");
+            setError(t("scoreRequired"));
             return;
         }
 
@@ -174,19 +190,19 @@ export default function AdminMatchesPage() {
                 }
             );
 
+            const data = await response.json();
+
             if (!response.ok) {
-                const data = await response.json();
-                setError(data.error || "Błąd podczas aktualizacji");
+                setError(apiError(data));
                 setIsUpdating(false);
                 return;
             }
 
-            const data = await response.json();
             setMatches(
                 matches.map((m) => (m.id === matchId ? data.match : m))
             );
 
-            setSuccessMessage("✓ Wynik został zaktualizowany");
+            setSuccessMessage(`✓ ${t("saveResult")}`);
             setEditingMatchId(null);
             setEditHomeGoals("");
             setEditAwayGoals("");
@@ -201,14 +217,14 @@ export default function AdminMatchesPage() {
                 );
 
                 if (calculateResponse.ok) {
-                    setSuccessMessage("✓ Wynik zapisany i punkty obliczone");
+                    setSuccessMessage(`✓ ${t("resultUpdated")}`);
                 } else {
                     const errorData = await calculateResponse.json();
-                    setError(errorData.error || "Błąd podczas liczenia punktów");
+                    setError(apiError(errorData));
                 }
             } catch (err) {
-                console.error("Błąd podczas wyliczania punktów:", err);
-                setError("Błąd podczas wyliczania punktów");
+                console.error(err);
+                setError(apiError());
             } finally {
                 setIsCalculating("");
                 setIsUpdating(false);
@@ -216,7 +232,7 @@ export default function AdminMatchesPage() {
 
             setTimeout(() => setSuccessMessage(""), 3000);
         } catch (err) {
-            setError("Błąd podczas aktualizacji");
+            setError(apiError());
             console.error(err);
             setIsUpdating(false);
         }
@@ -235,26 +251,27 @@ export default function AdminMatchesPage() {
                 }
             );
 
+            const data = await response.json();
+
             if (!response.ok) {
-                const data = await response.json();
-                setError(data.error || "Błąd podczas liczenia punktów");
+                setError(apiError(data));
                 setIsCalculating("");
                 return;
             }
 
-            setSuccessMessage("✓ Punkty zostały obliczone");
+            setSuccessMessage(`✓ ${t("pointsCalculated")}`);
             setIsCalculating("");
 
             setTimeout(() => setSuccessMessage(""), 3000);
         } catch (err) {
-            setError("Błąd podczas liczenia punktów");
+            setError(apiError());
             console.error(err);
             setIsCalculating("");
         }
     };
 
     const handleDeleteMatch = async (matchId: string) => {
-        if (!window.confirm("Na pewno chcesz usunąć ten mecz?")) {
+        if (!window.confirm(t("deleteConfirm"))) {
             return;
         }
 
@@ -269,23 +286,24 @@ export default function AdminMatchesPage() {
                 }
             );
 
+            const data = await response.json();
+
             if (!response.ok) {
-                const data = await response.json();
-                setError(data.error || "Błąd podczas usuwania");
+                setError(apiError(data));
                 return;
             }
 
             setMatches(matches.filter((m) => m.id !== matchId));
-            setSuccessMessage("✓ Mecz został usunięty");
+            setSuccessMessage(`✓ ${t("matchDeleted")}`);
 
             setTimeout(() => setSuccessMessage(""), 3000);
         } catch (err) {
-            setError("Błąd podczas usuwania");
+            setError(apiError());
             console.error(err);
         }
     };
 
-    if (session?.user?.role !== "ADMIN") {
+    if (status === "loading" || session?.user?.role !== "ADMIN") {
         return null;
     }
 
@@ -296,17 +314,17 @@ export default function AdminMatchesPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
                         <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white">
-                            Zarządzanie meczami
+                            {t("title")}
                         </h2>
                         <p className="text-sm sm:text-base text-zinc-600 dark:text-zinc-400 mt-2">
-                            Tworzenie, edycja i liczenie punktów
+                            {t("subtitle")}
                         </p>
                     </div>
                     <Link
                         href={`/dashboard/competitions/${competitionId}`}
                         className="px-4 sm:px-6 py-2.5 sm:py-3 bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-900 dark:text-white font-medium rounded-lg transition-colors text-center text-sm sm:text-base"
                     >
-                        Wróć
+                        {tCommon("back")}
                     </Link>
                 </div>
             </div>
@@ -334,19 +352,19 @@ export default function AdminMatchesPage() {
                     onClick={() => setShowForm(true)}
                     className="w-full px-6 py-3 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white font-medium rounded-lg transition-colors"
                 >
-                    + Dodaj nowy mecz
+                    {t("addNew")}
                 </button>
             ) : (
                 <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800">
                     <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-4">
-                        Nowy mecz
+                        {t("newMatchTitle")}
                     </h3>
 
                     <form onSubmit={handleCreateMatch} className="space-y-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                                    Drużyna domowa
+                                    {t("homeTeam")}
                                 </label>
                                 <select
                                     value={homeTeamId}
@@ -357,7 +375,7 @@ export default function AdminMatchesPage() {
                                     className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 >
                                     <option value="">
-                                        Wybierz drużynę...
+                                        {t("selectTeam")}
                                     </option>
                                     {teams.map((team) => (
                                         <option key={team.id} value={team.id}>
@@ -369,7 +387,7 @@ export default function AdminMatchesPage() {
 
                             <div>
                                 <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                                    Drużyna gościa
+                                    {t("awayTeam")}
                                 </label>
                                 <select
                                     value={awayTeamId}
@@ -380,7 +398,7 @@ export default function AdminMatchesPage() {
                                     className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 >
                                     <option value="">
-                                        Wybierz drużynę...
+                                        {t("selectTeam")}
                                     </option>
                                     {teams.map((team) => (
                                         <option key={team.id} value={team.id}>
@@ -394,7 +412,7 @@ export default function AdminMatchesPage() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                                    Data/Godzina meczu *
+                                    {t("matchDateTime")}
                                 </label>
                                 <input
                                     type="datetime-local"
@@ -407,7 +425,7 @@ export default function AdminMatchesPage() {
 
                             <div>
                                 <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                                    Przewidywany koniec
+                                    {t("predictedEndTime")}
                                 </label>
                                 <input
                                     type="datetime-local"
@@ -427,14 +445,14 @@ export default function AdminMatchesPage() {
                                 disabled={isCreating}
                                 className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
                             >
-                                {isCreating ? "Tworzenie..." : "Utwórz mecz"}
+                                {isCreating ? t("creating") : t("createMatch")}
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setShowForm(false)}
                                 className="flex-1 px-4 py-2 bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-900 dark:text-white font-medium rounded-lg transition-colors"
                             >
-                                Anuluj
+                                {tCommon("cancel")}
                             </button>
                         </div>
                     </form>
@@ -445,13 +463,13 @@ export default function AdminMatchesPage() {
             {loading ? (
                 <div className="p-8 text-center bg-white dark:bg-zinc-900 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-800">
                     <p className="text-zinc-600 dark:text-zinc-400">
-                        Ładowanie meczy...
+                        {tCommon("loading")}
                     </p>
                 </div>
             ) : matches.length === 0 ? (
                 <div className="p-8 text-center bg-white dark:bg-zinc-900 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-800">
                     <p className="text-zinc-600 dark:text-zinc-400">
-                        Brak meczy
+                        {tCommon("all")}
                     </p>
                 </div>
             ) : (
@@ -470,14 +488,14 @@ export default function AdminMatchesPage() {
                                     </h3>
                                     <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
                                         {new Date(match.kickoff).toLocaleString(
-                                            "pl-PL"
+                                            locale
                                         )}
                                     </p>
                                 </div>
 
                                 {match.resolved && (
                                     <div className="px-4 py-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 rounded-lg text-sm font-medium">
-                                        ✓ Zakończony
+                                        ✓ {tCommon("status")}
                                     </div>
                                 )}
                             </div>
@@ -486,7 +504,7 @@ export default function AdminMatchesPage() {
                             {editingMatchId === match.id ? (
                                 <div className="bg-zinc-50 dark:bg-zinc-800 p-4 rounded-lg space-y-4">
                                     <h4 className="font-medium text-zinc-900 dark:text-white">
-                                        Wpisz wynik
+                                        {t("editResult")}
                                     </h4>
 
                                     <div className="grid grid-cols-2 gap-4">
@@ -536,8 +554,8 @@ export default function AdminMatchesPage() {
                                             className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white text-sm font-medium rounded transition-colors disabled:opacity-50"
                                         >
                                             {isUpdating
-                                                ? "Zapisywanie..."
-                                                : "Zapisz wynik"}
+                                                ? tCommon("loading")
+                                                : t("saveResult")}
                                         </button>
                                         <button
                                             onClick={() => {
@@ -548,7 +566,7 @@ export default function AdminMatchesPage() {
                                             disabled={isUpdating}
                                             className="flex-1 px-3 py-2 bg-zinc-300 hover:bg-zinc-400 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-900 dark:text-white text-sm font-medium rounded transition-colors"
                                         >
-                                            Anuluj
+                                            {tCommon("cancel")}
                                         </button>
                                     </div>
                                 </div>
@@ -565,7 +583,7 @@ export default function AdminMatchesPage() {
                                     ) : (
                                         <div className="bg-zinc-50 dark:bg-zinc-800 p-4 rounded-lg text-center">
                                             <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                                                Brak wyniku
+                                                {t("noResult")}
                                             </p>
                                         </div>
                                     )}
@@ -586,7 +604,7 @@ export default function AdminMatchesPage() {
                                             }}
                                             className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded text-sm transition-colors"
                                         >
-                                            ✏️ Wpisz wynik
+                                            ✏️ {t("editResult")}
                                         </button>
 
                                         <button
@@ -595,7 +613,7 @@ export default function AdminMatchesPage() {
                                             }
                                             className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white font-medium rounded text-sm transition-colors"
                                         >
-                                            ️ Usuń
+                                            🗑️ {t("deleteMatch")}
                                         </button>
                                     </div>
                                 </>

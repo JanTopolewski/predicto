@@ -4,6 +4,9 @@ import React, { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { useTranslations, useLocale } from "next-intl";
+import { useApiError } from "@/lib/useApiError";
+import { Locale } from "@/i18n/config";
 
 interface Team {
     id: string;
@@ -40,6 +43,11 @@ export default function MatchesPage() {
         null
     );
 
+    const t = useTranslations("matches");
+    const tCommon = useTranslations("common");
+    const apiError = useApiError();
+    const locale = useLocale() as Locale;
+
     const hasPrediction = (match: Match) => {
         return match.predictions && match.predictions.length > 0;
     };
@@ -53,13 +61,15 @@ export default function MatchesPage() {
                 );
 
                 if (!response.ok) {
-                    throw new Error("Failed to fetch matches");
+                    const data = await response.json();
+                    setError(apiError(data));
+                    return;
                 }
 
                 const data = await response.json();
                 setMatches(data.matches || []);
             } catch (err) {
-                setError("Błąd podczas pobierania meczy");
+                setError(apiError());
                 console.error(err);
             } finally {
                 setLoading(false);
@@ -67,7 +77,7 @@ export default function MatchesPage() {
         };
 
         void fetchMatches();
-    }, [competitionId]);
+    }, [competitionId, apiError]);
 
     const handlePrediction = async (
         matchId: string,
@@ -88,17 +98,15 @@ export default function MatchesPage() {
                 }
             );
 
+            const data = await response.json();
+
             if (!response.ok) {
-                const data = await response.json();
-                setError(
-                    data.error ||
-                    "Błąd podczas dodawania predykcji"
-                );
+                setError(apiError(data));
                 setPredictingMatchId(null);
                 return;
             }
 
-            setSuccessMessage("✓ Twoja predykcja została zapisana");
+            setSuccessMessage(`✓ ${t("predictionSaved")}`);
 
             const matchesResponse = await fetch(
                 `/api/competitions/${competitionId}/matches`
@@ -111,7 +119,7 @@ export default function MatchesPage() {
             setTimeout(() => setSuccessMessage(""), 3000);
             setPredictingMatchId(null);
         } catch (err) {
-            setError("Błąd podczas dodawania predykcji");
+            setError(apiError());
             console.error(err);
             setPredictingMatchId(null);
         }
@@ -134,17 +142,17 @@ export default function MatchesPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
                         <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white">
-                            Mecze
+                            {t("title")}
                         </h2>
                         <p className="text-sm sm:text-base text-zinc-600 dark:text-zinc-400 mt-2">
-                            Obstawiaj mecze i zdobywaj punkty
+                            {t("subtitle")}
                         </p>
                     </div>
                     <Link
                         href={`/dashboard/competitions/${competitionId}`}
                         className="px-4 sm:px-6 py-2.5 sm:py-3 bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-900 dark:text-white font-medium rounded-lg transition-colors text-center text-sm sm:text-base"
                     >
-                        Wróć
+                        {tCommon("back")}
                     </Link>
                 </div>
             </div>
@@ -170,13 +178,13 @@ export default function MatchesPage() {
             {loading ? (
                 <div className="p-8 text-center bg-white dark:bg-zinc-900 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-800">
                     <p className="text-zinc-600 dark:text-zinc-400">
-                        Ładowanie meczy...
+                        {tCommon("loading")}
                     </p>
                 </div>
             ) : matches.length === 0 ? (
                 <div className="p-8 text-center bg-white dark:bg-zinc-900 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-800">
                     <p className="text-zinc-600 dark:text-zinc-400">
-                        Brak meczy
+                        {t("noMatches")}
                     </p>
                 </div>
             ) : (
@@ -195,7 +203,7 @@ export default function MatchesPage() {
                                     </h3>
                                     <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
                                         {new Date(match.kickoff).toLocaleString(
-                                            "pl-PL"
+                                            locale
                                         )}
                                     </p>
                                 </div>
@@ -207,14 +215,14 @@ export default function MatchesPage() {
                                             {match.awayGoals}
                                         </p>
                                         <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1">
-                                            Wynik
+                                            {t("result")}
                                         </p>
                                     </div>
                                 )}
 
                                 {!isVotingOpen(match) && (
                                     <div className="px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded text-sm font-medium">
-                                        🔒 Głosowanie zamknięte
+                                        🔒 {t("votingClosed")}
                                     </div>
                                 )}
                             </div>
@@ -224,7 +232,7 @@ export default function MatchesPage() {
                                 hasPrediction(match) ? (
                                     <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg text-center border border-emerald-200 dark:border-emerald-800">
                                         <p className="text-sm text-emerald-700 dark:text-emerald-400">
-                                            ✓ Twoja predykcja została zapisana
+                                            ✓ {t("predictionSaved")}
                                         </p>
                                     </div>
                                 ) : (
@@ -284,7 +292,7 @@ export default function MatchesPage() {
                                                 if (!pred) return;
 
                                                 if (pred.homeGoals === "" || pred.awayGoals === "") {
-                                                    setError("Podaj wynik obu drużyn");
+                                                    setError(t("scoreRequired"));
                                                     return;
                                                 }
 
@@ -299,7 +307,7 @@ export default function MatchesPage() {
                                                     away < 0 ||
                                                     away > 20
                                                 ) {
-                                                    setError("Wynik musi być z zakresu 0-20");
+                                                    setError(t("scoreRangeError"));
                                                     return;
                                                 }
 
@@ -314,8 +322,8 @@ export default function MatchesPage() {
                                             className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
                                             {predictingMatchId === match.id
-                                                ? "Zapisywanie..."
-                                                : "Oddaj strzał"}
+                                                ? t("saving")
+                                                : t("predict")}
                                         </button>
                                     </div>
                                 )
@@ -323,8 +331,8 @@ export default function MatchesPage() {
                                 <div className="p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg text-center">
                                     <p className="text-sm text-zinc-600 dark:text-zinc-400">
                                         {match.resolved
-                                            ? "Mecz zakończony - brak możliwości obstawiania"
-                                            : "Głosowanie na ten mecz jest zamknięte"}
+                                            ? t("matchFinishedNoVoting")
+                                            : t("votingClosed")}
                                     </p>
                                 </div>
                             )}

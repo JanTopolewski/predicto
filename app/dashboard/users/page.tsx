@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useTranslations, useLocale } from "next-intl";
+import { useApiError } from "@/lib/useApiError";
 
 interface User {
     id: string;
@@ -20,7 +22,11 @@ interface ApiResponse {
 }
 
 export default function UsersPage() {
-    const { data: session } = useSession();
+    const t = useTranslations("users");
+    const tCommon = useTranslations("common");
+    const locale = useLocale();
+    const apiError = useApiError();
+    const { data: session, status } = useSession();
     const router = useRouter();
     const [users, setUsers] = useState<User[]>([]);
     const [loading, setLoading] = useState(true);
@@ -42,36 +48,37 @@ export default function UsersPage() {
     const [actionLoading, setActionLoading] = useState(false);
 
     useEffect(() => {
-        if (session && session.user?.role !== "ADMIN") {
+        if (status === "authenticated" && session?.user?.role !== "ADMIN") {
             router.push("/dashboard");
         }
-    }, [session, router]);
+    }, [session, status, router]);
+
+    const fetchUsers = useCallback(async () => {
+        setLoading(true);
+        setError("");
+        try {
+            const response = await fetch(`/api/users?page=${page}&limit=10`);
+            const data = await response.json();
+
+            if (!response.ok) {
+                setError(apiError(data) || t("loadError"));
+                return;
+            }
+
+            const apiData = data as ApiResponse;
+            setUsers(apiData.users || []);
+            setTotalPages(apiData.totalPages || 1);
+        } catch (err) {
+            console.error(err);
+            setError(t("loadError"));
+        } finally {
+            setLoading(false);
+        }
+    }, [page, apiError, t]);
 
     useEffect(() => {
-        const fetchUsers = async () => {
-            setLoading(true);
-            setError("");
-            try {
-                const response = await fetch(`/api/users?page=${page}&limit=10`);
-                const data: ApiResponse = await response.json();
-
-                if (!response.ok) {
-                    setError(data.total ? "" : "Nie można pobrać listy użytkowników");
-                    return;
-                }
-
-                setUsers(data.users);
-                setTotalPages(data.totalPages);
-            } catch (err) {
-                setError("Błąd podczas pobierania użytkowników");
-                console.error(err);
-            } finally {
-                setLoading(false);
-            }
-        };
-
         void fetchUsers();
-    }, [page]);
+    }, [fetchUsers]);
 
     const openConfirmDialog = (
         action: "delete" | "promote" | "changePassword",
@@ -104,16 +111,16 @@ export default function UsersPage() {
             });
 
             if (!response.ok) {
-                const data = await response.json();
-                setError(data.message || "Błąd podczas usuwania użytkownika");
+                const data = await response.json().catch(() => null);
+                setError(apiError(data));
                 return;
             }
 
             setUsers(users.filter((u) => u.id !== confirmDialog.userId));
             closeConfirmDialog();
         } catch (err) {
-            setError("Błąd podczas usuwania użytkownika");
             console.error(err);
+            setError(apiError());
         } finally {
             setActionLoading(false);
         }
@@ -129,8 +136,8 @@ export default function UsersPage() {
             });
 
             if (!response.ok) {
-                const data = await response.json();
-                setError(data.message || "Błąd podczas awansowania użytkownika");
+                const data = await response.json().catch(() => null);
+                setError(apiError(data));
                 return;
             }
 
@@ -142,8 +149,8 @@ export default function UsersPage() {
             );
             closeConfirmDialog();
         } catch (err) {
-            setError("Błąd podczas awansowania użytkownika");
             console.error(err);
+            setError(apiError());
         } finally {
             setActionLoading(false);
         }
@@ -158,13 +165,13 @@ export default function UsersPage() {
                 body: JSON.stringify({ password: password.trim() }),
             });
 
-            const data = await response.json();
+            const data = await response.json().catch(() => null);
             if (!response.ok) {
-                setError(data.message || "Błąd podczas zmiany hasła użytkownika");
+                setError(apiError(data));
                 return;
             }
 
-            if (data.user) {
+            if (data?.user) {
                 setUsers((prevUsers) =>
                     prevUsers.map((u) =>
                         u.id === confirmDialog.userId ? data.user : u
@@ -173,8 +180,8 @@ export default function UsersPage() {
             }
             closeConfirmDialog();
         } catch (err) {
-            setError("Błąd podczas zmiany hasła użytkownika");
             console.error(err);
+            setError(apiError());
         } finally {
             setActionLoading(false);
         }
@@ -190,7 +197,7 @@ export default function UsersPage() {
         }
     };
 
-    if (session?.user?.role !== "ADMIN") {
+    if (status === "loading" || session?.user?.role !== "ADMIN") {
         return null;
     }
 
@@ -199,11 +206,10 @@ export default function UsersPage() {
             {/* Header */}
             <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-8 border border-zinc-200 dark:border-zinc-800">
                 <h2 className="text-3xl font-bold text-zinc-900 dark:text-white">
-                    Zarządzanie użytkownikami
+                    {t("title")}
                 </h2>
                 <p className="text-zinc-600 dark:text-zinc-400 mt-2">
-                    Zarządzaj użytkownikami aplikacji: usuwaj konta lub awansuj do roli
-                    administratora.
+                    {t("subtitle")}
                 </p>
             </div>
 
@@ -219,13 +225,13 @@ export default function UsersPage() {
                 {loading ? (
                     <div className="p-8 text-center">
                         <p className="text-zinc-600 dark:text-zinc-400">
-                            Ładowanie użytkowników...
+                            {tCommon("loading")}
                         </p>
                     </div>
                 ) : users.length === 0 ? (
                     <div className="p-8 text-center">
                         <p className="text-zinc-600 dark:text-zinc-400">
-                            Brak użytkowników do wyświetlenia
+                            {t("loadError")}
                         </p>
                     </div>
                 ) : (
@@ -235,19 +241,19 @@ export default function UsersPage() {
                                 <thead>
                                 <tr className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800">
                                     <th className="px-6 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">
-                                        Nazwa użytkownika
+                                        {t("table.user")}
                                     </th>
                                     <th className="px-6 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">
                                         Email
                                     </th>
                                     <th className="px-6 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">
-                                        Rola
+                                        {t("table.role")}
                                     </th>
                                     <th className="px-6 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">
-                                        Dołączył
+                                        {t("table.registered")}
                                     </th>
                                     <th className="px-6 py-3 text-right text-sm font-semibold text-zinc-900 dark:text-white">
-                                        Akcje
+                                        {t("table.actions")}
                                     </th>
                                 </tr>
                                 </thead>
@@ -275,12 +281,12 @@ export default function UsersPage() {
                                                         : "bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-300"
                                                 }`}
                                             >
-                                              {user.role === "ADMIN" ? "Administrator" : "Użytkownik"}
+                                                {user.role}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4">
                                             <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                                                {new Date(user.createdAt).toLocaleDateString("pl-PL")}
+                                                {new Date(user.createdAt).toLocaleDateString(locale, { timeZone: "Europe/Warsaw" })}
                                             </p>
                                         </td>
                                         <td className="px-6 py-4 text-right">
@@ -296,7 +302,7 @@ export default function UsersPage() {
                                                         }
                                                         className="whitespace-nowrap px-3 py-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white text-sm font-medium rounded transition-colors"
                                                     >
-                                                        Awansuj
+                                                        {t("promoteToAdmin")}
                                                     </button>
                                                 )}
                                                 <button
@@ -305,7 +311,7 @@ export default function UsersPage() {
                                                     }
                                                     className="whitespace-nowrap px-3 py-1 bg-violet-600 hover:bg-violet-700 dark:bg-violet-700 dark:hover:bg-violet-600 text-white text-sm font-medium rounded transition-colors"
                                                 >
-                                                    Zmień hasło
+                                                    {t("changePassword")}
                                                 </button>
                                                 <button
                                                     onClick={() =>
@@ -313,7 +319,7 @@ export default function UsersPage() {
                                                     }
                                                     className="whitespace-nowrap px-3 py-1 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white text-sm font-medium rounded transition-colors"
                                                 >
-                                                    Usuń
+                                                    {t("deleteUser")}
                                                 </button>
                                             </div>
                                         </td>
@@ -326,7 +332,7 @@ export default function UsersPage() {
                         {/* Pagination */}
                         <div className="px-6 py-4 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
                             <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                                Strona {page} z {totalPages}
+                                {t("pagination.pageOf", { page, totalPages })}
                             </p>
                             <div className="flex gap-2">
                                 <button
@@ -334,14 +340,14 @@ export default function UsersPage() {
                                     disabled={page === 1}
                                     className="px-4 py-2 bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-white rounded font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors"
                                 >
-                                    Poprzednia
+                                    {t("pagination.previous")}
                                 </button>
                                 <button
                                     onClick={() => setPage(Math.min(totalPages, page + 1))}
                                     disabled={page === totalPages}
                                     className="px-4 py-2 bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-white rounded font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors"
                                 >
-                                    Następna
+                                    {t("pagination.next")}
                                 </button>
                             </div>
                         </div>
@@ -354,14 +360,18 @@ export default function UsersPage() {
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
                     <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-xl p-6 max-w-sm w-full border border-zinc-200 dark:border-zinc-800">
                         <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-2">
-                            Potwierdź akcję
+                            {confirmDialog.action === "delete"
+                                ? t("dialog.deleteTitle")
+                                : confirmDialog.action === "promote"
+                                    ? t("dialog.promoteTitle")
+                                    : t("dialog.passwordTitle", { username: confirmDialog.username })}
                         </h3>
                         <p className="text-zinc-600 dark:text-zinc-400 mb-6">
                             {confirmDialog.action === "delete"
-                                ? `Czy na pewno chcesz usunąć użytkownika "${confirmDialog.username}"? Ta akcja jest nieodwracalna.`
+                                ? t("dialog.deleteConfirm", { username: confirmDialog.username })
                                 : confirmDialog.action === "promote"
-                                    ? `Czy na pewno chcesz awansować użytkownika "${confirmDialog.username}" do roli administratora?`
-                                    : `Podaj nowe hasło dla użytkownika "${confirmDialog.username}":`}
+                                    ? t("dialog.promoteConfirm", { username: confirmDialog.username })
+                                    : t("dialog.newPasswordLabel")}
                         </p>
                         {confirmDialog.action === "changePassword" && (
                             <input
@@ -379,7 +389,7 @@ export default function UsersPage() {
                                 disabled={actionLoading}
                                 className="px-4 py-2 bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-white rounded font-medium hover:bg-zinc-300 dark:hover:bg-zinc-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                                Anuluj
+                                {t("dialog.cancelButton")}
                             </button>
                             <button
                                 onClick={() => void handleConfirm()}
@@ -392,13 +402,7 @@ export default function UsersPage() {
                                             : "bg-violet-600 hover:bg-violet-700 dark:bg-violet-700 dark:hover:bg-violet-600"
                                 }`}
                             >
-                                {actionLoading
-                                    ? "Przetwarzanie..."
-                                    : confirmDialog.action === "delete"
-                                        ? "Usuń użytkownika"
-                                        : confirmDialog.action === "promote"
-                                            ? "Awansuj"
-                                            : "Zmień hasło"}
+                                {actionLoading ? t("dialog.saving") : t("dialog.confirmButton")}
                             </button>
                         </div>
                     </div>

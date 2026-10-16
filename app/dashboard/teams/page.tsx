@@ -4,13 +4,19 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslations, useLocale } from "next-intl";
+import { useApiError } from "@/lib/useApiError";
 import { Team } from "@/types/team";
 import { Driver } from "@/types/driver";
 
 type EntityType = "team" | "driver";
 
 export default function TeamsPage() {
-    const { data: session } = useSession();
+    const t = useTranslations("teams");
+    const tCommon = useTranslations("common");
+    const locale = useLocale();
+    const apiError = useApiError();
+    const { data: session, status } = useSession();
     const router = useRouter();
     const [teams, setTeams] = useState<Team[]>([]);
     const [drivers, setDrivers] = useState<Driver[]>([]);
@@ -28,7 +34,9 @@ export default function TeamsPage() {
             ]);
 
             if (!teamsRes.ok || !driversRes.ok) {
-                throw new Error("Nie można pobrać danych");
+                const badRes = !teamsRes.ok ? teamsRes : driversRes;
+                const errData = await badRes.json().catch(() => null);
+                throw new Error(apiError(errData) || t("loadError"));
             }
 
             const teamsData = await teamsRes.json();
@@ -36,24 +44,25 @@ export default function TeamsPage() {
 
             setTeams(teamsData.teams || []);
             setDrivers(driversData.drivers || []);
-        } catch (err) {
-            setError("Błąd podczas pobierania danych");
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : t("loadError");
+            setError(msg);
             console.error(err);
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [apiError, t]);
 
     useEffect(() => {
-        if (session && session.user?.role !== "ADMIN") {
+        if (status === "authenticated" && session?.user?.role !== "ADMIN") {
             router.push("/dashboard");
         } else if (session?.user?.id) {
             void fetchData();
         }
-    }, [session, router, fetchData]);
+    }, [session, status, router, fetchData]);
 
     const handleDeleteTeam = async (teamId: string) => {
-        if (!confirm("Czy na pewno chcesz usunąć tę drużynę?")) {
+        if (!confirm(t("deleteConfirmTeam"))) {
             return;
         }
 
@@ -66,8 +75,8 @@ export default function TeamsPage() {
             });
 
             if (!response.ok) {
-                const data = await response.json();
-                setError(data.message || "Błąd podczas usuwania drużyny");
+                const data = await response.json().catch(() => null);
+                setError(apiError(data));
                 setDeletingId(null);
                 return;
             }
@@ -75,14 +84,14 @@ export default function TeamsPage() {
             setTeams(teams.filter((team) => team.id !== teamId));
             setDeletingId(null);
         } catch (err) {
-            setError("Błąd podczas usuwania drużyny");
             console.error(err);
+            setError(apiError());
             setDeletingId(null);
         }
     };
 
     const handleDeleteDriver = async (driverId: string) => {
-        if (!confirm("Czy na pewno chcesz usunąć tego kierowcę?")) {
+        if (!confirm(t("deleteConfirmDriver"))) {
             return;
         }
 
@@ -95,8 +104,8 @@ export default function TeamsPage() {
             });
 
             if (!response.ok) {
-                const data = await response.json();
-                setError(data.message || "Błąd podczas usuwania kierowcy");
+                const data = await response.json().catch(() => null);
+                setError(apiError(data));
                 setDeletingId(null);
                 return;
             }
@@ -104,13 +113,13 @@ export default function TeamsPage() {
             setDrivers(drivers.filter((driver) => driver.id !== driverId));
             setDeletingId(null);
         } catch (err) {
-            setError("Błąd podczas usuwania kierowcy");
             console.error(err);
+            setError(apiError());
             setDeletingId(null);
         }
     };
 
-    if (session?.user?.role !== "ADMIN") {
+    if (status === "loading" || session?.user?.role !== "ADMIN") {
         return null;
     }
 
@@ -121,10 +130,10 @@ export default function TeamsPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
                         <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white">
-                            Zarządzanie drużynami i kierowcami
+                            {t("title")}
                         </h2>
                         <p className="text-sm sm:text-base text-zinc-600 dark:text-zinc-400 mt-2">
-                            Dodawaj, edytuj i usuwaj drużyny piłkarskie oraz kierowców wyścigowych
+                            {t("subtitle")}
                         </p>
                     </div>
                 </div>
@@ -140,7 +149,7 @@ export default function TeamsPage() {
                             : "border-b-2 border-transparent text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
                     }`}
                 >
-                    ⚽ Drużyny piłkarskie
+                    ⚽ {t("tabs.teams")}
                 </button>
                 <button
                     onClick={() => setActiveTab("driver")}
@@ -150,7 +159,7 @@ export default function TeamsPage() {
                             : "border-b-2 border-transparent text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
                     }`}
                 >
-                    🏎️ Kierowcy
+                    🏎️ {t("tabs.drivers")}
                 </button>
             </div>
 
@@ -169,26 +178,26 @@ export default function TeamsPage() {
                             href="/dashboard/teams/create"
                             className="px-4 sm:px-6 py-2.5 sm:py-3 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white font-medium rounded-lg transition-colors text-center text-sm sm:text-base whitespace-nowrap"
                         >
-                            + Dodaj drużynę
+                            {t("addTeam")}
                         </Link>
                     </div>
 
                     {loading ? (
                         <div className="p-8 text-center bg-white dark:bg-zinc-900 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-800">
                             <p className="text-zinc-600 dark:text-zinc-400">
-                                Ładowanie drużyn...
+                                {tCommon("loading")}
                             </p>
                         </div>
                     ) : teams.length === 0 ? (
                         <div className="p-8 text-center bg-white dark:bg-zinc-900 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-800">
                             <p className="text-zinc-600 dark:text-zinc-400 mb-4">
-                                Brak dodanych drużyn
+                                {t("noTeams")}
                             </p>
                             <Link
                                 href="/dashboard/teams/create"
                                 className="inline-block px-4 py-2 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white font-medium rounded-lg transition-colors"
                             >
-                                Dodaj pierwszą drużynę
+                                {t("addTeam")}
                             </Link>
                         </div>
                     ) : (
@@ -200,16 +209,16 @@ export default function TeamsPage() {
                                         <thead>
                                         <tr className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800">
                                             <th className="px-6 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">
-                                                Nazwa
+                                                {t("teamTable.name")}
                                             </th>
                                             <th className="px-6 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">
-                                                Skrót
+                                                {t("teamTable.shortName")}
                                             </th>
                                             <th className="px-6 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">
-                                                Data utworzenia
+                                                {t("teamTable.created")}
                                             </th>
                                             <th className="px-6 py-3 text-right text-sm font-semibold text-zinc-900 dark:text-white">
-                                                Akcje
+                                                {t("teamTable.actions")}
                                             </th>
                                         </tr>
                                         </thead>
@@ -232,7 +241,8 @@ export default function TeamsPage() {
                                                 <td className="px-6 py-4">
                                                     <p className="text-zinc-600 dark:text-zinc-400 text-sm">
                                                         {new Date(team.createdAt).toLocaleDateString(
-                                                            "pl-PL"
+                                                            locale,
+                                                            { timeZone: "Europe/Warsaw" }
                                                         )}
                                                     </p>
                                                 </td>
@@ -242,14 +252,14 @@ export default function TeamsPage() {
                                                             href={`/dashboard/teams/${team.id}/edit`}
                                                             className="px-3 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white text-sm font-medium rounded transition-colors"
                                                         >
-                                                            Edytuj
+                                                            {tCommon("edit")}
                                                         </Link>
                                                         <button
                                                             onClick={() => handleDeleteTeam(team.id)}
                                                             disabled={deletingId === team.id}
                                                             className="px-3 py-2 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white text-sm font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                         >
-                                                            {deletingId === team.id ? "Usuwanie..." : "Usuń"}
+                                                            {deletingId === team.id ? tCommon("loading") : tCommon("delete")}
                                                         </button>
                                                     </div>
                                                 </td>
@@ -272,13 +282,13 @@ export default function TeamsPage() {
                                                 {team.name}
                                             </h3>
                                             <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1">
-                                                {new Date(team.createdAt).toLocaleDateString("pl-PL")}
+                                                {new Date(team.createdAt).toLocaleDateString(locale, { timeZone: "Europe/Warsaw" })}
                                             </p>
                                         </div>
 
                                         <div className="bg-zinc-50 dark:bg-zinc-800 p-3 rounded">
                                             <p className="text-xs text-zinc-600 dark:text-zinc-400 mb-1">
-                                                Skrót
+                                                {t("teamTable.shortName")}
                                             </p>
                                             <code className="text-lg font-mono font-semibold text-zinc-900 dark:text-white">
                                                 {team.shortName}
@@ -290,14 +300,14 @@ export default function TeamsPage() {
                                                 href={`/dashboard/teams/${team.id}/edit`}
                                                 className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white text-sm font-medium rounded transition-colors text-center"
                                             >
-                                                Edytuj
+                                                {tCommon("edit")}
                                             </Link>
                                             <button
                                                 onClick={() => handleDeleteTeam(team.id)}
                                                 disabled={deletingId === team.id}
                                                 className="flex-1 px-3 py-2 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white text-sm font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
-                                                {deletingId === team.id ? "Usuwanie..." : "Usuń"}
+                                                {deletingId === team.id ? tCommon("loading") : tCommon("delete")}
                                             </button>
                                         </div>
                                     </div>
@@ -316,26 +326,26 @@ export default function TeamsPage() {
                             href="/dashboard/drivers/create"
                             className="px-4 sm:px-6 py-2.5 sm:py-3 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white font-medium rounded-lg transition-colors text-center text-sm sm:text-base whitespace-nowrap"
                         >
-                            + Dodaj kierowcę
+                            {t("addDriver")}
                         </Link>
                     </div>
 
                     {loading ? (
                         <div className="p-8 text-center bg-white dark:bg-zinc-900 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-800">
                             <p className="text-zinc-600 dark:text-zinc-400">
-                                Ładowanie kierowców...
+                                {tCommon("loading")}
                             </p>
                         </div>
                     ) : drivers.length === 0 ? (
                         <div className="p-8 text-center bg-white dark:bg-zinc-900 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-800">
                             <p className="text-zinc-600 dark:text-zinc-400 mb-4">
-                                Brak dodanych kierowców
+                                {t("noDrivers")}
                             </p>
                             <Link
                                 href="/dashboard/drivers/create"
                                 className="inline-block px-4 py-2 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white font-medium rounded-lg transition-colors"
                             >
-                                Dodaj pierwszego kierowcę
+                                {t("addDriver")}
                             </Link>
                         </div>
                     ) : (
@@ -347,19 +357,19 @@ export default function TeamsPage() {
                                         <thead>
                                         <tr className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800">
                                             <th className="px-6 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">
-                                                Numer
+                                                {t("driverTable.number")}
                                             </th>
                                             <th className="px-6 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">
-                                                Imię i nazwisko
+                                                {t("driverTable.name")}
                                             </th>
                                             <th className="px-6 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">
-                                                Zespół
+                                                {t("driverTable.team")}
                                             </th>
                                             <th className="px-6 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">
-                                                Data utworzenia
+                                                {t("teamTable.created")}
                                             </th>
                                             <th className="px-6 py-3 text-right text-sm font-semibold text-zinc-900 dark:text-white">
-                                                Akcje
+                                                {t("driverTable.actions")}
                                             </th>
                                         </tr>
                                         </thead>
@@ -387,7 +397,8 @@ export default function TeamsPage() {
                                                 <td className="px-6 py-4">
                                                     <p className="text-zinc-600 dark:text-zinc-400 text-sm">
                                                         {new Date(driver.createdAt).toLocaleDateString(
-                                                            "pl-PL"
+                                                            locale,
+                                                            { timeZone: "Europe/Warsaw" }
                                                         )}
                                                     </p>
                                                 </td>
@@ -397,14 +408,14 @@ export default function TeamsPage() {
                                                             href={`/dashboard/drivers/${driver.id}/edit`}
                                                             className="px-3 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white text-sm font-medium rounded transition-colors"
                                                         >
-                                                            Edytuj
+                                                            {tCommon("edit")}
                                                         </Link>
                                                         <button
                                                             onClick={() => handleDeleteDriver(driver.id)}
                                                             disabled={deletingId === driver.id}
                                                             className="px-3 py-2 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white text-sm font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                                         >
-                                                            {deletingId === driver.id ? "Usuwanie..." : "Usuń"}
+                                                            {deletingId === driver.id ? tCommon("loading") : tCommon("delete")}
                                                         </button>
                                                     </div>
                                                 </td>
@@ -429,7 +440,8 @@ export default function TeamsPage() {
                                                 </h3>
                                                 <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1">
                                                     {new Date(driver.createdAt).toLocaleDateString(
-                                                        "pl-PL"
+                                                        locale,
+                                                        { timeZone: "Europe/Warsaw" }
                                                     )}
                                                 </p>
                                             </div>
@@ -440,7 +452,7 @@ export default function TeamsPage() {
 
                                         <div className="bg-zinc-50 dark:bg-zinc-800 p-3 rounded">
                                             <p className="text-xs text-zinc-600 dark:text-zinc-400 mb-1">
-                                                Zespół
+                                                {t("driverTable.team")}
                                             </p>
                                             <p className="font-semibold text-zinc-900 dark:text-white">
                                                 {driver.team}
@@ -452,14 +464,14 @@ export default function TeamsPage() {
                                                 href={`/dashboard/drivers/${driver.id}/edit`}
                                                 className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white text-sm font-medium rounded transition-colors text-center"
                                             >
-                                                Edytuj
+                                                {tCommon("edit")}
                                             </Link>
                                             <button
                                                 onClick={() => handleDeleteDriver(driver.id)}
                                                 disabled={deletingId === driver.id}
                                                 className="flex-1 px-3 py-2 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white text-sm font-medium rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
-                                                {deletingId === driver.id ? "Usuwanie..." : "Usuń"}
+                                                {deletingId === driver.id ? tCommon("loading") : tCommon("delete")}
                                             </button>
                                         </div>
                                     </div>

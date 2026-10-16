@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { getApiErrorMessage } from "@/lib/apiErrors";
+import { useApiError } from "@/lib/useApiError";
 import { Locale } from "@/i18n/config";
 
 export default function RegisterPage() {
@@ -20,6 +20,7 @@ export default function RegisterPage() {
     const t = useTranslations("auth.register");
     const tCommon = useTranslations("common");
     const tErrors = useTranslations("apiErrors");
+    const apiError = useApiError();
     const locale = useLocale() as Locale;
 
     const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
@@ -29,17 +30,17 @@ export default function RegisterPage() {
 
         try {
             if (!username || !email || !password || !confirmPassword) {
-                setError(tErrors("missingFields"));
+                setError(tErrors("MISSING_FIELDS"));
                 return;
             }
 
             if (password !== confirmPassword) {
-                setError(tErrors("passwordSameAsOld") ? "Hasła nie zgadzają się" : "Passwords do not match");
+                setError(t("passwordMismatch"));
                 return;
             }
 
             if (password.length < 8) {
-                setError(tErrors("passwordMinLength"));
+                setError(t("passwordTooShort"));
                 return;
             }
 
@@ -52,13 +53,13 @@ export default function RegisterPage() {
             const data = await response.json();
 
             if (!response.ok) {
-                setError(getApiErrorMessage(tErrors, data.message || "Registration error"));
+                setError(apiError(data));
                 return;
             }
 
             router.push("/auth/login?registered=true");
         } catch (_err) {
-            setError(tErrors("internalError"));
+            setError(apiError());
         } finally {
             setIsLoading(false);
         }
