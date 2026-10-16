@@ -74,7 +74,7 @@ export default function ChangePasswordPage() {
                 router.push("/dashboard");
             }, 2000);
         } catch (_err) {
-            setError(tErrors("internalError"));
+            setError(apiError());
             setIsLoading(false);
         }
     };

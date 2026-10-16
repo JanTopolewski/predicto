@@ -5,6 +5,7 @@
     "INTERNAL_ERROR": "Something went wrong on our side. Please try again later.",
     "VALIDATION_FAILED": "Some of the provided data is invalid",
     "MISSING_FIELDS": "Please fill in all required fields",
+    "INVALID_CREDENTIALS": "Invalid email or password",
     "INVALID_DATE": "Invalid date format",
     "USER_EXISTS": "User with this email or username already exists",
     "USER_NOT_FOUND": "User not found",
@@ -58,6 +59,18 @@
     "SEASON_ALREADY_STARTED": "First event of the season has already started. Prediction is closed.",
     "ALREADY_VOTED": "You have already cast your vote. Changes are not permitted.",
     "TEAM_NOT_IN_SEASON": "Selected team does not participate in this season",
-    "DRIVER_NOT_IN_SEASON": "Selected driver does not participate in this season"
+    "DRIVER_NOT_IN_SEASON": "Selected driver does not participate in this season",
+    "EMAIL_TAKEN": "Email is already taken",
+    "USERNAME_TAKEN": "Username is already taken",
+    "PRIVATE_COMPETITION": "This competition is private. An invite code is required.",
+    "WILDCARD_REQUIRED": "Wildcard must be configured for this session",
+    "DRIVER_NOT_IN_SESSION": "Selected driver does not participate in this session",
+    "DUPLICATE_DRIVER_RESULT": "Each driver can only have one result assigned",
+    "DUPLICATE_POSITION_RESULT": "Each position can only be assigned to one driver",
+    "CANNOT_MODIFY_RESOLVED_SESSION_PARTICIPANTS": "Cannot modify participants for an already resolved session",
+    "CANNOT_DELETE_RESOLVED_SESSION": "Cannot delete session that has already been resolved",
+    "CANNOT_DELETE_RESOLVED_WEEKEND": "Cannot delete race weekend that has already been resolved",
+    "CANNOT_DELETE_USED_DRIVER": "Cannot delete driver who is assigned to existing sessions or results",
+    "CANNOT_DELETE_USED_TEAM": "Cannot delete team that is assigned to existing seasons or matches"
   }
 }

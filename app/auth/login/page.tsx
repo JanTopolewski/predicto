@@ -27,9 +27,9 @@ export default function LoginPage() {
 
         if (errorParam) {
             if (errorParam === "CredentialsSignin") {
-                setError(tErrors("invalidCredentials"));
+                setError(tErrors("INVALID_CREDENTIALS"));
             } else {
-                setError(tErrors("internalError"));
+                setError(tErrors("INTERNAL_ERROR"));
             }
         }
 
@@ -45,7 +45,7 @@ export default function LoginPage() {
 
         try {
             if (!email || !password) {
-                setError(tErrors("missingFields"));
+                setError(tErrors("MISSING_FIELDS"));
                 setIsLoading(false);
                 return;
             }
@@ -58,9 +58,9 @@ export default function LoginPage() {
 
             if (result?.error) {
                 if (result.error === "CredentialsSignin") {
-                    setError(tErrors("invalidCredentials"));
+                    setError(tErrors("INVALID_CREDENTIALS"));
                 } else {
-                    setError(tErrors("internalError"));
+                    setError(tErrors("INTERNAL_ERROR"));
                 }
                 setIsLoading(false);
                 return;
@@ -71,7 +71,7 @@ export default function LoginPage() {
                 router.push(callbackUrl);
             }
         } catch (_err) {
-            setError(tErrors("internalError"));
+            setError(tErrors("INTERNAL_ERROR"));
             setIsLoading(false);
         }
     };

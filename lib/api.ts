@@ -3,7 +3,6 @@ import { NextResponse } from "next/server";
 /**
  * Standard API error response. The backend speaks English only:
  *  - `error`  - human readable English message (for logs / API clients / fallback)
- *  - `message` - mirrored English message so legacy callers or tests checking `.message` remain compatible
  *  - `code`   - stable UPPER_SNAKE identifier; the frontend translates it via `apiErrors.<code>`
  *  - `params` - optional values interpolated into the translated message (e.g. { max: 20 })
  */

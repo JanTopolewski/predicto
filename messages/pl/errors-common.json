@@ -5,6 +5,7 @@
     "INTERNAL_ERROR": "Wystąpił błąd po stronie serwera. Spróbuj ponownie później.",
     "VALIDATION_FAILED": "Niektóre z wprowadzonych danych są niepoprawne",
     "MISSING_FIELDS": "Wypełnij wszystkie wymagane pola",
+    "INVALID_CREDENTIALS": "Nieprawidłowy adres email lub hasło",
     "INVALID_DATE": "Niepoprawny format daty",
     "USER_EXISTS": "Użytkownik o podanym adresie email lub nazwie już istnieje",
     "USER_NOT_FOUND": "Użytkownik nie został znaleziony",
@@ -58,6 +59,18 @@
     "SEASON_ALREADY_STARTED": "Pierwsze wydarzenie sezonu już się rozpoczęło. Głosowanie jest zamknięte.",
     "ALREADY_VOTED": "Już oddałeś swój głos. Nie można go zmienić.",
     "TEAM_NOT_IN_SEASON": "Wybrana drużyna nie bierze udziału w tym sezonie",
-    "DRIVER_NOT_IN_SEASON": "Wybrany kierowca nie bierze udziału w tym sezonie"
+    "DRIVER_NOT_IN_SEASON": "Wybrany kierowca nie bierze udziału w tym sezonie",
+    "EMAIL_TAKEN": "Podany adres email jest już zajęty",
+    "USERNAME_TAKEN": "Podana nazwa użytkownika jest już zajęta",
+    "PRIVATE_COMPETITION": "Ta konkurencja jest prywatna. Wymagany jest kod zaproszenia.",
+    "WILDCARD_REQUIRED": "Dla tej sesji musi zostać skonfigurowany joker",
+    "DRIVER_NOT_IN_SESSION": "Wybrany kierowca nie bierze udziału w tej sesji",
+    "DUPLICATE_DRIVER_RESULT": "Każdy kierowca może mieć przypisany tylko jeden wynik",
+    "DUPLICATE_POSITION_RESULT": "Każda pozycja może być przypisana tylko do jednego kierowcy",
+    "CANNOT_MODIFY_RESOLVED_SESSION_PARTICIPANTS": "Nie można modyfikować listy uczestników dla rozliczonej sesji",
+    "CANNOT_DELETE_RESOLVED_SESSION": "Nie można usunąć sesji, która została już rozliczona",
+    "CANNOT_DELETE_RESOLVED_WEEKEND": "Nie można usunąć weekendu wyścigowego, który został już rozliczony",
+    "CANNOT_DELETE_USED_DRIVER": "Nie można usunąć kierowcy przypisanego do istniejących sesji lub wyników",
+    "CANNOT_DELETE_USED_TEAM": "Nie można usunąć drużyny przypisanej do istniejących sezonów lub meczów"
   }
 }
