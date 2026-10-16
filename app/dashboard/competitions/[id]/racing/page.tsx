@@ -261,21 +261,36 @@ export default function RacingPage() {
                                                             {t("yourVote")}
                                                         </p>
                                                     </div>
-                                                    <div className="text-sm text-zinc-800 dark:text-zinc-200 space-y-2">
+                                                    <div className="text-sm text-zinc-800 dark:text-zinc-200 space-y-3">
                                                         {isPodiumSession && (
-                                                            <div className="flex flex-wrap gap-2 sm:gap-3">
-                                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-900 dark:text-amber-200 font-medium text-xs">
-                                                                    <span className="font-bold">P1</span>
-                                                                    <span>{racingSession.participants.find(p => p.driver.id === existingVote.firstDriverId)?.driver.name || "—"}</span>
-                                                                </span>
-                                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium text-xs">
-                                                                    <span className="font-bold">P2</span>
-                                                                    <span>{racingSession.participants.find(p => p.driver.id === existingVote.secondDriverId)?.driver.name || "—"}</span>
-                                                                </span>
-                                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-800/10 dark:bg-amber-800/20 text-amber-800 dark:text-amber-300 font-medium text-xs">
-                                                                    <span className="font-bold">P3</span>
-                                                                    <span>{racingSession.participants.find(p => p.driver.id === existingVote.thirdDriverId)?.driver.name || "—"}</span>
-                                                                </span>
+                                                            <div className="grid grid-cols-3 gap-2 items-end pt-1">
+                                                                {[
+                                                                    { pos: 2, driverId: existingVote.secondDriverId, bg: "bg-slate-100 dark:bg-slate-800", border: "border-slate-300 dark:border-slate-600", badgeBg: "bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-100", podiumStep: "h-6 bg-slate-200 dark:bg-slate-700" },
+                                                                    { pos: 1, driverId: existingVote.firstDriverId, bg: "bg-amber-50 dark:bg-amber-950/30", border: "border-amber-300 dark:border-amber-600/70", badgeBg: "bg-amber-400 text-amber-950 font-bold", podiumStep: "h-10 bg-amber-200 dark:bg-amber-900/60" },
+                                                                    { pos: 3, driverId: existingVote.thirdDriverId, bg: "bg-amber-900/5 dark:bg-amber-950/20", border: "border-amber-700/30 dark:border-amber-700/50", badgeBg: "bg-amber-700 text-amber-100", podiumStep: "h-4 bg-amber-800/20 dark:bg-amber-900/40" },
+                                                                ].map((step) => {
+                                                                    const driver = racingSession.participants.find(p => p.driver.id === step.driverId)?.driver;
+                                                                    return (
+                                                                        <div key={`existing-podium-${step.pos}`} className={`flex flex-col justify-end rounded-lg border ${step.border} ${step.bg} overflow-hidden text-center`}>
+                                                                            <div className="p-2 flex flex-col items-center">
+                                                                                <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold mb-1 ${step.badgeBg}`}>
+                                                                                    {step.pos}
+                                                                                </div>
+                                                                                <span className="text-xs font-semibold text-zinc-900 dark:text-white text-clip overflow-hidden max-w-full">
+                                                                                    {driver ? driver.name : "—"}
+                                                                                </span>
+                                                                                {driver && (
+                                                                                    <span className="text-[10px] text-zinc-500 dark:text-zinc-400 text-clip overflow-hidden max-w-full">
+                                                                                        #{driver.number} {driver.team}
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+                                                                            <div className={`${step.podiumStep} flex items-center justify-center text-[11px] font-extrabold text-zinc-700 dark:text-zinc-300`}>
+                                                                                P{step.pos}
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                })}
                                                             </div>
                                                         )}
                                                         {existingVote.wildcardPosition && (
@@ -289,52 +304,43 @@ export default function RacingPage() {
                                             ) : !isStarted && !racingSession.resolved && !racingSession.votingClosedAt ? (
                                                 <div className="space-y-3">
                                                     {isPodiumSession && (
-                                                        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                                                            <p className="text-xs font-semibold text-blue-900 dark:text-blue-200 mb-3">
-                                                                {t("selectPodium")}
-                                                            </p>
-                                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                                                                {[1, 2, 3].map(
-                                                                    (pos) => (
+                                                        <div className="p-3 sm:p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-zinc-200 dark:border-zinc-700/80">
+                                                            <div className="mb-3">
+                                                                <p className="text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
+                                                                    {t("selectPodium")}
+                                                                </p>
+                                                            </div>
+
+                                                            {/* Visual Realistic Podium: P2 (left, medium), P1 (center, highest), P3 (right, lower) */}
+                                                            <div className="grid grid-cols-3 gap-2 sm:gap-3 items-end pt-2">
+                                                                {[
+                                                                    { pos: 2, height: "h-36 sm:h-44", bg: "bg-slate-100 dark:bg-slate-800/80", border: "border-slate-300 dark:border-slate-600", badgeBg: "bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-100 border-slate-300 dark:border-slate-500", label: "2nd", podiumStep: "h-14 sm:h-18 bg-gradient-to-t from-slate-300 to-slate-200 dark:from-slate-800 dark:to-slate-700 border-t-2 border-slate-400 dark:border-slate-500" },
+                                                                    { pos: 1, height: "h-44 sm:h-52", bg: "bg-amber-50/70 dark:bg-amber-950/20", border: "border-amber-300 dark:border-amber-600/60 shadow-sm", badgeBg: "bg-amber-400 text-amber-950 border-amber-300 font-black ring-2 ring-amber-300/40", label: "1st", podiumStep: "h-22 sm:h-26 bg-gradient-to-t from-amber-300 to-amber-200 dark:from-amber-900/60 dark:to-amber-800/60 border-t-2 border-amber-400 dark:border-amber-500" },
+                                                                    { pos: 3, height: "h-32 sm:h-38", bg: "bg-amber-900/5 dark:bg-amber-950/10", border: "border-amber-700/30 dark:border-amber-700/40", badgeBg: "bg-amber-700 text-amber-100 border-amber-800", label: "3rd", podiumStep: "h-10 sm:h-12 bg-gradient-to-t from-amber-700/30 to-amber-600/20 dark:from-amber-950/50 dark:to-amber-900/40 border-t-2 border-amber-600/40 dark:border-amber-700/50" },
+                                                                ].map((step) => {
+                                                                    const pos = step.pos;
+                                                                    const field = pos === 1 ? "firstDriver" : pos === 2 ? "secondDriver" : "thirdDriver";
+                                                                    const selectedVal = currentPrediction?.sessionId === racingSession.id
+                                                                        ? (currentPrediction as any)[field] || ""
+                                                                        : "";
+
+                                                                    return (
                                                                         <div
-                                                                            key={`podium-${pos}`}
+                                                                            key={`podium-slot-${pos}`}
+                                                                            className={`flex flex-col justify-end rounded-xl border ${step.border} ${step.bg} overflow-hidden transition-all`}
                                                                         >
-                                                                            <label className="text-xs font-semibold text-zinc-900 dark:text-white">
-                                                                                {t("positionLabel", { pos })}
-                                                                            </label>
-                                                                            <select
-                                                                                value={
-                                                                                    pos ===
-                                                                                    1
-                                                                                        ? currentPrediction
-                                                                                            ?.sessionId ===
-                                                                                        racingSession.id
-                                                                                            ? currentPrediction
-                                                                                                .firstDriver
-                                                                                            : ""
-                                                                                        : pos ===
-                                                                                        2
-                                                                                            ? currentPrediction
-                                                                                                ?.sessionId ===
-                                                                                            racingSession.id
-                                                                                                ? currentPrediction
-                                                                                                    .secondDriver
-                                                                                                : ""
-                                                                                            : currentPrediction
-                                                                                                ?.sessionId ===
-                                                                                            racingSession.id
-                                                                                                ? currentPrediction
-                                                                                                    .thirdDriver
-                                                                                                : ""
-                                                                                }
-                                                                                onChange={(
-                                                                                    e
-                                                                                ) => {
-                                                                                    const field = pos === 1 ? "firstDriver" : pos === 2 ? "secondDriver" : "thirdDriver";
-                                                                                    setCurrentPrediction(
-                                                                                        (
-                                                                                            prev
-                                                                                        ) =>
+                                                                            {/* Driver select & badge */}
+                                                                            <div className="p-2 sm:p-2.5 flex flex-col items-center text-center space-y-1.5 flex-1 justify-center">
+                                                                                <div className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-xs border shadow-xs ${step.badgeBg}`}>
+                                                                                    {pos}
+                                                                                </div>
+                                                                                <span className="text-[10px] sm:text-xs font-semibold text-zinc-600 dark:text-zinc-400">
+                                                                                    {t("positionLabel", { pos })}
+                                                                                </span>
+                                                                                <select
+                                                                                    value={selectedVal}
+                                                                                    onChange={(e) => {
+                                                                                        setCurrentPrediction((prev) =>
                                                                                             prev && prev.sessionId === racingSession.id
                                                                                                 ? {
                                                                                                     ...prev,
@@ -347,38 +353,28 @@ export default function RacingPage() {
                                                                                                     thirdDriver: field === "thirdDriver" ? e.target.value : "",
                                                                                                     wildcardPosition: null,
                                                                                                 }
-                                                                                    );
-                                                                                }}
-                                                                                className="w-full px-2 py-1 text-sm rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
-                                                                            >
-                                                                                <option value="">
-                                                                                    {t("selectDriver")}
-                                                                                </option>
-                                                                                {racingSession.participants.map(
-                                                                                    (
-                                                                                        p
-                                                                                    ) => (
-                                                                                        <option
-                                                                                            key={
-                                                                                                p
-                                                                                                    .driver
-                                                                                                    .id
-                                                                                            }
-                                                                                            value={
-                                                                                                p
-                                                                                                    .driver
-                                                                                                    .id
-                                                                                            }
-                                                                                        >
-                                                                                            #{p.driver.number}{" "}
-                                                                                            {p.driver.name}
+                                                                                        );
+                                                                                    }}
+                                                                                    className="w-full text-[11px] sm:text-xs px-1 sm:px-1.5 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-clip overflow-hidden focus:outline-hidden focus:ring-1 focus:ring-blue-500 font-medium"
+                                                                                >
+                                                                                    <option value="">{t("selectDriver")}</option>
+                                                                                    {racingSession.participants.map((p) => (
+                                                                                        <option key={p.driver.id} value={p.driver.id}>
+                                                                                            #{p.driver.number} {p.driver.name}
                                                                                         </option>
-                                                                                    )
-                                                                                )}
-                                                                            </select>
+                                                                                    ))}
+                                                                                </select>
+                                                                            </div>
+
+                                                                            {/* Pedestal Step Base */}
+                                                                            <div className={`${step.podiumStep} flex items-center justify-center`}>
+                                                                                <span className="text-sm sm:text-lg font-black tracking-tighter opacity-60 text-zinc-800 dark:text-zinc-200">
+                                                                                    P{pos}
+                                                                                </span>
+                                                                            </div>
                                                                         </div>
-                                                                    )
-                                                                )}
+                                                                    );
+                                                                })}
                                                             </div>
                                                         </div>
                                                     )}
