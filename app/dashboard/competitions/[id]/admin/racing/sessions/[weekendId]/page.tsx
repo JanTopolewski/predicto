@@ -6,6 +6,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
 import { useApiError } from "@/lib/useApiError";
+import { CheckIcon, LockIcon, ClockIcon, TargetIcon, AlertTriangleIcon } from "@/components/Icons";
 
 interface Driver {
     id: string;
@@ -340,15 +341,17 @@ export default function RacingSessionsPage() {
 
             {/* Messages */}
             {error && (
-                <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2">
+                    <AlertTriangleIcon className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0" />
                     <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
                 </div>
             )}
 
             {success && (
-                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg">
+                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg flex items-center gap-2">
+                    <CheckIcon className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
                     <p className="text-sm text-emerald-700 dark:text-emerald-400">
-                        ✓ {success}
+                        {success}
                     </p>
                 </div>
             )}
@@ -509,22 +512,25 @@ export default function RacingSessionsPage() {
                             >
                                 <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                                     <div>
-                                        <div className="flex items-center gap-3">
+                                        <div className="flex items-center gap-2 flex-wrap">
                                             <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
                                                 {racingSession.name}
                                             </h3>
                                             {racingSession.resolved ? (
-                                                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                                                    ✓ {t("resolved")}
+                                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                                    <CheckIcon className="w-3.5 h-3.5" />
+                                                    <span>{t("resolved")}</span>
                                                 </span>
                                             ) : (
-                                                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
-                                                    ⏳ {t("pending")}
+                                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                                                    <ClockIcon className="w-3.5 h-3.5" />
+                                                    <span>{t("pending")}</span>
                                                 </span>
                                             )}
                                             {racingSession.votingClosedAt && (
-                                                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-                                                    🔒 {t("votingClosed")}
+                                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+                                                    <LockIcon className="w-3.5 h-3.5" />
+                                                    <span>{t("votingClosed")}</span>
                                                 </span>
                                             )}
                                         </div>
@@ -543,16 +549,32 @@ export default function RacingSessionsPage() {
                                         {/* Saved Results Preview */}
                                         {racingSession.results && racingSession.results.length > 0 && (
                                             <div className="mt-3 p-3 bg-zinc-50 dark:bg-zinc-800/60 rounded-lg border border-zinc-200 dark:border-zinc-700">
-                                                <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1">
+                                                <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1.5">
                                                     {t("confirmedResults")}
                                                 </p>
-                                                <div className="flex flex-wrap gap-4 text-sm text-zinc-800 dark:text-zinc-200">
-                                                    {resultsMap.get(1) && <span>🥇 P1: {resultsMap.get(1)?.name}</span>}
-                                                    {resultsMap.get(2) && <span>🥈 P2: {resultsMap.get(2)?.name}</span>}
-                                                    {resultsMap.get(3) && <span>🥉 P3: {resultsMap.get(3)?.name}</span>}
+                                                <div className="flex flex-wrap gap-2 sm:gap-3 text-sm text-zinc-800 dark:text-zinc-200">
+                                                    {resultsMap.get(1) && (
+                                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-900 dark:text-amber-200 font-medium text-xs">
+                                                            <span className="font-bold">P1</span>
+                                                            <span>{resultsMap.get(1)?.name}</span>
+                                                        </span>
+                                                    )}
+                                                    {resultsMap.get(2) && (
+                                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium text-xs">
+                                                            <span className="font-bold">P2</span>
+                                                            <span>{resultsMap.get(2)?.name}</span>
+                                                        </span>
+                                                    )}
+                                                    {resultsMap.get(3) && (
+                                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-800/10 dark:bg-amber-800/20 text-amber-800 dark:text-amber-300 font-medium text-xs">
+                                                            <span className="font-bold">P3</span>
+                                                            <span>{resultsMap.get(3)?.name}</span>
+                                                        </span>
+                                                    )}
                                                     {wildcard && (
-                                                        <span>
-                                                            🎯 {wildcard.driver.name} (Wildcard): P{racingSession.results.find(r => r.driverId === wildcard.driverId)?.position || "?"}
+                                                        <span className="inline-flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-300 font-semibold">
+                                                            <TargetIcon className="w-3.5 h-3.5" />
+                                                            <span>{wildcard.driver.name} (Wildcard): P{racingSession.results.find(r => r.driverId === wildcard.driverId)?.position || "?"}</span>
                                                         </span>
                                                     )}
                                                 </div>

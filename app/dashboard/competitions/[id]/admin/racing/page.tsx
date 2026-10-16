@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { CalendarIcon, ClockIcon, TrophyIcon, FlagIcon } from "@/components/Icons";
 
 export default function RacingAdminPage() {
     const t = useTranslations("racing.admin");
@@ -29,16 +30,19 @@ export default function RacingAdminPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">
-                        🏎️ {t("title")}
-                    </h1>
+                    <div className="flex items-center gap-2">
+                        <FlagIcon className="w-7 h-7 text-zinc-900 dark:text-white" />
+                        <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white">
+                            {t("title")}
+                        </h1>
+                    </div>
                     <p className="text-zinc-600 dark:text-zinc-400 text-sm mt-1">
                         {t("subtitle")}
                     </p>
                 </div>
                 <Link
                     href={`/dashboard/competitions/${competitionId}`}
-                    className="px-4 py-2 bg-gray-600 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
+                    className="px-4 py-2 bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-900 dark:text-white font-medium rounded-lg transition-colors text-sm"
                 >
                     {tCommon("back")}
                 </Link>
@@ -49,15 +53,20 @@ export default function RacingAdminPage() {
                 {/* Manage Weekends */}
                 <Link
                     href={`/dashboard/competitions/${competitionId}/admin/racing/weekends`}
-                    className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800 hover:shadow-xl transition-shadow"
+                    className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all flex flex-col justify-between"
                 >
-                    <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">
-                        📅 {t("manageWeekends")}
-                    </h3>
-                    <p className="text-zinc-600 dark:text-zinc-400 text-sm mb-4">
-                        {t("manageWeekendsDesc")}
-                    </p>
-                    <span className="inline-block px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded">
+                    <div>
+                        <div className="flex items-center gap-2 mb-2">
+                            <CalendarIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                            <h3 className="text-xl font-bold text-zinc-900 dark:text-white">
+                                {t("manageWeekends")}
+                            </h3>
+                        </div>
+                        <p className="text-zinc-600 dark:text-zinc-400 text-sm mb-4">
+                            {t("manageWeekendsDesc")}
+                        </p>
+                    </div>
+                    <span className="self-start px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors">
                         {t("open")}
                     </span>
                 </Link>
@@ -65,15 +74,20 @@ export default function RacingAdminPage() {
                 {/* Manage Sessions */}
                 <Link
                     href={`/dashboard/competitions/${competitionId}/admin/racing/weekends`}
-                    className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800 hover:shadow-xl transition-shadow"
+                    className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all flex flex-col justify-between"
                 >
-                    <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">
-                        ⏱️ {t("manageSessions")}
-                    </h3>
-                    <p className="text-zinc-600 dark:text-zinc-400 text-sm mb-4">
-                        {t("manageSessionsDesc")}
-                    </p>
-                    <span className="inline-block px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded">
+                    <div>
+                        <div className="flex items-center gap-2 mb-2">
+                            <ClockIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                            <h3 className="text-xl font-bold text-zinc-900 dark:text-white">
+                                {t("manageSessions")}
+                            </h3>
+                        </div>
+                        <p className="text-zinc-600 dark:text-zinc-400 text-sm mb-4">
+                            {t("manageSessionsDesc")}
+                        </p>
+                    </div>
+                    <span className="self-start px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors">
                         {t("open")}
                     </span>
                 </Link>
@@ -81,15 +95,20 @@ export default function RacingAdminPage() {
                 {/* Announce Season Winner */}
                 <Link
                     href={`/dashboard/competitions/${competitionId}/admin/racing/season-winner`}
-                    className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800 hover:shadow-xl transition-shadow"
+                    className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition-all flex flex-col justify-between"
                 >
-                    <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">
-                        🏆 {t("announceChampion")}
-                    </h3>
-                    <p className="text-zinc-600 dark:text-zinc-400 text-sm mb-4">
-                        {t("announceChampionDesc")}
-                    </p>
-                    <span className="inline-block px-4 py-2 bg-green-600 text-white text-sm font-medium rounded">
+                    <div>
+                        <div className="flex items-center gap-2 mb-2">
+                            <TrophyIcon className="w-5 h-5 text-amber-500" />
+                            <h3 className="text-xl font-bold text-zinc-900 dark:text-white">
+                                {t("announceChampion")}
+                            </h3>
+                        </div>
+                        <p className="text-zinc-600 dark:text-zinc-400 text-sm mb-4">
+                            {t("announceChampionDesc")}
+                        </p>
+                    </div>
+                    <span className="self-start px-4 py-2 bg-green-600 text-white text-sm font-medium rounded hover:bg-green-700 transition-colors">
                         {t("open")}
                     </span>
                 </Link>

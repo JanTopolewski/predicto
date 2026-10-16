@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
 import { useApiError } from "@/lib/useApiError";
 import { Locale } from "@/i18n/config";
+import { CheckIcon, TrophyIcon, BallIcon, FlagIcon, SettingsIcon, TrashIcon, AlertTriangleIcon } from "@/components/Icons";
 
 interface Match {
     id: string;
@@ -149,7 +150,7 @@ export default function CompetitionDetailPage() {
                 return;
             }
 
-            setSuccessMessage(`✓ ${t("seasonWinner.predictionSaved")}`);
+            setSuccessMessage(t("seasonWinner.predictionSaved"));
             setPredictingWinner(false);
             await fetchCompetition();
             setTimeout(() => setSuccessMessage(""), 3000);
@@ -253,7 +254,8 @@ export default function CompetitionDetailPage() {
             )}
 
             {successMessage && (
-                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg">
+                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg flex items-center gap-2">
+                    <CheckIcon className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
                     <p className="text-sm text-emerald-700 dark:text-emerald-400">{successMessage}</p>
                 </div>
             )}
@@ -290,9 +292,12 @@ export default function CompetitionDetailPage() {
             {/* Season Winner Prediction - For members and if first match/session didn't start */}
             {isMember && !isAdmin && !competition.hasStarted && !competition.winnerResolved && !competition.seasonPrediction && (
                 <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800">
-                    <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-4">
-                        🏆 {t("seasonWinner.title")}
-                    </h3>
+                    <div className="flex items-center gap-2 mb-4">
+                        <TrophyIcon className="w-5 h-5 text-amber-500" />
+                        <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
+                            {t("seasonWinner.title")}
+                        </h3>
+                    </div>
                     <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
                         {t("seasonWinner.description")}
                     </p>
@@ -344,22 +349,29 @@ export default function CompetitionDetailPage() {
 
             {isMember && !isAdmin && competition.seasonPrediction && (
                 <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800">
-                    <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-2">
-                        🏆 {t("seasonWinner.yourPick")}
-                    </h3>
-                    <p className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
-                        ✓ {competition.type === "FOOTBALL" 
-                            ? competition.seasonPrediction.team?.name 
-                            : `${competition.seasonPrediction.driver?.name} (#${competition.seasonPrediction.driver?.number})`}
-                    </p>
+                    <div className="flex items-center gap-2 mb-2">
+                        <TrophyIcon className="w-5 h-5 text-amber-500" />
+                        <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
+                            {t("seasonWinner.yourPick")}
+                        </h3>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 font-medium">
+                        <CheckIcon className="w-4 h-4 flex-shrink-0" />
+                        <span>
+                            {competition.type === "FOOTBALL" 
+                                ? competition.seasonPrediction.team?.name 
+                                : `${competition.seasonPrediction.driver?.name} (#${competition.seasonPrediction.driver?.number})`}
+                        </span>
+                    </div>
                     <p className="text-xs text-zinc-500 mt-1">{t("seasonWinner.pickRegistered")}</p>
                 </div>
             )}
 
             {isMember && competition.hasStarted && !competition.seasonPrediction && (
-                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-                    <p className="text-sm text-yellow-800 dark:text-yellow-300">
-                        ⚠️ {t("seasonWinner.seasonAlreadyStarted")}
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 flex items-center gap-2">
+                    <AlertTriangleIcon className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                    <p className="text-sm text-amber-800 dark:text-amber-300">
+                        {t("seasonWinner.seasonAlreadyStarted")}
                     </p>
                 </div>
             )}
@@ -367,9 +379,12 @@ export default function CompetitionDetailPage() {
             {/* Matches - For FOOTBALL members */}
             {isMember && competition.type === "FOOTBALL" && competition.matches.length > 0 && (
                 <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800">
-                    <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-4">
-                        ⚽ {t("details.matchesTitle")}
-                    </h3>
+                    <div className="flex items-center gap-2 mb-4">
+                        <BallIcon className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
+                        <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
+                            {t("details.matchesTitle")}
+                        </h3>
+                    </div>
                     <Link
                         href={`/dashboard/competitions/${competitionId}/matches`}
                         className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
@@ -382,9 +397,12 @@ export default function CompetitionDetailPage() {
             {/* Racing Sessions - For RACING members */}
             {isMember && competition.type === "RACING" && (
                 <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800">
-                    <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-4">
-                        🏁 {t("details.racingTitle")}
-                    </h3>
+                    <div className="flex items-center gap-2 mb-4">
+                        <FlagIcon className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
+                        <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
+                            {t("details.racingTitle")}
+                        </h3>
+                    </div>
                     <Link
                         href={`/dashboard/competitions/${competitionId}/racing`}
                         className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
@@ -447,15 +465,19 @@ export default function CompetitionDetailPage() {
             {/* Admin Actions - FOOTBALL */}
             {isAdmin && isOwner && competition.type === "FOOTBALL" && (
                 <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800">
-                    <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-4">
-                        ⚙️ {t("details.adminPanel")}
-                    </h3>
+                    <div className="flex items-center gap-2 mb-4">
+                        <SettingsIcon className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
+                        <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
+                            {t("details.adminPanel")}
+                        </h3>
+                    </div>
                     <div className="flex flex-col flex-wrap sm:flex-row gap-3">
                         <Link
                             href={`/dashboard/competitions/${competitionId}/admin/matches`}
-                            className="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white font-medium rounded-lg transition-colors text-center"
+                            className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white font-medium rounded-lg transition-colors text-center"
                         >
-                            ⚽ {t("details.manageMatches")}
+                            <BallIcon className="w-4 h-4" />
+                            <span>{t("details.manageMatches")}</span>
                         </Link>
                         <button
                             onClick={async () => {
@@ -478,23 +500,26 @@ export default function CompetitionDetailPage() {
                                     }
                                 }
                             }}
-                            className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white font-medium rounded-lg transition-colors"
+                            className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white font-medium rounded-lg transition-colors"
                         >
-                            🗑️ {t("details.deleteCompetition")}
+                            <TrashIcon className="w-4 h-4" />
+                            <span>{t("details.deleteCompetition")}</span>
                         </button>
 
                         {!competition?.winnerResolved && (
                             <Link
                                 href={`/dashboard/competitions/${competitionId}/admin/announce-winner`}
-                                className="block w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 text-white font-medium rounded-lg transition-colors text-center"
+                                className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 text-white font-medium rounded-lg transition-colors text-center"
                             >
-                                🏆 {t("details.announceWinner")}
+                                <TrophyIcon className="w-4 h-4" />
+                                <span>{t("details.announceWinner")}</span>
                             </Link>
                         )}
 
                         {competition?.winnerResolved && (
-                            <div className="w-full px-4 py-3 bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg text-emerald-700 dark:text-emerald-300 font-medium text-center">
-                                ✓ {t("details.winnerAlreadyAnnounced")}
+                            <div className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg text-emerald-700 dark:text-emerald-300 font-medium text-center">
+                                <CheckIcon className="w-4 h-4" />
+                                <span>{t("details.winnerAlreadyAnnounced")}</span>
                             </div>
                         )}
                     </div>
@@ -504,15 +529,19 @@ export default function CompetitionDetailPage() {
             {/* Admin Actions - RACING */}
             {isAdmin && isOwner && competition.type === "RACING" && (
                 <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800">
-                    <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-4">
-                        ⚙️ {t("details.adminPanel")}
-                    </h3>
+                    <div className="flex items-center gap-2 mb-4">
+                        <SettingsIcon className="w-5 h-5 text-zinc-700 dark:text-zinc-300" />
+                        <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
+                            {t("details.adminPanel")}
+                        </h3>
+                    </div>
                     <div className="flex flex-col flex-wrap sm:flex-row gap-3">
                         <Link
                             href={`/dashboard/competitions/${competitionId}/admin/racing/weekends`}
-                            className="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white font-medium rounded-lg transition-colors text-center"
+                            className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white font-medium rounded-lg transition-colors text-center"
                         >
-                            🏁 {t("details.manageWeekends")}
+                            <FlagIcon className="w-4 h-4" />
+                            <span>{t("details.manageWeekends")}</span>
                         </Link>
                         <button
                             onClick={async () => {
@@ -535,23 +564,26 @@ export default function CompetitionDetailPage() {
                                     }
                                 }
                             }}
-                            className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white font-medium rounded-lg transition-colors"
+                            className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white font-medium rounded-lg transition-colors"
                         >
-                            🗑️ {t("details.deleteCompetition")}
+                            <TrashIcon className="w-4 h-4" />
+                            <span>{t("details.deleteCompetition")}</span>
                         </button>
 
                         {!competition?.winnerResolved && (
                             <Link
                                 href={`/dashboard/competitions/${competitionId}/admin/racing/season-winner`}
-                                className="block w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 text-white font-medium rounded-lg transition-colors text-center"
+                                className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 text-white font-medium rounded-lg transition-colors text-center"
                             >
-                                🏆 {t("details.announceWinner")}
+                                <TrophyIcon className="w-4 h-4" />
+                                <span>{t("details.announceWinner")}</span>
                             </Link>
                         )}
 
                         {competition?.winnerResolved && (
-                            <div className="w-full px-4 py-3 bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg text-emerald-700 dark:text-emerald-300 font-medium text-center">
-                                ✓ {t("details.winnerAlreadyAnnounced")}
+                            <div className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 bg-emerald-100 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg text-emerald-700 dark:text-emerald-300 font-medium text-center">
+                                <CheckIcon className="w-4 h-4" />
+                                <span>{t("details.winnerAlreadyAnnounced")}</span>
                             </div>
                         )}
                     </div>

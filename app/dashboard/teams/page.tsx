@@ -8,6 +8,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { useApiError } from "@/lib/useApiError";
 import { Team } from "@/types/team";
 import { Driver } from "@/types/driver";
+import { BallIcon, FlagIcon } from "@/components/Icons";
 
 type EntityType = "team" | "driver";
 
@@ -143,23 +144,25 @@ export default function TeamsPage() {
             <div className="flex gap-0 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 rounded-t-lg overflow-hidden">
                 <button
                     onClick={() => setActiveTab("team")}
-                    className={`flex-1 px-4 py-3 font-medium transition-colors text-center ${
+                    className={`flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 font-medium transition-colors text-center ${
                         activeTab === "team"
                             ? "border-b-2 border-blue-600 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/30"
                             : "border-b-2 border-transparent text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
                     }`}
                 >
-                    ⚽ {t("tabs.teams")}
+                    <BallIcon className="w-4 h-4" />
+                    <span>{t("tabs.teams")}</span>
                 </button>
                 <button
                     onClick={() => setActiveTab("driver")}
-                    className={`flex-1 px-4 py-3 font-medium transition-colors text-center ${
+                    className={`flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 font-medium transition-colors text-center ${
                         activeTab === "driver"
                             ? "border-b-2 border-orange-600 text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/30"
                             : "border-b-2 border-transparent text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
                     }`}
                 >
-                    🏎️ {t("tabs.drivers")}
+                    <FlagIcon className="w-4 h-4" />
+                    <span>{t("tabs.drivers")}</span>
                 </button>
             </div>
 

@@ -6,6 +6,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
 import { useApiError } from "@/lib/useApiError";
+import { CheckIcon, TargetIcon, AlertTriangleIcon } from "@/components/Icons";
 
 interface Driver {
     id: string;
@@ -177,15 +178,17 @@ export default function RacingPage() {
 
             {/* Messages */}
             {error && (
-                <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2">
+                    <AlertTriangleIcon className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0" />
                     <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
                 </div>
             )}
 
             {success && (
-                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg">
+                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg flex items-center gap-2">
+                    <CheckIcon className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
                     <p className="text-sm text-emerald-700 dark:text-emerald-400">
-                        ✓ {success}
+                        {success}
                     </p>
                 </div>
             )}
@@ -252,21 +255,34 @@ export default function RacingPage() {
 
                                             {existingVote ? (
                                                 <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg">
-                                                    <p className="text-xs font-bold text-emerald-800 dark:text-emerald-200 uppercase tracking-wide mb-2">
-                                                        ✓ {t("yourVote")}
-                                                    </p>
-                                                    <div className="text-sm text-zinc-800 dark:text-zinc-200 space-y-1">
+                                                    <div className="flex items-center gap-1.5 mb-2">
+                                                        <CheckIcon className="w-4 h-4 text-emerald-700 dark:text-emerald-300 flex-shrink-0" />
+                                                        <p className="text-xs font-bold text-emerald-800 dark:text-emerald-200 uppercase tracking-wide">
+                                                            {t("yourVote")}
+                                                        </p>
+                                                    </div>
+                                                    <div className="text-sm text-zinc-800 dark:text-zinc-200 space-y-2">
                                                         {isPodiumSession && (
-                                                            <div className="flex flex-wrap gap-3">
-                                                                <span>🥇 {t("p1")}: {racingSession.participants.find(p => p.driver.id === existingVote.firstDriverId)?.driver.name || "—"}</span>
-                                                                <span>🥈 {t("p2")}: {racingSession.participants.find(p => p.driver.id === existingVote.secondDriverId)?.driver.name || "—"}</span>
-                                                                <span>🥉 {t("p3")}: {racingSession.participants.find(p => p.driver.id === existingVote.thirdDriverId)?.driver.name || "—"}</span>
+                                                            <div className="flex flex-wrap gap-2 sm:gap-3">
+                                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-900 dark:text-amber-200 font-medium text-xs">
+                                                                    <span className="font-bold">P1</span>
+                                                                    <span>{racingSession.participants.find(p => p.driver.id === existingVote.firstDriverId)?.driver.name || "—"}</span>
+                                                                </span>
+                                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100 font-medium text-xs">
+                                                                    <span className="font-bold">P2</span>
+                                                                    <span>{racingSession.participants.find(p => p.driver.id === existingVote.secondDriverId)?.driver.name || "—"}</span>
+                                                                </span>
+                                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-amber-800/10 dark:bg-amber-800/20 text-amber-800 dark:text-amber-300 font-medium text-xs">
+                                                                    <span className="font-bold">P3</span>
+                                                                    <span>{racingSession.participants.find(p => p.driver.id === existingVote.thirdDriverId)?.driver.name || "—"}</span>
+                                                                </span>
                                                             </div>
                                                         )}
                                                         {existingVote.wildcardPosition && (
-                                                            <p className="text-xs text-amber-700 dark:text-amber-300 font-semibold mt-1">
-                                                                🎯 {t("wildcardPredicted", { pos: existingVote.wildcardPosition })}
-                                                            </p>
+                                                            <div className="inline-flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-300 font-semibold mt-1">
+                                                                <TargetIcon className="w-3.5 h-3.5" />
+                                                                <span>{t("wildcardPredicted", { pos: existingVote.wildcardPosition })}</span>
+                                                            </div>
                                                         )}
                                                     </div>
                                                 </div>

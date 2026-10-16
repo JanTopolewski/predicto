@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
 import { useApiError } from "@/lib/useApiError";
 import { Locale } from "@/i18n/config";
+import { CheckIcon, LockIcon, AlertTriangleIcon } from "@/components/Icons";
 
 interface Team {
     id: string;
@@ -106,7 +107,7 @@ export default function MatchesPage() {
                 return;
             }
 
-            setSuccessMessage(`✓ ${t("predictionSaved")}`);
+            setSuccessMessage(t("predictionSaved"));
 
             const matchesResponse = await fetch(
                 `/api/competitions/${competitionId}/matches`
@@ -159,15 +160,17 @@ export default function MatchesPage() {
 
             {/* Messages */}
             {error && (
-                <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2">
+                    <AlertTriangleIcon className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0" />
                     <p className="text-sm text-red-700 dark:text-red-400">
-                        ⚠️ {error}
+                        {error}
                     </p>
                 </div>
             )}
 
             {successMessage && (
-                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg">
+                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg flex items-center gap-2">
+                    <CheckIcon className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
                     <p className="text-sm text-emerald-700 dark:text-emerald-400">
                         {successMessage}
                     </p>
@@ -221,8 +224,9 @@ export default function MatchesPage() {
                                 )}
 
                                 {!isVotingOpen(match) && (
-                                    <div className="px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded text-sm font-medium">
-                                        🔒 {t("votingClosed")}
+                                    <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded text-sm font-medium self-start sm:self-auto">
+                                        <LockIcon className="w-3.5 h-3.5" />
+                                        <span>{t("votingClosed")}</span>
                                     </div>
                                 )}
                             </div>
@@ -230,9 +234,10 @@ export default function MatchesPage() {
                             {/* Prediction Form */}
                             {isVotingOpen(match) && !match.resolved ? (
                                 hasPrediction(match) ? (
-                                    <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg text-center border border-emerald-200 dark:border-emerald-800">
+                                    <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg flex items-center justify-center gap-2 border border-emerald-200 dark:border-emerald-800">
+                                        <CheckIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
                                         <p className="text-sm text-emerald-700 dark:text-emerald-400">
-                                            ✓ {t("predictionSaved")}
+                                            {t("predictionSaved")}
                                         </p>
                                     </div>
                                 ) : (

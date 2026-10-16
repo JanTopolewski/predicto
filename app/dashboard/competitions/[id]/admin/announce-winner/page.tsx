@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useApiError } from "@/lib/useApiError";
+import { TrophyIcon } from "@/components/Icons";
 
 interface Team {
     id: string;
@@ -129,9 +130,12 @@ export default function AnnounceWinnerPage() {
             <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 sm:p-8 border border-zinc-200 dark:border-zinc-800">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
-                        <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white">
-                            🏆 {t("title")}
-                        </h2>
+                        <div className="flex items-center gap-2">
+                            <TrophyIcon className="w-7 h-7 text-amber-500" />
+                            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white">
+                                {t("title")}
+                            </h2>
+                        </div>
                         <p className="text-sm sm:text-base text-zinc-600 dark:text-zinc-400 mt-2">
                             {competition.name}
                         </p>

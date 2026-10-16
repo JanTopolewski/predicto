@@ -6,6 +6,7 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useApiError } from "@/lib/useApiError";
+import { TrophyIcon, CheckIcon, AlertTriangleIcon } from "@/components/Icons";
 
 interface Driver {
     id: string;
@@ -115,16 +116,19 @@ export default function RacingSeasonWinnerPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">
-                        🏆 {t("title")}
-                    </h1>
+                    <div className="flex items-center gap-2">
+                        <TrophyIcon className="w-7 h-7 text-amber-500" />
+                        <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white">
+                            {t("title")}
+                        </h1>
+                    </div>
                     <p className="text-zinc-600 dark:text-zinc-400 text-sm mt-1">
                         {t("subtitle")}
                     </p>
                 </div>
                 <Link
                     href={`/dashboard/competitions/${competitionId}/admin/racing`}
-                    className="px-4 py-2 bg-gray-600 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
+                    className="px-4 py-2 bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-900 dark:text-white font-medium rounded-lg transition-colors text-sm"
                 >
                     {tCommon("back")}
                 </Link>
@@ -132,15 +136,17 @@ export default function RacingSeasonWinnerPage() {
 
             {/* Messages */}
             {error && (
-                <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2">
+                    <AlertTriangleIcon className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0" />
                     <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
                 </div>
             )}
 
             {success && (
-                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg">
+                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg flex items-center gap-2">
+                    <CheckIcon className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
                     <p className="text-sm text-emerald-700 dark:text-emerald-400">
-                        ✓ {success}
+                        {success}
                     </p>
                 </div>
             )}

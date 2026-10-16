@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useApiError } from "@/lib/useApiError";
+import { GlobeIcon, LockIcon } from "@/components/Icons";
 
 export default function CreateCompetitionPage() {
     const { data: session, status } = useSession();
@@ -131,8 +132,8 @@ export default function CreateCompetitionPage() {
                             className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                             disabled={isLoading}
                         >
-                            <option value="FOOTBALL">⚽ {tCommon("football")}</option>
-                            <option value="RACING">🏎️ {tCommon("racing")}</option>
+                            <option value="FOOTBALL">{tCommon("football")}</option>
+                            <option value="RACING">{tCommon("racing")}</option>
                         </select>
                     </div>
 
@@ -201,9 +202,19 @@ export default function CreateCompetitionPage() {
                         />
                         <label
                             htmlFor="isPublic"
-                            className="text-sm font-medium text-zinc-700 dark:text-zinc-300 cursor-pointer"
+                            className="flex items-center gap-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 cursor-pointer"
                         >
-                            {isPublic ? `🌍 ${t("publicOption")}` : `🔒 ${t("privateOption")}`}
+                            {isPublic ? (
+                                <>
+                                    <GlobeIcon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                    <span>{t("publicOption")}</span>
+                                </>
+                            ) : (
+                                <>
+                                    <LockIcon className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                                    <span>{t("privateOption")}</span>
+                                </>
+                            )}
                         </label>
                     </div>
 
