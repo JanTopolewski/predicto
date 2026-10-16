@@ -2,32 +2,24 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { NextRequest, NextResponse } from "next/server";
+import { apiError, unauthorized, internalError } from "@/lib/api";
 
 export async function POST(request: NextRequest) {
     try {
         const session = await auth();
 
         if (!session?.user?.id) {
-            return NextResponse.json(
-                { message: "Brak autoryzacji" },
-                { status: 401 }
-            );
+            return unauthorized();
         }
 
         const { currentPassword, newPassword } = await request.json();
 
         if (!currentPassword || !newPassword) {
-            return NextResponse.json(
-                { message: "Wszystkie pola są wymagane" },
-                { status: 400 }
-            );
+            return apiError(400, "MISSING_FIELDS", "All fields are required");
         }
 
         if (newPassword.length < 8) {
-            return NextResponse.json(
-                { message: "Nowe hasło musi mieć co najmniej 8 znaków" },
-                { status: 400 }
-            );
+            return apiError(400, "PASSWORD_TOO_SHORT", "New password must be at least 8 characters long");
         }
 
         const user = await prisma.user.findUnique({
@@ -35,10 +27,7 @@ export async function POST(request: NextRequest) {
         });
 
         if (!user) {
-            return NextResponse.json(
-                { message: "Użytkownik nie istnieje" },
-                { status: 404 }
-            );
+            return apiError(404, "USER_NOT_FOUND", "User not found");
         }
 
         const isCurrentPasswordValid = await bcrypt.compare(
@@ -47,10 +36,7 @@ export async function POST(request: NextRequest) {
         );
 
         if (!isCurrentPasswordValid) {
-            return NextResponse.json(
-                { message: "Aktualne hasło jest niepoprawne" },
-                { status: 400 }
-            );
+            return apiError(400, "INVALID_CURRENT_PASSWORD", "Current password is incorrect");
         }
 
         const isSamePassword = await bcrypt.compare(
@@ -59,10 +45,7 @@ export async function POST(request: NextRequest) {
         );
 
         if (isSamePassword) {
-            return NextResponse.json(
-                { message: "Nowe hasło musi być inne niż aktualne" },
-                { status: 400 }
-            );
+            return apiError(400, "PASSWORD_SAME_AS_OLD", "New password must be different from current password");
         }
 
         const saltRounds = 10;
@@ -76,14 +59,11 @@ export async function POST(request: NextRequest) {
         });
 
         return NextResponse.json(
-            { message: "Hasło zostało pomyślnie zmienione" },
+            { message: "Password changed successfully" },
             { status: 200 }
         );
     } catch (error) {
         console.error("Change password error:", error);
-        return NextResponse.json(
-            { message: "Błąd serwera podczas zmiany hasła" },
-            { status: 500 }
-        );
+        return internalError();
     }
 }

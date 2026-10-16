@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { getApiErrorMessage } from "@/lib/apiErrors";
 
 export default function ChangePasswordPage() {
     const router = useRouter();
@@ -13,6 +15,10 @@ export default function ChangePasswordPage() {
     const [successMessage, setSuccessMessage] = useState("");
     const [isLoading, setIsLoading] = useState(false);
 
+    const t = useTranslations("auth.reset");
+    const tCommon = useTranslations("common");
+    const tErrors = useTranslations("apiErrors");
+
     const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
         setError("");
@@ -20,19 +26,19 @@ export default function ChangePasswordPage() {
         setIsLoading(true);
 
         if (!currentPassword || !newPassword || !confirmPassword) {
-            setError("Wszystkie pola są wymagane");
+            setError(tErrors("missingFields"));
             setIsLoading(false);
             return;
         }
 
         if (newPassword.length < 8) {
-            setError("Nowe hasło musi mieć co najmniej 8 znaków");
+            setError(t("passwordTooShort"));
             setIsLoading(false);
             return;
         }
 
         if (newPassword !== confirmPassword) {
-            setError("Nowe hasła nie są identyczne");
+            setError(t("passwordMismatch"));
             setIsLoading(false);
             return;
         }
@@ -52,12 +58,12 @@ export default function ChangePasswordPage() {
             const data = await response.json();
 
             if (!response.ok) {
-                setError(data.message || "Błąd podczas zmiany hasła");
+                setError(getApiErrorMessage(tErrors, data.message || "Error changing password"));
                 setIsLoading(false);
                 return;
             }
 
-            setSuccessMessage("Hasło zostało pomyślnie zmienione!");
+            setSuccessMessage(t("successMessage"));
             setCurrentPassword("");
             setNewPassword("");
             setConfirmPassword("");
@@ -67,7 +73,7 @@ export default function ChangePasswordPage() {
                 router.push("/dashboard");
             }, 2000);
         } catch (_err) {
-            setError("Coś poszło nie tak. Spróbuj ponownie później.");
+            setError(tErrors("internalError"));
             setIsLoading(false);
         }
     };
@@ -78,10 +84,10 @@ export default function ChangePasswordPage() {
                 <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 sm:p-8 border border-zinc-200 dark:border-zinc-800">
                     <div className="mb-6 sm:mb-8">
                         <h1 className="text-2xl sm:text-3xl font-bold text-center text-zinc-900 dark:text-white mb-2">
-                            Predicto
+                            {tCommon("appName")}
                         </h1>
                         <p className="text-center text-sm sm:text-base text-zinc-600 dark:text-zinc-400">
-                            Zmień swoje hasło
+                            {t("title")}
                         </p>
                     </div>
 
@@ -105,7 +111,7 @@ export default function ChangePasswordPage() {
                                 htmlFor="currentPassword"
                                 className="block text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
                             >
-                                Aktualne hasło
+                                {t("currentPassword")}
                             </label>
                             <input
                                 id="currentPassword"
@@ -123,7 +129,7 @@ export default function ChangePasswordPage() {
                                 htmlFor="newPassword"
                                 className="block text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
                             >
-                                Nowe hasło
+                                {t("newPassword")}
                             </label>
                             <input
                                 id="newPassword"
@@ -141,7 +147,7 @@ export default function ChangePasswordPage() {
                                 htmlFor="confirmPassword"
                                 className="block text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
                             >
-                                Powtórz nowe hasło
+                                {t("confirmNewPassword")}
                             </label>
                             <input
                                 id="confirmPassword"
@@ -159,7 +165,7 @@ export default function ChangePasswordPage() {
                             disabled={isLoading}
                             className="w-full px-4 py-2.5 sm:py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
                         >
-                            {isLoading ? "Zapisywanie..." : "Zmień hasło"}
+                            {isLoading ? t("submittingButton") : t("submitButton")}
                         </button>
                     </form>
 
@@ -168,7 +174,7 @@ export default function ChangePasswordPage() {
                             href="/dashboard"
                             className="text-xs sm:text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
                         >
-                            ← Powrót do panelu
+                            ← {t("backToDashboard")}
                         </Link>
                     </div>
                 </div>

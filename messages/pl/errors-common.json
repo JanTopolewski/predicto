@@ -1,0 +1,11 @@
+{
+  "apiErrors": {
+    "UNAUTHORIZED": "Musisz być zalogowany, aby to zrobić",
+    "FORBIDDEN": "Nie masz uprawnień do tej operacji",
+    "INTERNAL_ERROR": "Coś poszło nie tak po naszej stronie. Spróbuj ponownie później.",
+    "VALIDATION_FAILED": "Część podanych danych jest nieprawidłowa",
+    "MISSING_FIELDS": "Wypełnij wszystkie wymagane pola",
+    "INVALID_DATE": "Nieprawidłowy format daty"
+  }
+}
+

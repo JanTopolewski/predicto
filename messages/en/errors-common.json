@@ -1,0 +1,11 @@
+{
+  "apiErrors": {
+    "UNAUTHORIZED": "You must be logged in to do this",
+    "FORBIDDEN": "You do not have permission to do this",
+    "INTERNAL_ERROR": "Something went wrong on our side. Please try again later.",
+    "VALIDATION_FAILED": "Some of the provided data is invalid",
+    "MISSING_FIELDS": "Please fill in all required fields",
+    "INVALID_DATE": "Invalid date format"
+  }
+}
+

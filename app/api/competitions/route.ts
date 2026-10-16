@@ -2,16 +2,14 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { nanoid } from "nanoid";
+import { apiError, unauthorized, internalError } from "@/lib/api";
 
 export async function GET(_request: NextRequest) {
     try {
         const session = await auth();
 
         if (!session?.user?.id) {
-            return NextResponse.json(
-                { error: "Unauthorized" },
-                { status: 401 }
-            );
+            return unauthorized();
         }
 
         const competitionMembers = await prisma.competitionMember.findMany({
@@ -53,10 +51,7 @@ export async function GET(_request: NextRequest) {
         });
     } catch (error) {
         console.error("Error fetching competitions:", error);
-        return NextResponse.json(
-            { error: "Internal server error" },
-            { status: 500 }
-        );
+        return internalError();
     }
 }
 
@@ -65,10 +60,7 @@ export async function POST(request: NextRequest) {
         const session = await auth();
 
         if (!session?.user?.id) {
-            return NextResponse.json(
-                { message: "Unauthorized" },
-                { status: 401 }
-            );
+            return unauthorized();
         }
 
         const user = await prisma.user.findUnique({
@@ -77,43 +69,28 @@ export async function POST(request: NextRequest) {
         });
 
         if (user?.role !== "ADMIN") {
-            return NextResponse.json(
-                { message: "Tylko administratorzy mogą tworzyć konkurencje" },
-                { status: 403 }
-            );
+            return apiError(403, "FORBIDDEN", "Only administrators can create competitions");
         }
 
         const { name, type, season, startDate, endDate, isPublic } = await request.json();
 
         if (!name || !type || !season || !startDate || !endDate) {
-            return NextResponse.json(
-                { message: "Wszystkie pola są wymagane" },
-                { status: 400 }
-            );
+            return apiError(400, "MISSING_FIELDS", "All fields are required");
         }
 
         if (!["FOOTBALL", "RACING"].includes(type)) {
-            return NextResponse.json(
-                { message: "Nieprawidłowy typ konkurencji" },
-                { status: 400 }
-            );
+            return apiError(400, "INVALID_COMPETITION_TYPE", "Invalid competition type");
         }
 
         const parsedStartDate = new Date(startDate);
         const parsedEndDate = new Date(endDate);
 
         if (isNaN(parsedStartDate.getTime()) || isNaN(parsedEndDate.getTime())) {
-            return NextResponse.json(
-                { message: "Nieprawidłowy format daty" },
-                { status: 400 }
-            );
+            return apiError(400, "INVALID_DATE", "Invalid date format");
         }
 
         if (parsedEndDate < parsedStartDate) {
-            return NextResponse.json(
-                { message: "Data zakończenia nie może być wcześniejsza niż data rozpoczęcia" },
-                { status: 400 }
-            );
+            return apiError(400, "END_DATE_BEFORE_START", "End date cannot be earlier than start date");
         }
 
         const inviteCode = nanoid(10).toUpperCase();
@@ -133,16 +110,13 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json(
             {
-                message: "Konkurencja została utworzona",
+                message: "Competition created successfully",
                 competition,
             },
             { status: 201 }
         );
     } catch (error) {
         console.error("Error creating competition:", error);
-        return NextResponse.json(
-            { message: "Internal server error" },
-            { status: 500 }
-        );
+        return internalError();
     }
 }

@@ -1,16 +1,14 @@
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { NextRequest, NextResponse } from "next/server";
+import { apiError, internalError } from "@/lib/api";
 
 export async function POST(request: NextRequest) {
     try {
         const { username, email, password } = await request.json();
 
         if (!username || !email || !password) {
-            return NextResponse.json(
-                { message: "Wszystkie pola są wymagane" },
-                { status: 400 }
-            );
+            return apiError(400, "MISSING_FIELDS", "All fields are required");
         }
 
         if (
@@ -18,27 +16,18 @@ export async function POST(request: NextRequest) {
             typeof email !== "string" ||
             typeof password !== "string"
         ) {
-            return NextResponse.json(
-                { message: "Nieprawidłowy format danych" },
-                { status: 400 }
-            );
+            return apiError(400, "VALIDATION_FAILED", "Invalid data format");
         }
 
         const normalizedUsername = username.trim();
         const normalizedEmail = email.trim().toLowerCase();
 
         if (!normalizedUsername || !normalizedEmail) {
-            return NextResponse.json(
-                { message: "Wszystkie pola są wymagane" },
-                { status: 400 }
-            );
+            return apiError(400, "MISSING_FIELDS", "All fields are required");
         }
 
         if (password.length < 8) {
-            return NextResponse.json(
-                { message: "Hasło musi mieć co najmniej 8 znaków" },
-                { status: 400 }
-            );
+            return apiError(400, "PASSWORD_TOO_SHORT", "Password must be at least 8 characters long");
         }
 
         const existingUser = await prisma.user.findFirst({
@@ -51,14 +40,11 @@ export async function POST(request: NextRequest) {
         });
 
         if (existingUser) {
-            return NextResponse.json(
-                {
-                    message:
-                        existingUser.email.toLowerCase() === normalizedEmail
-                            ? "Email już jest zarejestrowany"
-                            : "Nazwa użytkownika jest już zajęta",
-                },
-                { status: 409 }
+            const isEmail = existingUser.email.toLowerCase() === normalizedEmail;
+            return apiError(
+                409,
+                isEmail ? "EMAIL_TAKEN" : "USERNAME_TAKEN",
+                isEmail ? "Email is already taken" : "Username is already taken"
             );
         }
 
@@ -76,7 +62,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json(
             {
-                message: "Rejestracja powiodła się",
+                message: "Registration successful",
                 user: {
                     id: user.id,
                     username: user.username,
@@ -87,15 +73,9 @@ export async function POST(request: NextRequest) {
         );
     } catch (error: any) {
         if (error?.code === "P2002") {
-            return NextResponse.json(
-                { message: "Email lub nazwa użytkownika jest już zajęta" },
-                { status: 409 }
-            );
+            return apiError(409, "USER_EXISTS", "Email or username is already taken");
         }
         console.error("Registration error:", error);
-        return NextResponse.json(
-            { message: "Błąd serwera" },
-            { status: 500 }
-        );
+        return internalError();
     }
 }

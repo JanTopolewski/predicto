@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { apiError, unauthorized, internalError } from "@/lib/api";
 
 export async function GET(
     _request: NextRequest,
@@ -11,10 +12,7 @@ export async function GET(
         const competitionId = (await params).id;
 
         if (!session?.user?.id) {
-            return NextResponse.json(
-                { error: "Unauthorized" },
-                { status: 401 }
-            );
+            return unauthorized();
         }
 
         const competition = await prisma.competition.findUnique({
@@ -49,10 +47,7 @@ export async function GET(
         });
 
         if (!competition || competition.type !== "RACING") {
-            return NextResponse.json(
-                { error: "Competition not found or is not a racing competition" },
-                { status: 404 }
-            );
+            return apiError(404, "COMPETITION_NOT_FOUND", "Competition not found or is not a racing competition");
         }
 
         // Allow if user is admin of this competition OR member
@@ -69,10 +64,7 @@ export async function GET(
             });
 
             if (!member) {
-                return NextResponse.json(
-                    { error: "You are not a member of this competition" },
-                    { status: 403 }
-                );
+                return apiError(403, "NOT_A_MEMBER", "You are not a member of this competition");
             }
         }
 
@@ -82,10 +74,7 @@ export async function GET(
         return NextResponse.json({ weekends });
     } catch (error) {
         console.error("Error fetching weekends:", error);
-        return NextResponse.json(
-            { error: "Internal server error" },
-            { status: 500 }
-        );
+        return internalError();
     }
 }
 
@@ -97,20 +86,14 @@ export async function POST(
         const session = await auth();
 
         if (!session?.user?.id || session.user.role !== "ADMIN") {
-            return NextResponse.json(
-                { error: "Only admins can create weekends" },
-                { status: 403 }
-            );
+            return apiError(403, "FORBIDDEN", "Only admins can create weekends");
         }
 
         const competitionId = (await params).id;
         const { grandPrix, country, raceDate } = await request.json();
 
         if (!grandPrix || !country || !raceDate) {
-            return NextResponse.json(
-                { error: "Missing required fields" },
-                { status: 400 }
-            );
+            return apiError(400, "MISSING_FIELDS", "Missing required fields");
         }
 
         const competition = await prisma.competition.findUnique({
@@ -119,17 +102,11 @@ export async function POST(
         });
 
         if (!competition || competition.type !== "RACING") {
-            return NextResponse.json(
-                { error: "Competition not found or is not a racing competition" },
-                { status: 404 }
-            );
+            return apiError(404, "COMPETITION_NOT_FOUND", "Competition not found or is not a racing competition");
         }
 
         if (competition.createdBy !== session.user.id) {
-            return NextResponse.json(
-                { error: "Only competition creator can create weekends" },
-                { status: 403 }
-            );
+            return apiError(403, "FORBIDDEN", "Only competition creator can create weekends");
         }
 
         let racingSeason = competition.racingSeasons[0];
@@ -154,9 +131,6 @@ export async function POST(
         return NextResponse.json({ weekend }, { status: 201 });
     } catch (error) {
         console.error("Error creating weekend:", error);
-        return NextResponse.json(
-            { error: "Internal server error" },
-            { status: 500 }
-        );
+        return internalError();
     }
 }

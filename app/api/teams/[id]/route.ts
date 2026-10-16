@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { apiError, unauthorized, forbidden, internalError } from "@/lib/api";
 
 export async function GET(
     _request: NextRequest,
@@ -12,10 +13,7 @@ export async function GET(
         const session = await auth();
 
         if (!session?.user?.id) {
-            return NextResponse.json(
-                { message: "Unauthorized" },
-                { status: 401 }
-            );
+            return unauthorized();
         }
 
         const user = await prisma.user.findUnique({
@@ -24,10 +22,7 @@ export async function GET(
         });
 
         if (user?.role !== "ADMIN") {
-            return NextResponse.json(
-                { message: "Forbidden" },
-                { status: 403 }
-            );
+            return forbidden();
         }
 
         const team = await prisma.team.findUnique({
@@ -35,19 +30,13 @@ export async function GET(
         });
 
         if (!team) {
-            return NextResponse.json(
-                { message: "Drużyna nie znaleziona" },
-                { status: 404 }
-            );
+            return apiError(404, "TEAM_NOT_FOUND", "Team not found");
         }
 
         return NextResponse.json({ team });
     } catch (error) {
         console.error("Error fetching team:", error);
-        return NextResponse.json(
-            { message: "Internal server error" },
-            { status: 500 }
-        );
+        return internalError();
     }
 }
 
@@ -61,10 +50,7 @@ export async function PUT(
         const session = await auth();
 
         if (!session?.user?.id) {
-            return NextResponse.json(
-                { message: "Unauthorized" },
-                { status: 401 }
-            );
+            return unauthorized();
         }
 
         const user = await prisma.user.findUnique({
@@ -73,10 +59,7 @@ export async function PUT(
         });
 
         if (user?.role !== "ADMIN") {
-            return NextResponse.json(
-                { message: "Forbidden" },
-                { status: 403 }
-            );
+            return forbidden();
         }
 
         const { name, shortName } = await request.json();
@@ -89,10 +72,7 @@ export async function PUT(
             !name.trim() ||
             !shortName.trim()
         ) {
-            return NextResponse.json(
-                { message: "Nazwa i skrót są wymagane" },
-                { status: 400 }
-            );
+            return apiError(400, "MISSING_FIELDS", "Name and short name are required");
         }
 
         const existingTeam = await prisma.team.findUnique({
@@ -100,10 +80,7 @@ export async function PUT(
         });
 
         if (!existingTeam) {
-            return NextResponse.json(
-                { message: "Drużyna nie znaleziona" },
-                { status: 404 }
-            );
+            return apiError(404, "TEAM_NOT_FOUND", "Team not found");
         }
 
         const trimmedShortName = shortName.trim().toUpperCase();
@@ -113,10 +90,7 @@ export async function PUT(
         });
 
         if (shortnameExists && shortnameExists.id !== id) {
-            return NextResponse.json(
-                { message: "Drużyna z takim skrótem już istnieje" },
-                { status: 409 }
-            );
+            return apiError(409, "TEAM_SHORT_NAME_TAKEN", "Team with this short name already exists");
         }
 
         const updatedTeam = await prisma.team.update({
@@ -130,10 +104,7 @@ export async function PUT(
         return NextResponse.json({ team: updatedTeam });
     } catch (error) {
         console.error("Error updating team:", error);
-        return NextResponse.json(
-            { message: "Internal server error" },
-            { status: 500 }
-        );
+        return internalError();
     }
 }
 
@@ -147,10 +118,7 @@ export async function DELETE(
         const session = await auth();
 
         if (!session?.user?.id) {
-            return NextResponse.json(
-                { message: "Unauthorized" },
-                { status: 401 }
-            );
+            return unauthorized();
         }
 
         const user = await prisma.user.findUnique({
@@ -159,10 +127,7 @@ export async function DELETE(
         });
 
         if (user?.role !== "ADMIN") {
-            return NextResponse.json(
-                { message: "Forbidden" },
-                { status: 403 }
-            );
+            return forbidden();
         }
 
         const team = await prisma.team.findUnique({
@@ -179,10 +144,7 @@ export async function DELETE(
         });
 
         if (!team) {
-            return NextResponse.json(
-                { message: "Drużyna nie znaleziona" },
-                { status: 404 }
-            );
+            return apiError(404, "TEAM_NOT_FOUND", "Team not found");
         }
 
         const isUsed =
@@ -191,12 +153,10 @@ export async function DELETE(
             team._count.seasonWinnerPredictions > 0;
 
         if (isUsed) {
-            return NextResponse.json(
-                {
-                    message:
-                        "Nie można usunąć drużyny, która bierze udział w meczach lub posiada zarejestrowane głosy na zwycięzcę sezonu.",
-                },
-                { status: 409 }
+            return apiError(
+                409,
+                "CANNOT_DELETE_USED_TEAM",
+                "Cannot delete team with associated matches or season winner predictions"
             );
         }
 
@@ -204,12 +164,9 @@ export async function DELETE(
             where: { id },
         });
 
-        return NextResponse.json({ message: "Drużyna usunięta" });
+        return NextResponse.json({ message: "Team deleted successfully" });
     } catch (error) {
         console.error("Error deleting team:", error);
-        return NextResponse.json(
-            { message: "Internal server error" },
-            { status: 500 }
-        );
+        return internalError();
     }
 }

@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isTimePassed } from "@/lib/timeUtils";
 import { NextRequest, NextResponse } from "next/server";
+import { apiError, unauthorized, internalError } from "@/lib/api";
 
 export async function POST(
     request: NextRequest,
@@ -15,20 +16,14 @@ export async function POST(
         const session = await auth();
 
         if (!session?.user?.id) {
-            return NextResponse.json(
-                { error: "Unauthorized" },
-                { status: 401 }
-            );
+            return unauthorized();
         }
 
         const { id: competitionId, matchId } = await params;
         const { homeGoals, awayGoals } = await request.json();
 
         if (homeGoals === undefined || awayGoals === undefined) {
-            return NextResponse.json(
-                { error: "Missing prediction data" },
-                { status: 400 }
-            );
+            return apiError(400, "MISSING_PREDICTION_DATA", "Missing prediction data");
         }
 
         if (
@@ -39,10 +34,7 @@ export async function POST(
             awayGoals < 0 ||
             awayGoals > 20
         ) {
-            return NextResponse.json(
-                { error: "Incorrect goal numbers" },
-                { status: 400 }
-            );
+            return apiError(400, "INVALID_GOALS", "Incorrect goal numbers (must be integer between 0 and 20)");
         }
 
         const member = await prisma.competitionMember.findUnique({
@@ -55,10 +47,7 @@ export async function POST(
         });
 
         if (!member) {
-            return NextResponse.json(
-                { error: "You are not a member of this competition" },
-                { status: 403 }
-            );
+            return apiError(403, "NOT_A_MEMBER", "You are not a member of this competition");
         }
 
         const match = await prisma.footballMatch.findUnique({
@@ -69,38 +58,23 @@ export async function POST(
         });
 
         if (!match || match.season.competitionId !== competitionId) {
-            return NextResponse.json(
-                { error: "Match not found" },
-                { status: 404 }
-            );
+            return apiError(404, "MATCH_NOT_FOUND", "Match not found");
         }
 
         if (match.resolved) {
-            return NextResponse.json(
-                { error: "Match has already been resolved" },
-                { status: 400 }
-            );
+            return apiError(400, "MATCH_RESOLVED", "Match has already been resolved");
         }
 
         if (match.status !== "SCHEDULED") {
-            return NextResponse.json(
-                { error: `Cannot predict a match with status ${match.status}` },
-                { status: 400 }
-            );
+            return apiError(400, "MATCH_NOT_SCHEDULED", `Cannot predict a match with status ${match.status}`, { status: match.status });
         }
 
         if (match.votingClosedAt && isTimePassed(match.votingClosedAt)) {
-            return NextResponse.json(
-                { error: "Voting for this match is closed" },
-                { status: 400 }
-            );
+            return apiError(400, "VOTING_CLOSED", "Voting for this match is closed");
         }
 
         if (match.kickoff && isTimePassed(match.kickoff)) {
-            return NextResponse.json(
-                { error: "Match has already started" },
-                { status: 400 }
-            );
+            return apiError(400, "MATCH_ALREADY_STARTED", "Match has already started");
         }
 
         const prediction = await prisma.footballPrediction.upsert({
@@ -125,9 +99,6 @@ export async function POST(
         return NextResponse.json({ prediction }, { status: 201 });
     } catch (error) {
         console.error("Error creating prediction:", error);
-        return NextResponse.json(
-            { error: "Internal server error" },
-            { status: 500 }
-        );
+        return internalError();
     }
 }

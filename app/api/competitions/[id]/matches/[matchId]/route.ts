@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isTimePassed } from "@/lib/timeUtils";
 import { NextRequest, NextResponse } from "next/server";
+import { apiError, forbidden, internalError } from "@/lib/api";
 
 export async function PATCH(
     request: NextRequest,
@@ -15,10 +16,7 @@ export async function PATCH(
         const session = await auth();
 
         if (!session?.user?.id || session.user.role !== "ADMIN") {
-            return NextResponse.json(
-                { error: "Only admins can update matches" },
-                { status: 403 }
-            );
+            return forbidden();
         }
 
         const { id: competitionId, matchId } = await params;
@@ -27,29 +25,20 @@ export async function PATCH(
 
         if (homeGoals !== undefined) {
             if (!Number.isInteger(homeGoals) || homeGoals < 0 || homeGoals > 50) {
-                return NextResponse.json(
-                    { error: "Invalid home goals" },
-                    { status: 400 }
-                );
+                return apiError(400, "INVALID_GOALS", "Invalid home goals");
             }
         }
 
         if (awayGoals !== undefined) {
             if (!Number.isInteger(awayGoals) || awayGoals < 0 || awayGoals > 50) {
-                return NextResponse.json(
-                    { error: "Invalid away goals" },
-                    { status: 400 }
-                );
+                return apiError(400, "INVALID_GOALS", "Invalid away goals");
             }
         }
 
         if (status !== undefined) {
             const validStatuses = ["SCHEDULED", "IN_PROGRESS", "FINISHED", "POSTPONED", "CANCELLED"];
             if (!validStatuses.includes(status)) {
-                return NextResponse.json(
-                    { error: "Invalid match status" },
-                    { status: 400 }
-                );
+                return apiError(400, "INVALID_STATUS", "Invalid match status");
             }
         }
 
@@ -60,10 +49,7 @@ export async function PATCH(
             } else {
                 parsedVotingClosedAt = new Date(votingClosedAt);
                 if (isNaN(parsedVotingClosedAt.getTime())) {
-                    return NextResponse.json(
-                        { error: "Invalid votingClosedAt date format" },
-                        { status: 400 }
-                    );
+                    return apiError(400, "INVALID_DATE", "Invalid votingClosedAt date format");
                 }
             }
         }
@@ -81,31 +67,27 @@ export async function PATCH(
         });
 
         if (!match || match.season.competitionId !== competitionId) {
-            return NextResponse.json(
-                { error: "Match not found" },
-                { status: 404 }
-            );
+            return apiError(404, "MATCH_NOT_FOUND", "Match not found");
         }
 
         const competition = match.season.competition;
         if (competition.createdBy !== session.user.id) {
-            return NextResponse.json(
-                { error: "Only competition creator can update matches" },
-                { status: 403 }
-            );
+            return apiError(403, "FORBIDDEN", "Only competition creator can update matches");
         }
 
         if (parsedVotingClosedAt !== undefined) {
             if (match.resolved) {
-                return NextResponse.json(
-                    { error: "Nie można modyfikować czasu głosowania dla rozliczonego meczu" },
-                    { status: 400 }
+                return apiError(
+                    400,
+                    "CANNOT_MODIFY_RESOLVED_MATCH",
+                    "Cannot modify voting time for an already resolved match (nie można modyfikować czasu głosowania dla rozliczonego meczu)"
                 );
             }
             if (match.kickoff && isTimePassed(match.kickoff)) {
-                return NextResponse.json(
-                    { error: "Nie można modyfikować czasu głosowania po rozpoczęciu meczu" },
-                    { status: 400 }
+                return apiError(
+                    400,
+                    "CANNOT_MODIFY_PAST_MATCH",
+                    "Cannot modify voting time after match has started (nie można modyfikować czasu głosowania po rozpoczęciu meczu)"
                 );
             }
         }
@@ -132,10 +114,7 @@ export async function PATCH(
         return NextResponse.json({ match: updatedMatch });
     } catch (error) {
         console.error("Error updating match:", error);
-        return NextResponse.json(
-            { error: "Internal server error" },
-            { status: 500 }
-        );
+        return internalError();
     }
 }
 
@@ -151,10 +130,7 @@ export async function DELETE(
         const session = await auth();
 
         if (!session?.user?.id || session.user.role !== "ADMIN") {
-            return NextResponse.json(
-                { error: "Only admins can delete matches" },
-                { status: 403 }
-            );
+            return forbidden();
         }
 
         const { id: competitionId, matchId } = await params;
@@ -171,26 +147,18 @@ export async function DELETE(
         });
 
         if (!match || match.season.competitionId !== competitionId) {
-            return NextResponse.json(
-                { error: "Match not found" },
-                { status: 404 }
-            );
+            return apiError(404, "MATCH_NOT_FOUND", "Match not found");
         }
 
         if (match.season.competition.createdBy !== session.user.id) {
-            return NextResponse.json(
-                { error: "Only competition creator can delete matches" },
-                { status: 403 }
-            );
+            return apiError(403, "FORBIDDEN", "Only competition creator can delete matches");
         }
 
         if (match.resolved) {
-            return NextResponse.json(
-                {
-                    error:
-                        "Nie można usunąć meczu, który został już rozliczony i posiada naliczone punkty.",
-                },
-                { status: 400 }
+            return apiError(
+                400,
+                "CANNOT_DELETE_RESOLVED_MATCH",
+                "Cannot delete match that has already been resolved and points awarded"
             );
         }
 
@@ -203,9 +171,6 @@ export async function DELETE(
         });
     } catch (error) {
         console.error("Error deleting match:", error);
-        return NextResponse.json(
-            { error: "Internal server error" },
-            { status: 500 }
-        );
+        return internalError();
     }
 }

@@ -1,16 +1,14 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { forbidden, internalError } from "@/lib/api";
 
 export async function GET(request: NextRequest) {
     try {
         const session = await auth();
 
         if (!session || session.user?.role !== "ADMIN") {
-            return NextResponse.json(
-                { message: "Brak dostępu do tego zasobu" },
-                { status: 403 }
-            );
+            return forbidden();
         }
 
         const searchParams = request.nextUrl.searchParams;
@@ -54,9 +52,6 @@ export async function GET(request: NextRequest) {
         );
     } catch (error) {
         console.error("Get users error:", error);
-        return NextResponse.json(
-            { message: "Błąd serwera" },
-            { status: 500 }
-        );
+        return internalError();
     }
 }

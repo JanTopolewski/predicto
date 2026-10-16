@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { apiError, internalError } from "@/lib/api";
 
 export async function DELETE(
     _request: NextRequest,
@@ -10,10 +11,7 @@ export async function DELETE(
         const session = await auth();
 
         if (!session?.user?.id || session.user.role !== "ADMIN") {
-            return NextResponse.json(
-                { error: "Only admins can delete competitions" },
-                { status: 403 }
-            );
+            return apiError(403, "FORBIDDEN", "Only admins can delete competitions");
         }
 
         const competitionId = (await params).id;
@@ -23,17 +21,11 @@ export async function DELETE(
         });
 
         if (!competition) {
-            return NextResponse.json(
-                { error: "Competition not found" },
-                { status: 404 }
-            );
+            return apiError(404, "COMPETITION_NOT_FOUND", "Competition not found");
         }
 
         if (competition.createdBy !== session.user.id) {
-            return NextResponse.json(
-                { error: "Only competition creator can delete it" },
-                { status: 403 }
-            );
+            return apiError(403, "FORBIDDEN", "Only competition creator can delete it");
         }
 
         await prisma.competition.delete({
@@ -45,9 +37,6 @@ export async function DELETE(
         });
     } catch (error) {
         console.error("Error deleting competition:", error);
-        return NextResponse.json(
-            { error: "Internal server error" },
-            { status: 500 }
-        );
+        return internalError();
     }
 }

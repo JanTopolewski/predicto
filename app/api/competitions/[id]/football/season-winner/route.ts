@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { apiError, unauthorized, internalError } from "@/lib/api";
 
 export async function POST(
     request: NextRequest,
@@ -10,20 +11,14 @@ export async function POST(
         const session = await auth();
 
         if (!session?.user?.id) {
-            return NextResponse.json(
-                { error: "Unauthorized" },
-                { status: 401 }
-            );
+            return unauthorized();
         }
 
         const competitionId = (await params).id;
         const { teamId } = await request.json();
 
         if (!teamId) {
-            return NextResponse.json(
-                { error: "Team ID is required" },
-                { status: 400 }
-            );
+            return apiError(400, "MISSING_FIELDS", "Team ID is required");
         }
 
         const member = await prisma.competitionMember.findUnique({
@@ -36,10 +31,7 @@ export async function POST(
         });
 
         if (!member) {
-            return NextResponse.json(
-                { error: "You are not a member of this competition" },
-                { status: 403 }
-            );
+            return apiError(403, "NOT_A_MEMBER", "You are not a member of this competition");
         }
 
         const competition = await prisma.competition.findUnique({
@@ -50,16 +42,14 @@ export async function POST(
         });
 
         if (!competition || competition.type !== "FOOTBALL") {
-            return NextResponse.json(
-                { error: "Competition not found or is not a football competition" },
-                { status: 404 }
-            );
+            return apiError(404, "COMPETITION_NOT_FOUND", "Competition not found or is not a football competition");
         }
 
         if (competition.winnerResolved) {
-            return NextResponse.json(
-                { error: "Zwycięzca sezonu został już ogłoszony. Głosowanie jest zamknięte." },
-                { status: 400 }
+            return apiError(
+                400,
+                "WINNER_ALREADY_RESOLVED",
+                "Season winner has already been announced. Voting is closed."
             );
         }
 
@@ -76,9 +66,10 @@ export async function POST(
         });
 
         if (earliestMatch && new Date() >= new Date(earliestMatch.kickoff)) {
-            return NextResponse.json(
-                { error: "Pierwszy mecz sezonu już się rozpoczął. Nie można już typować zwycięzcy." },
-                { status: 400 }
+            return apiError(
+                400,
+                "SEASON_ALREADY_STARTED",
+                "First match of the season has already started. Season winner prediction is closed."
             );
         }
 
@@ -93,9 +84,10 @@ export async function POST(
             });
 
         if (existingPrediction) {
-            return NextResponse.json(
-                { error: "Już oddałeś głos na zwycięzcę sezonu. Nie można zmienić typu." },
-                { status: 400 }
+            return apiError(
+                400,
+                "ALREADY_VOTED",
+                "You have already voted for the season winner. Predictions cannot be changed."
             );
         }
 
@@ -104,10 +96,7 @@ export async function POST(
         });
 
         if (!team) {
-            return NextResponse.json(
-                { error: "Team not found" },
-                { status: 404 }
-            );
+            return apiError(404, "TEAM_NOT_FOUND", "Team not found");
         }
 
         const isTeamInSeason = await prisma.footballMatch.findFirst({
@@ -118,9 +107,10 @@ export async function POST(
         });
 
         if (!isTeamInSeason) {
-            return NextResponse.json(
-                { error: "Wybrana drużyna nie bierze udziału w rozgrywkach tego sezonu" },
-                { status: 400 }
+            return apiError(
+                400,
+                "TEAM_NOT_IN_SEASON",
+                "Selected team does not participate in this season's matches"
             );
         }
 
@@ -139,10 +129,7 @@ export async function POST(
         return NextResponse.json({ prediction }, { status: 201 });
     } catch (error) {
         console.error("Error creating season winner prediction:", error);
-        return NextResponse.json(
-            { error: "Internal server error" },
-            { status: 500 }
-        );
+        return internalError();
     }
 }
 
@@ -154,10 +141,7 @@ export async function GET(
         const session = await auth();
 
         if (!session?.user?.id) {
-            return NextResponse.json(
-                { error: "Unauthorized" },
-                { status: 401 }
-            );
+            return unauthorized();
         }
 
         const competitionId = (await params).id;
@@ -177,10 +161,7 @@ export async function GET(
         });
 
         if (!competition) {
-            return NextResponse.json(
-                { error: "Competition not found" },
-                { status: 404 }
-            );
+            return apiError(404, "COMPETITION_NOT_FOUND", "Competition not found");
         }
 
         const prediction =
@@ -189,9 +170,6 @@ export async function GET(
         return NextResponse.json({ prediction });
     } catch (error) {
         console.error("Error fetching season winner prediction:", error);
-        return NextResponse.json(
-            { error: "Internal server error" },
-            { status: 500 }
-        );
+        return internalError();
     }
 }

@@ -1,16 +1,14 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { unauthorized, internalError } from "@/lib/api";
 
 export async function GET() {
     try {
         const session = await auth();
 
         if (!session?.user?.id) {
-            return NextResponse.json(
-                { error: "Unauthorized" },
-                { status: 401 }
-            );
+            return unauthorized();
         }
 
         const teams = await prisma.team.findMany({
@@ -27,9 +25,6 @@ export async function GET() {
         return NextResponse.json({ teams });
     } catch (error) {
         console.error("Error fetching sorted teams:", error);
-        return NextResponse.json(
-            { error: "Internal server error" },
-            { status: 500 }
-        );
+        return internalError();
     }
 }

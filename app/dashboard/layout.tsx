@@ -4,15 +4,21 @@ import React, { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslations, useLocale } from "next-intl";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { Locale } from "@/i18n/config";
 
 export default function DashboardLayout({
-                                            children,
-                                        }: {
+    children,
+}: {
     children: React.ReactNode;
 }) {
     const { data: session } = useSession();
     const router = useRouter();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const t = useTranslations("nav");
+    const tCommon = useTranslations("common");
+    const locale = useLocale() as Locale;
 
     const handleLogout = async () => {
         await signOut({ redirect: false });
@@ -22,12 +28,14 @@ export default function DashboardLayout({
     const isAdmin = session?.user?.role === "ADMIN";
 
     const navLinks = [
-        { href: "/dashboard", label: "Dashboard" },
-        { href: "/dashboard/competitions", label: "Konkurencje" },
-        ...(isAdmin ? [
-            { href: "/dashboard/users", label: "Zarządzanie użytkownikami" },
-            { href: "/dashboard/teams", label: "Zarządzanie drużynami" },
-        ] : []),
+        { href: "/dashboard", label: t("dashboard") },
+        { href: "/dashboard/competitions", label: t("competitions") },
+        ...(isAdmin
+            ? [
+                  { href: "/dashboard/users", label: t("manageUsers") },
+                  { href: "/dashboard/teams", label: t("manageTeams") },
+              ]
+            : []),
     ];
 
     return (
@@ -37,14 +45,14 @@ export default function DashboardLayout({
                 <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center h-16">
                         {/* Logo */}
-                        <div className="flex items-center">
-                            <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
-                                Predicto
-                            </h1>
+                        <div className="flex items-center gap-4">
+                            <Link href="/dashboard" className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">
+                                {tCommon("appName")}
+                            </Link>
                         </div>
 
                         {/* Desktop Navigation Links */}
-                        <div className="hidden md:flex items-center gap-8">
+                        <div className="hidden md:flex items-center gap-6">
                             {navLinks.map((link) => (
                                 <Link
                                     key={link.href}
@@ -55,6 +63,9 @@ export default function DashboardLayout({
                                 </Link>
                             ))}
 
+                            {/* Language Switcher */}
+                            <LanguageSwitcher currentLocale={locale} />
+
                             {/* User Info & Logout */}
                             <div className="flex items-center gap-4 pl-4 border-l border-zinc-200 dark:border-zinc-800">
                                 <div className="text-right">
@@ -64,42 +75,45 @@ export default function DashboardLayout({
                                     <Link
                                         key="change password link"
                                         href="/dashboard/users/reset"
-                                        className="text-xs text-zinc-600 dark:text-zinc-400"
+                                        className="text-xs text-zinc-600 dark:text-zinc-400 hover:underline"
                                     >
-                                        Zmień hasło
+                                        {t("changePassword")}
                                     </Link>
                                 </div>
                                 <button
                                     onClick={handleLogout}
-                                    className="px-4 py-2 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white font-medium rounded-lg transition-colors"
+                                    className="px-4 py-2 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white font-medium rounded-lg transition-colors text-sm"
                                 >
-                                    Wyloguj się
+                                    {t("logout")}
                                 </button>
                             </div>
                         </div>
 
-                        {/* Mobile Menu Button */}
-                        <button
-                            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                            aria-label="Menu nawigacyjne"
-                            aria-expanded={mobileMenuOpen}
-                            className="md:hidden p-2 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
-                        >
-                            <svg
-                                aria-hidden="true"
-                                className="w-6 h-6"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
+                        {/* Mobile Menu Button & Switcher */}
+                        <div className="flex md:hidden items-center gap-2">
+                            <LanguageSwitcher currentLocale={locale} />
+                            <button
+                                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                                aria-label="Menu"
+                                aria-expanded={mobileMenuOpen}
+                                className="p-2 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
                             >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d={mobileMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"}
-                                />
-                            </svg>
-                        </button>
+                                <svg
+                                    aria-hidden="true"
+                                    className="w-6 h-6"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d={mobileMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"}
+                                    />
+                                </svg>
+                            </button>
+                        </div>
                     </div>
 
                     {/* Mobile Navigation Menu */}
@@ -125,16 +139,16 @@ export default function DashboardLayout({
                                     <Link
                                         key="change password link"
                                         href="/dashboard/users/reset"
-                                        className="text-xs text-zinc-600 dark:text-zinc-400"
+                                        className="text-xs text-zinc-600 dark:text-zinc-400 hover:underline"
                                     >
-                                        Zmień hasło
+                                        {t("changePassword")}
                                     </Link>
                                 </div>
                                 <button
                                     onClick={handleLogout}
                                     className="w-full px-4 py-2 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white font-medium rounded-lg transition-colors text-sm"
                                 >
-                                    Wyloguj się
+                                    {t("logout")}
                                 </button>
                             </div>
                         </div>

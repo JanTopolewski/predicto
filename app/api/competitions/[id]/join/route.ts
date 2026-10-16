@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { apiError, unauthorized, internalError } from "@/lib/api";
 
 export async function POST(
     _request: NextRequest,
@@ -10,10 +11,7 @@ export async function POST(
         const session = await auth();
 
         if (!session?.user?.id) {
-            return NextResponse.json(
-                { error: "Unauthorized" },
-                { status: 401 }
-            );
+            return unauthorized();
         }
 
         const { id } = await params;
@@ -24,16 +22,14 @@ export async function POST(
         });
 
         if (!competition) {
-            return NextResponse.json(
-                { message: "Konkurencja nie istnieje" },
-                { status: 404 }
-            );
+            return apiError(404, "COMPETITION_NOT_FOUND", "Competition not found");
         }
 
         if (!competition.isPublic) {
-            return NextResponse.json(
-                { message: "Ta liga jest prywatna. Wymagany jest kod zaproszenia." },
-                { status: 403 }
+            return apiError(
+                403,
+                "PRIVATE_COMPETITION",
+                "This competition is private. An invite code is required."
             );
         }
 
@@ -47,10 +43,7 @@ export async function POST(
         });
 
         if (existingMember) {
-            return NextResponse.json(
-                { message: "Już jesteś członkiem tej konkurencji" },
-                { status: 409 }
-            );
+            return apiError(409, "ALREADY_MEMBER", "You are already a member of this competition");
         }
 
         await prisma.competitionMember.create({
@@ -62,14 +55,11 @@ export async function POST(
         });
 
         return NextResponse.json(
-            { message: "Pomyślnie dołączyłeś do konkurencji" },
+            { message: "Successfully joined the competition" },
             { status: 200 }
         );
     } catch (error) {
         console.error("Error joining competition:", error);
-        return NextResponse.json(
-            { error: "Internal server error" },
-            { status: 500 }
-        );
+        return internalError();
     }
 }

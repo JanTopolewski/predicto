@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { apiError, forbidden, internalError } from "@/lib/api";
 
 export async function GET(
     _request: NextRequest,
@@ -59,10 +60,7 @@ export async function GET(
         });
 
         if (!competition) {
-            return NextResponse.json(
-                { error: "Competition not found" },
-                { status: 404 }
-            );
+            return apiError(404, "COMPETITION_NOT_FOUND", "Competition not found");
         }
 
         const isMember = competition.members.some((m) => m.userId === session?.user?.id);
@@ -70,10 +68,7 @@ export async function GET(
         const isOwner = competition.createdBy === session?.user?.id;
 
         if (!session?.user?.id || (!isMember && !(isAdmin && isOwner))) {
-            return NextResponse.json(
-                { error: "Access denied" },
-                { status: 403 }
-            );
+            return forbidden();
         }
 
         const footballSeason = competition.footballSeasons[0];
@@ -102,8 +97,8 @@ export async function GET(
         if (racingSeason) {
             const driverIds = new Set<string>();
             racingSeason.weekends.forEach((weekend) => {
-                weekend.sessions.forEach((session) => {
-                    session.participants.forEach((participant) => {
+                weekend.sessions.forEach((sessionItem) => {
+                    sessionItem.participants.forEach((participant) => {
                         driverIds.add(participant.driverId);
                     });
                 });
@@ -168,9 +163,6 @@ export async function GET(
         });
     } catch (error) {
         console.error("Error fetching competition:", error);
-        return NextResponse.json(
-            { error: "Internal server error" },
-            { status: 500 }
-        );
+        return internalError();
     }
 }

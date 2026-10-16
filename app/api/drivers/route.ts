@@ -1,16 +1,14 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { apiError, unauthorized, forbidden, internalError } from "@/lib/api";
 
 export async function GET() {
     try {
         const session = await auth();
 
         if (!session?.user?.id) {
-            return NextResponse.json(
-                { message: "Unauthorized" },
-                { status: 401 }
-            );
+            return unauthorized();
         }
 
         const user = await prisma.user.findUnique({
@@ -19,10 +17,7 @@ export async function GET() {
         });
 
         if (user?.role !== "ADMIN") {
-            return NextResponse.json(
-                { message: "Forbidden" },
-                { status: 403 }
-            );
+            return forbidden();
         }
 
         const drivers = await prisma.driver.findMany({
@@ -32,10 +27,7 @@ export async function GET() {
         return NextResponse.json({ drivers });
     } catch (error) {
         console.error("Error fetching drivers:", error);
-        return NextResponse.json(
-            { message: "Internal server error" },
-            { status: 500 }
-        );
+        return internalError();
     }
 }
 
@@ -44,10 +36,7 @@ export async function POST(request: NextRequest) {
         const session = await auth();
 
         if (!session?.user?.id) {
-            return NextResponse.json(
-                { message: "Unauthorized" },
-                { status: 401 }
-            );
+            return unauthorized();
         }
 
         const user = await prisma.user.findUnique({
@@ -56,26 +45,17 @@ export async function POST(request: NextRequest) {
         });
 
         if (user?.role !== "ADMIN") {
-            return NextResponse.json(
-                { message: "Forbidden" },
-                { status: 403 }
-            );
+            return forbidden();
         }
 
         const { name, number, team } = await request.json();
 
         if (!name || !number || !team) {
-            return NextResponse.json(
-                { message: "Nazwa, numer i zespół są wymagane" },
-                { status: 400 }
-            );
+            return apiError(400, "MISSING_FIELDS", "Name, number and team are required");
         }
 
         if (!Number.isInteger(number) || number < 1) {
-            return NextResponse.json(
-                { message: "Numer musi być liczbą dodatnią" },
-                { status: 400 }
-            );
+            return apiError(400, "INVALID_NUMBER", "Number must be a positive integer");
         }
 
         const existingDriver = await prisma.driver.findUnique({
@@ -83,10 +63,7 @@ export async function POST(request: NextRequest) {
         });
 
         if (existingDriver) {
-            return NextResponse.json(
-                { message: "Kierowca z takim numerem już istnieje" },
-                { status: 409 }
-            );
+            return apiError(409, "DRIVER_NUMBER_TAKEN", "Driver with this number already exists");
         }
 
         const driver = await prisma.driver.create({
@@ -100,9 +77,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ driver }, { status: 201 });
     } catch (error) {
         console.error("Error creating driver:", error);
-        return NextResponse.json(
-            { message: "Internal server error" },
-            { status: 500 }
-        );
+        return internalError();
     }
 }
