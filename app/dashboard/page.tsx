@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { useApiError } from "@/lib/useApiError";
 
 interface Competition {
     id: string;
@@ -23,6 +25,10 @@ export default function DashboardPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
+    const t = useTranslations("dashboard");
+    const tCommon = useTranslations("common");
+    const apiError = useApiError();
+
     useEffect(() => {
         const fetchCompetitions = async () => {
             try {
@@ -30,13 +36,15 @@ export default function DashboardPage() {
                 const response = await fetch("/api/competitions");
 
                 if (!response.ok) {
-                    throw new Error("Nie można pobrać konkurencji");
+                    const data = await response.json();
+                    setError(apiError(data));
+                    return;
                 }
 
                 const data: ApiResponse = await response.json();
                 setCompetitions(data.competitions || []);
             } catch (err) {
-                setError("Błąd podczas pobierania konkurencji");
+                setError(apiError());
                 console.error(err);
             } finally {
                 setLoading(false);
@@ -46,10 +54,10 @@ export default function DashboardPage() {
         if (session?.user?.id) {
             void fetchCompetitions();
         }
-    }, [session?.user?.id]);
+    }, [session?.user?.id, apiError]);
 
     const getCompetitionTypeLabel = (type: string) => {
-        return type === "FOOTBALL" ? "Piłka nożna" : "Wyścigi";
+        return type === "FOOTBALL" ? tCommon("football") : tCommon("racing");
     };
 
     const getCompetitionTypeColor = (type: string) => {
@@ -65,11 +73,10 @@ export default function DashboardPage() {
             {/* Welcome Section */}
             <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-8 border border-zinc-200 dark:border-zinc-800">
                 <h2 className="text-3xl font-bold text-zinc-900 dark:text-white mb-2">
-                    Witaj, {session?.user?.name}! 👋
+                    {t("welcome", { name: session?.user?.name || "" })}
                 </h2>
                 <p className="text-zinc-600 dark:text-zinc-400">
-                    Witaj w aplikacji Predicto - twojej platformie do obstawiania meczy
-                    i wyścigów.
+                    {t("welcomeSub")}
                 </p>
             </div>
 
@@ -85,17 +92,17 @@ export default function DashboardPage() {
                 <div className="p-6 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
                     <div>
                         <h3 className="text-xl font-bold text-zinc-900 dark:text-white">
-                            Moje konkurencje
+                            {t("myCompetitions")}
                         </h3>
                         <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-                            Konkurencje, w których jesteś członkiem
+                            {t("myCompetitionsSub")}
                         </p>
                     </div>
                     <Link
                         href="/dashboard/competitions"
                         className="ml-5 px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
                     >
-                        Przeglądaj konkurencje
+                        {t("browseCompetitions")}
                     </Link>
                 </div>
 
@@ -104,19 +111,19 @@ export default function DashboardPage() {
                     {loading ? (
                         <div className="p-8 text-center">
                             <p className="text-zinc-600 dark:text-zinc-400">
-                                Ładowanie konkurencji...
+                                {tCommon("loading")}
                             </p>
                         </div>
                     ) : competitions.length === 0 ? (
                         <div className="p-8 text-center">
                             <p className="text-zinc-600 dark:text-zinc-400 mb-4">
-                                Nie jesteś członkiem żadnej konkurencji
+                                {t("emptyCompetitions")}
                             </p>
                             <Link
                                 href="/dashboard/competitions"
                                 className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
                             >
-                                Dołącz do konkurencji
+                                {t("joinCompetition")}
                             </Link>
                         </div>
                     ) : (
@@ -124,22 +131,22 @@ export default function DashboardPage() {
                             <thead>
                             <tr className="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800">
                                 <th className="px-6 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">
-                                    Konkurencja
+                                    {t("tableCompetition")}
                                 </th>
                                 <th className="px-6 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">
-                                    Typ
+                                    {t("tableType")}
                                 </th>
                                 <th className="px-6 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">
-                                    Sezon
+                                    {t("tableSeason")}
                                 </th>
                                 <th className="px-6 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">
-                                    Twoje punkty
+                                    {t("tableYourPoints")}
                                 </th>
                                 <th className="px-6 py-3 text-left text-sm font-semibold text-zinc-900 dark:text-white">
-                                    Członkowie
+                                    {t("tableMembers")}
                                 </th>
                                 <th className="px-6 py-3 text-right text-sm font-semibold text-zinc-900 dark:text-white">
-                                    Akcje
+                                    {t("tableActions")}
                                 </th>
                             </tr>
                             </thead>
@@ -170,7 +177,7 @@ export default function DashboardPage() {
                                     </td>
                                     <td className="px-6 py-4">
                                         <p className="text-lg font-semibold text-zinc-900 dark:text-white">
-                                            {comp.points} pkt
+                                            {comp.points} {tCommon("pointsShort")}
                                         </p>
                                     </td>
                                     <td className="px-6 py-4">
@@ -183,7 +190,7 @@ export default function DashboardPage() {
                                             href={`/dashboard/competitions/${comp.id}`}
                                             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white text-sm font-medium rounded transition-colors"
                                         >
-                                            Wejdź
+                                            {tCommon("enter")}
                                         </Link>
                                     </td>
                                 </tr>
@@ -198,19 +205,19 @@ export default function DashboardPage() {
                     {loading ? (
                         <div className="p-6 text-center">
                             <p className="text-zinc-600 dark:text-zinc-400">
-                                Ładowanie konkurencji...
+                                {tCommon("loading")}
                             </p>
                         </div>
                     ) : competitions.length === 0 ? (
                         <div className="p-6 text-center">
                             <p className="text-zinc-600 dark:text-zinc-400 mb-4">
-                                Nie jesteś członkiem żadnej konkurencji
+                                {t("emptyCompetitions")}
                             </p>
                             <Link
                                 href="/dashboard/competitions"
                                 className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors text-sm"
                             >
-                                Dołącz do konkurencji
+                                {t("joinCompetition")}
                             </Link>
                         </div>
                     ) : (
@@ -226,19 +233,19 @@ export default function DashboardPage() {
                                             href={`/dashboard/competitions/${comp.id}`}
                                             className="px-3 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white text-xs font-medium rounded transition-colors whitespace-nowrap flex-shrink-0"
                                         >
-                                            Wejdź
+                                            {tCommon("enter")}
                                         </Link>
                                     </div>
 
                                     {/* Row 2: Season */}
                                     <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                                        Sezon: {comp.season}
+                                        {tCommon("season")}: {comp.season}
                                     </p>
 
                                     {/* Row 3: Grid with Typ, Punkty, Członkowie */}
                                     <div className="grid grid-cols-3 gap-2 text-xs">
                                         <div className="bg-zinc-50 dark:bg-zinc-800 p-2 rounded">
-                                            <p className="text-zinc-600 dark:text-zinc-400 mb-1">Typ</p>
+                                            <p className="text-zinc-600 dark:text-zinc-400 mb-1">{tCommon("type")}</p>
                                             <span
                                                 className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium w-full justify-center ${getCompetitionTypeColor(
                                                     comp.type
@@ -248,13 +255,13 @@ export default function DashboardPage() {
                                             </span>
                                         </div>
                                         <div className="bg-zinc-50 dark:bg-zinc-800 p-2 rounded">
-                                            <p className="text-zinc-600 dark:text-zinc-400 mb-1">Punkty</p>
+                                            <p className="text-zinc-600 dark:text-zinc-400 mb-1">{tCommon("points")}</p>
                                             <p className="font-semibold text-zinc-900 dark:text-white text-center">
                                                 {comp.points}
                                             </p>
                                         </div>
                                         <div className="bg-zinc-50 dark:bg-zinc-800 p-2 rounded">
-                                            <p className="text-zinc-600 dark:text-zinc-400 mb-1">Członkowie</p>
+                                            <p className="text-zinc-600 dark:text-zinc-400 mb-1">{tCommon("members")}</p>
                                             <p className="font-semibold text-zinc-900 dark:text-white text-center">
                                                 {comp.memberCount}
                                             </p>
@@ -271,20 +278,20 @@ export default function DashboardPage() {
             {isAdmin && (
                 <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800">
                     <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-3">
-                        Panel administratora
+                        {t("adminPanel")}
                     </h3>
                     <div className="flex flex-col sm:flex-row gap-3">
                         <Link
                             href="/dashboard/competitions/create"
                             className="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white font-medium rounded-lg transition-colors text-center"
                         >
-                            + Utwórz nową konkurencję
+                            {t("createNewCompetition")}
                         </Link>
                         <Link
                             href="/dashboard/teams"
                             className="flex-1 px-6 py-3 bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 text-white font-medium rounded-lg transition-colors text-center"
                         >
-                            ⚙️ Zarządzaj drużynami
+                            {t("manageTeamsAndDrivers")}
                         </Link>
                     </div>
                 </div>

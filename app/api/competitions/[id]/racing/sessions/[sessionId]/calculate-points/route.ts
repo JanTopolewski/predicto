@@ -1,3 +1,4 @@
+import { apiError, forbidden, internalError } from "@/lib/api";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
@@ -14,10 +15,7 @@ export async function POST(
         const session = await auth();
 
         if (!session?.user?.id || session.user.role !== "ADMIN") {
-            return NextResponse.json(
-                { error: "Only admins can calculate points" },
-                { status: 403 }
-            );
+            return forbidden();
         }
 
         const { id: competitionId, sessionId } = await params;
@@ -47,25 +45,24 @@ export async function POST(
             !racingSession ||
             racingSession.weekend.season.competition.id !== competitionId
         ) {
-            return NextResponse.json(
-                { error: "Session not found" },
-                { status: 404 }
-            );
+            return apiError(404, "SESSION_NOT_FOUND", "Session not found");
         }
 
         if (
             racingSession.weekend.season.competition.createdBy !== session.user.id
         ) {
-            return NextResponse.json(
-                { error: "Only competition creator can calculate points" },
-                { status: 403 }
+            return apiError(
+                403,
+                "FORBIDDEN",
+                "Only competition creator can calculate points"
             );
         }
 
         if (racingSession.results.length === 0) {
-            return NextResponse.json(
-                { error: "Session results must be set first" },
-                { status: 400 }
+            return apiError(
+                400,
+                "RESULTS_NOT_SET",
+                "Session results must be set first"
             );
         }
 
@@ -178,9 +175,6 @@ export async function POST(
         });
     } catch (error) {
         console.error("Error calculating points:", error);
-        return NextResponse.json(
-            { error: "Internal server error" },
-            { status: 500 }
-        );
+        return internalError();
     }
 }

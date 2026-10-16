@@ -4,9 +4,14 @@ import React, { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { useApiError } from "@/lib/useApiError";
 
 export default function CreateTeamPage() {
-    const { data: session } = useSession();
+    const t = useTranslations("teams.createTeam");
+    const tCommon = useTranslations("common");
+    const apiError = useApiError();
+    const { data: session, status } = useSession();
     const router = useRouter();
     const [name, setName] = useState("");
     const [shortName, setShortName] = useState("");
@@ -14,10 +19,10 @@ export default function CreateTeamPage() {
     const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
-        if (session && session.user?.role !== "ADMIN") {
+        if (status === "authenticated" && session?.user?.role !== "ADMIN") {
             router.push("/dashboard");
         }
-    }, [session, router]);
+    }, [session, status, router]);
 
     const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -26,13 +31,13 @@ export default function CreateTeamPage() {
 
         try {
             if (!name || !shortName) {
-                setError("Wszystkie pola są wymagane");
+                setError(t("fieldsRequired"));
                 setIsLoading(false);
                 return;
             }
 
             if (shortName.length > 3) {
-                setError("Skrót nie może mieć więcej niż 3 znaki");
+                setError(t("shortNameLength"));
                 setIsLoading(false);
                 return;
             }
@@ -46,23 +51,22 @@ export default function CreateTeamPage() {
                 }),
             });
 
-            const data = await response.json();
-
             if (!response.ok) {
-                setError(data.message || "Błąd podczas tworzenia drużyny");
+                const data = await response.json().catch(() => null);
+                setError(apiError(data));
                 setIsLoading(false);
                 return;
             }
 
             router.push("/dashboard/teams");
         } catch (err) {
-            setError("Coś poszło nie tak");
             console.error(err);
+            setError(apiError());
             setIsLoading(false);
         }
     };
 
-    if (session?.user?.role !== "ADMIN") {
+    if (status === "loading" || session?.user?.role !== "ADMIN") {
         return null;
     }
 
@@ -71,10 +75,10 @@ export default function CreateTeamPage() {
             {/* Header */}
             <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-8 border border-zinc-200 dark:border-zinc-800">
                 <h2 className="text-3xl font-bold text-zinc-900 dark:text-white">
-                    Dodaj nową drużynę
+                    {t("title")}
                 </h2>
                 <p className="text-zinc-600 dark:text-zinc-400 mt-2">
-                    Wypełnij poniższy formularz, aby dodać nową drużynę piłkarską
+                    {t("subtitle")}
                 </p>
             </div>
 
@@ -92,20 +96,16 @@ export default function CreateTeamPage() {
                             htmlFor="name"
                             className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
                         >
-                            Nazwa
+                            {t("nameLabel")}
                         </label>
                         <input
                             id="name"
                             type="text"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
-                            className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-                            placeholder="np. Lech Poznań"
-                            disabled={isLoading}
+                            placeholder={t("namePlaceholder")}
+                            className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors"
                         />
-                        <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1">
-                            Pełna nazwa drużyny
-                        </p>
                     </div>
 
                     <div>
@@ -113,37 +113,36 @@ export default function CreateTeamPage() {
                             htmlFor="shortName"
                             className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
                         >
-                            Skrót (max 3 znaki)
+                            {t("shortNameLabel")}
                         </label>
                         <input
                             id="shortName"
                             type="text"
-                            value={shortName.toUpperCase()}
-                            onChange={(e) => setShortName(e.target.value.slice(0, 3))}
                             maxLength={3}
-                            className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 uppercase"
-                            placeholder="np. LEC"
-                            disabled={isLoading}
+                            value={shortName}
+                            onChange={(e) => setShortName(e.target.value)}
+                            placeholder={t("shortNamePlaceholder")}
+                            className="w-full px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors uppercase"
                         />
-                        <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1">
-                            Trzyliterowy skrót (np. LEC dla Lecha Poznań)
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                            {t("shortNameHelp")}
                         </p>
                     </div>
 
-                    <div className="flex gap-3 pt-4">
-                        <button
-                            type="submit"
-                            disabled={isLoading}
-                            className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {isLoading ? "Dodawanie..." : "Dodaj drużynę"}
-                        </button>
+                    <div className="flex gap-4">
                         <Link
                             href="/dashboard/teams"
                             className="flex-1 px-4 py-2 bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-900 dark:text-white font-medium rounded-lg transition-colors text-center"
                         >
-                            Anuluj
+                            {tCommon("cancel")}
                         </Link>
+                        <button
+                            type="submit"
+                            disabled={isLoading}
+                            className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {isLoading ? t("submitting") : t("submit")}
+                        </button>
                     </div>
                 </form>
             </div>

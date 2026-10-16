@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { apiError, unauthorized, internalError } from "@/lib/api";
 
 export async function GET(
     _request: NextRequest,
@@ -14,10 +15,7 @@ export async function GET(
         const session = await auth();
 
         if (!session?.user?.id) {
-            return NextResponse.json(
-                { error: "Unauthorized" },
-                { status: 401 }
-            );
+            return unauthorized();
         }
 
         const { id: competitionId, weekendId } = await params;
@@ -34,10 +32,7 @@ export async function GET(
         });
 
         if (!isAdmin && !member) {
-            return NextResponse.json(
-                { error: "You are not a member of this competition" },
-                { status: 403 }
-            );
+            return apiError(403, "NOT_A_MEMBER", "You are not a member of this competition");
         }
 
         const weekend = await prisma.racingWeekend.findUnique({
@@ -74,19 +69,13 @@ export async function GET(
         });
 
         if (!weekend || weekend.season.competition.id !== competitionId) {
-            return NextResponse.json(
-                { error: "Weekend not found" },
-                { status: 404 }
-            );
+            return apiError(404, "WEEKEND_NOT_FOUND", "Weekend not found");
         }
 
         return NextResponse.json({ weekend });
     } catch (error) {
         console.error("Error fetching weekend:", error);
-        return NextResponse.json(
-            { error: "Internal server error" },
-            { status: 500 }
-        );
+        return internalError();
     }
 }
 
@@ -102,10 +91,7 @@ export async function DELETE(
         const session = await auth();
 
         if (!session?.user?.id || session.user.role !== "ADMIN") {
-            return NextResponse.json(
-                { error: "Only admins can delete weekends" },
-                { status: 403 }
-            );
+            return apiError(403, "FORBIDDEN", "Only admins can delete weekends");
         }
 
         const { id: competitionId, weekendId } = await params;
@@ -127,27 +113,19 @@ export async function DELETE(
         });
 
         if (!weekend || weekend.season.competition.id !== competitionId) {
-            return NextResponse.json(
-                { error: "Weekend not found" },
-                { status: 404 }
-            );
+            return apiError(404, "WEEKEND_NOT_FOUND", "Weekend not found");
         }
 
         if (weekend.season.competition.createdBy !== session.user.id) {
-            return NextResponse.json(
-                { error: "Only competition creator can delete weekends" },
-                { status: 403 }
-            );
+            return apiError(403, "FORBIDDEN", "Only competition creator can delete weekends");
         }
 
         const hasResolvedSession = weekend.sessions.some((s) => s.resolved);
         if (hasResolvedSession) {
-            return NextResponse.json(
-                {
-                    error:
-                        "Nie można usunąć weekendu, w którym znajdują się już rozliczone sesje z naliczonymi punktami.",
-                },
-                { status: 400 }
+            return apiError(
+                400,
+                "CANNOT_DELETE_RESOLVED_WEEKEND",
+                "Cannot delete weekend with already resolved sessions and points awarded"
             );
         }
 
@@ -160,9 +138,6 @@ export async function DELETE(
         });
     } catch (error) {
         console.error("Error deleting weekend:", error);
-        return NextResponse.json(
-            { error: "Internal server error" },
-            { status: 500 }
-        );
+        return internalError();
     }
 }

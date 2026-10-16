@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { apiError, unauthorized, internalError } from "@/lib/api";
 
 export async function POST(
     request: NextRequest,
@@ -10,10 +11,7 @@ export async function POST(
         const session = await auth();
 
         if (!session?.user?.id || session.user.role !== "ADMIN") {
-            return NextResponse.json(
-                { error: "Only admins can create sessions" },
-                { status: 403 }
-            );
+            return apiError(403, "FORBIDDEN", "Only admins can create sessions");
         }
 
         const competitionId = (await params).id;
@@ -27,10 +25,7 @@ export async function POST(
         } = await request.json();
 
         if (!weekendId || !type || !name || !startTime || !participatingDriverIds) {
-            return NextResponse.json(
-                { error: "Missing required fields" },
-                { status: 400 }
-            );
+            return apiError(400, "MISSING_FIELDS", "Missing required fields");
         }
 
         const validSessionTypes = [
@@ -43,28 +38,21 @@ export async function POST(
             "RACE",
         ];
         if (!validSessionTypes.includes(type)) {
-            return NextResponse.json(
-                { error: "Nieprawidłowy typ sesji" },
-                { status: 400 }
-            );
+            return apiError(400, "INVALID_SESSION_TYPE", "Invalid session type");
         }
 
         if (!Array.isArray(participatingDriverIds) || participatingDriverIds.length === 0) {
-            return NextResponse.json(
-                { error: "At least one driver must participate" },
-                { status: 400 }
-            );
+            return apiError(400, "MISSING_PARTICIPANTS", "At least one driver must participate");
         }
 
         const isPodiumSession = type === "SPRINT" || type === "RACE";
 
-        // Dla sesji bez podium (treningi, kwalifikacje) kierowca Wildcard jest obowiązkowy
+        // For non-podium sessions (practice, qualifying) wildcard driver is required
         if (!isPodiumSession && !wildcardDriverId) {
-            return NextResponse.json(
-                {
-                    error: "Kierowca Wildcard jest wymagany dla sesji treningowych i kwalifikacyjnych (brak podium)",
-                },
-                { status: 400 }
+            return apiError(
+                400,
+                "WILDCARD_REQUIRED",
+                "Wildcard driver is required for practice and qualifying sessions (no podium)"
             );
         }
 
@@ -76,11 +64,7 @@ export async function POST(
             const randomIndex = Math.floor(Math.random() * participatingDriverIds.length);
             finalWildcardDriverId = participatingDriverIds[randomIndex];
         } else if (wildcardDriverId && !participatingDriverIds.includes(wildcardDriverId)) {
-            // Validate wildcard driver if manually provided
-            return NextResponse.json(
-                { error: "Wildcard driver must be a participant" },
-                { status: 400 }
-            );
+            return apiError(400, "WILDCARD_NOT_A_PARTICIPANT", "Wildcard driver must be a participant");
         }
 
         const weekend = await prisma.racingWeekend.findUnique({
@@ -95,17 +79,11 @@ export async function POST(
         });
 
         if (!weekend || weekend.season.competition.id !== competitionId) {
-            return NextResponse.json(
-                { error: "Weekend not found" },
-                { status: 404 }
-            );
+            return apiError(404, "WEEKEND_NOT_FOUND", "Weekend not found");
         }
 
         if (weekend.season.competition.createdBy !== session.user.id) {
-            return NextResponse.json(
-                { error: "Only competition creator can create sessions" },
-                { status: 403 }
-            );
+            return apiError(403, "FORBIDDEN", "Only competition creator can create sessions");
         }
 
         const racingSession = await prisma.racingSession.create({
@@ -141,11 +119,8 @@ export async function POST(
 
         return NextResponse.json({ session: racingSession }, { status: 201 });
     } catch (error) {
-        console.error("Error creating session:", error);
-        return NextResponse.json(
-            { error: "Internal server error" },
-            { status: 500 }
-        );
+        console.error("Error creating racing session:", error);
+        return internalError();
     }
 }
 
@@ -158,10 +133,7 @@ export async function GET(
         const competitionId = (await params).id;
 
         if (!session?.user?.id) {
-            return NextResponse.json(
-                { error: "Unauthorized" },
-                { status: 401 }
-            );
+            return unauthorized();
         }
 
         const member = await prisma.competitionMember.findUnique({
@@ -174,10 +146,7 @@ export async function GET(
         });
 
         if (!member) {
-            return NextResponse.json(
-                { error: "You are not a member of this competition" },
-                { status: 403 }
-            );
+            return apiError(403, "NOT_A_MEMBER", "You are not a member of this competition");
         }
 
         const competition = await prisma.competition.findUnique({
@@ -209,10 +178,7 @@ export async function GET(
         });
 
         if (!competition) {
-            return NextResponse.json(
-                { error: "Competition not found" },
-                { status: 404 }
-            );
+            return apiError(404, "COMPETITION_NOT_FOUND", "Competition not found");
         }
 
         const sessions = competition.racingSeasons[0]?.weekends
@@ -220,10 +186,7 @@ export async function GET(
 
         return NextResponse.json({ sessions });
     } catch (error) {
-        console.error("Error fetching sessions:", error);
-        return NextResponse.json(
-            { error: "Internal server error" },
-            { status: 500 }
-        );
+        console.error("Error fetching racing sessions:", error);
+        return internalError();
     }
 }

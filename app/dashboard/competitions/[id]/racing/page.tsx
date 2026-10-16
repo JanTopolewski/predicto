@@ -4,6 +4,8 @@ import React, { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
+import { useTranslations, useLocale } from "next-intl";
+import { useApiError } from "@/lib/useApiError";
 
 interface Driver {
     id: string;
@@ -43,7 +45,11 @@ interface RacingWeekend {
 const PODIUM_SESSIONS = ["SPRINT", "RACE"];
 
 export default function RacingPage() {
-    const { data: session } = useSession();
+    const t = useTranslations("racing");
+    const tCommon = useTranslations("common");
+    const locale = useLocale();
+    const apiError = useApiError();
+    const { data: session, status } = useSession();
     const router = useRouter();
     const params = useParams();
     const competitionId = params.id as string;
@@ -62,10 +68,10 @@ export default function RacingPage() {
     } | null>(null);
 
     useEffect(() => {
-        if (!session?.user?.id) {
+        if (status === "unauthenticated") {
             router.push("/auth/login");
         }
-    }, [session, router]);
+    }, [status, router]);
 
     const fetchWeekends = React.useCallback(async () => {
         try {
@@ -74,17 +80,20 @@ export default function RacingPage() {
                 `/api/competitions/${competitionId}/racing/weekends`
             );
             if (!response.ok) {
-                throw new Error("Failed to fetch weekends");
+                const data = await response.json().catch(() => null);
+                setError(apiError(data) || t("loadError"));
+                return;
             }
             const data = await response.json();
             setWeekends(data.weekends || []);
         } catch (err) {
-            setError("Error loading racing weekends");
             console.error(err);
+            setError(t("loadError"));
         } finally {
             setLoading(false);
         }
-    }, [competitionId]);
+    }, [competitionId, apiError, t]);
+
     useEffect(() => {
         void fetchWeekends();
     }, [fetchWeekends]);
@@ -94,7 +103,7 @@ export default function RacingPage() {
         sessionType: string,
     ) => {
         if (!currentPrediction || currentPrediction.sessionId !== sessionId) {
-            setError("Please select all required fields");
+            setError(t("validationRequired"));
             return;
         }
 
@@ -106,7 +115,7 @@ export default function RacingPage() {
                 !currentPrediction.secondDriver ||
                 !currentPrediction.thirdDriver)
         ) {
-            setError("Please select podium drivers");
+            setError(t("validationPodium"));
             return;
         }
 
@@ -132,29 +141,23 @@ export default function RacingPage() {
             );
 
             if (!response.ok) {
-                const data = await response.json();
-                setError(data.error || "Failed to save prediction");
+                const data = await response.json().catch(() => null);
+                setError(apiError(data));
                 return;
             }
 
-            setSuccess("Prediction saved successfully!");
+            setSuccess(t("predictionSaved"));
             setCurrentPrediction(null);
             await fetchWeekends();
             setTimeout(() => setSuccess(""), 3000);
         } catch (err) {
-            setError("Error saving prediction");
             console.error(err);
+            setError(apiError());
         }
     };
 
-    if (!session?.user?.id) {
-        return (
-            <div className="p-8 text-center bg-white dark:bg-zinc-900 rounded-lg shadow-lg">
-                <p className="text-zinc-600 dark:text-zinc-400">
-                    Please login first
-                </p>
-            </div>
-        );
+    if (status !== "authenticated" || !session?.user?.id) {
+        return null;
     }
 
     return (
@@ -162,13 +165,13 @@ export default function RacingPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">
-                    Racing Predictions
+                    {t("title")}
                 </h1>
                 <Link
                     href={`/dashboard/competitions/${competitionId}`}
                     className="px-4 py-2 bg-gray-600 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
                 >
-                    Back
+                    {tCommon("back")}
                 </Link>
             </div>
 
@@ -191,13 +194,13 @@ export default function RacingPage() {
             {loading ? (
                 <div className="p-8 text-center bg-white dark:bg-zinc-900 rounded-lg shadow-lg">
                     <p className="text-zinc-600 dark:text-zinc-400">
-                        Loading weekends...
+                        {tCommon("loading")}
                     </p>
                 </div>
             ) : weekends.length === 0 ? (
                 <div className="p-8 text-center bg-white dark:bg-zinc-900 rounded-lg shadow-lg">
                     <p className="text-zinc-600 dark:text-zinc-400">
-                        No weekends available
+                        {t("noWeekends")}
                     </p>
                 </div>
             ) : (
@@ -212,7 +215,7 @@ export default function RacingPage() {
                             </h2>
                             <p className="text-zinc-600 dark:text-zinc-400 mb-6">
                                 {weekend.country} •{" "}
-                                {new Date(weekend.raceDate).toLocaleDateString()}
+                                {new Date(weekend.raceDate).toLocaleDateString(locale, { timeZone: "Europe/Warsaw" })}
                             </p>
 
                             <div className="space-y-6">
@@ -237,12 +240,12 @@ export default function RacingPage() {
                                                     <p className="text-sm text-zinc-600 dark:text-zinc-400">
                                                         {new Date(
                                                             racingSession.startTime
-                                                        ).toLocaleString()}
+                                                        ).toLocaleString(locale, { timeZone: "Europe/Warsaw" })}
                                                     </p>
                                                 </div>
                                                 {isStarted && (
                                                     <span className="px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 text-xs font-semibold rounded-full">
-                                                        Session started
+                                                        {t("sessionStarted")}
                                                     </span>
                                                 )}
                                             </div>
@@ -250,19 +253,19 @@ export default function RacingPage() {
                                             {existingVote ? (
                                                 <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg">
                                                     <p className="text-xs font-bold text-emerald-800 dark:text-emerald-200 uppercase tracking-wide mb-2">
-                                                        ✓ Twój oddany głos na tę sesję:
+                                                        ✓ {t("yourVote")}
                                                     </p>
                                                     <div className="text-sm text-zinc-800 dark:text-zinc-200 space-y-1">
                                                         {isPodiumSession && (
                                                             <div className="flex flex-wrap gap-3">
-                                                                <span>🥇 P1: {racingSession.participants.find(p => p.driver.id === existingVote.firstDriverId)?.driver.name || "—"}</span>
-                                                                <span>🥈 P2: {racingSession.participants.find(p => p.driver.id === existingVote.secondDriverId)?.driver.name || "—"}</span>
-                                                                <span>🥉 P3: {racingSession.participants.find(p => p.driver.id === existingVote.thirdDriverId)?.driver.name || "—"}</span>
+                                                                <span>🥇 {t("p1")}: {racingSession.participants.find(p => p.driver.id === existingVote.firstDriverId)?.driver.name || "—"}</span>
+                                                                <span>🥈 {t("p2")}: {racingSession.participants.find(p => p.driver.id === existingVote.secondDriverId)?.driver.name || "—"}</span>
+                                                                <span>🥉 {t("p3")}: {racingSession.participants.find(p => p.driver.id === existingVote.thirdDriverId)?.driver.name || "—"}</span>
                                                             </div>
                                                         )}
                                                         {existingVote.wildcardPosition && (
                                                             <p className="text-xs text-amber-700 dark:text-amber-300 font-semibold mt-1">
-                                                                🎯 Typowana pozycja Wildcard: P{existingVote.wildcardPosition}
+                                                                🎯 {t("wildcardPredicted", { pos: existingVote.wildcardPosition })}
                                                             </p>
                                                         )}
                                                     </div>
@@ -272,7 +275,7 @@ export default function RacingPage() {
                                                     {isPodiumSession && (
                                                         <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                                                             <p className="text-xs font-semibold text-blue-900 dark:text-blue-200 mb-3">
-                                                                SELECT PODIUM (3 pts exact, 1 pt any):
+                                                                {t("selectPodium")}
                                                             </p>
                                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                                                 {[1, 2, 3].map(
@@ -281,7 +284,7 @@ export default function RacingPage() {
                                                                             key={`podium-${pos}`}
                                                                         >
                                                                             <label className="text-xs font-semibold text-zinc-900 dark:text-white">
-                                                                                Position {pos}
+                                                                                {t("positionLabel", { pos })}
                                                                             </label>
                                                                             <select
                                                                                 value={
@@ -333,7 +336,7 @@ export default function RacingPage() {
                                                                                 className="w-full px-2 py-1 text-sm rounded border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white"
                                                                             >
                                                                                 <option value="">
-                                                                                    Select...
+                                                                                    {t("selectDriver")}
                                                                                 </option>
                                                                                 {racingSession.participants.map(
                                                                                     (
@@ -367,7 +370,7 @@ export default function RacingPage() {
                                                     {racingSession.wildcards && racingSession.wildcards.length > 0 && (
                                                         <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
                                                             <p className="text-xs font-semibold text-amber-900 dark:text-amber-200 mb-3">
-                                                                WILDCARD DRIVER (2 pts exact, 1 pt ±2 positions):
+                                                                {t("wildcardDriver")}
                                                             </p>
                                                             <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg mb-3">
                                                                 <p className="text-sm font-bold text-amber-900 dark:text-amber-100">
@@ -379,13 +382,13 @@ export default function RacingPage() {
                                                             </div>
                                                             <div>
                                                                 <label className="text-xs font-semibold text-zinc-900 dark:text-white">
-                                                                    Predicted Finishing Position
+                                                                    {t("wildcardFinishing")}
                                                                 </label>
                                                                 <input
                                                                     type="number"
                                                                     min="1"
                                                                     max={racingSession.participants.length}
-                                                                    placeholder={`Enter position (1-${racingSession.participants.length})...`}
+                                                                    placeholder={t("wildcardPlaceholder", { max: racingSession.participants.length })}
                                                                     value={
                                                                         currentPrediction?.sessionId === racingSession.id && currentPrediction.wildcardPosition
                                                                             ? currentPrediction.wildcardPosition
@@ -420,14 +423,14 @@ export default function RacingPage() {
                                                         }
                                                         className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
                                                     >
-                                                        Save Prediction
+                                                        {t("submitPrediction")}
                                                     </button>
                                                 </div>
                                             ) : (
                                                 <p className="text-sm text-zinc-600 dark:text-zinc-400">
                                                     {racingSession.resolved
-                                                        ? "Session resolved"
-                                                        : "Session is in progress"}
+                                                        ? t("sessionResolved")
+                                                        : t("sessionInProgress")}
                                                 </p>
                                             )}
                                         </div>

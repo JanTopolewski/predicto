@@ -1,16 +1,14 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { unauthorized, internalError } from "@/lib/api";
 
 export async function GET(_request: NextRequest) {
     try {
         const session = await auth();
 
         if (!session?.user?.id) {
-            return NextResponse.json(
-                { error: "Unauthorized" },
-                { status: 401 }
-            );
+            return unauthorized();
         }
 
         const isAdmin = session.user?.role === "ADMIN";
@@ -127,9 +125,6 @@ export async function GET(_request: NextRequest) {
         });
     } catch (error) {
         console.error("Error fetching competitions:", error);
-        return NextResponse.json(
-            { error: "Internal server error" },
-            { status: 500 }
-        );
+        return internalError();
     }
 }

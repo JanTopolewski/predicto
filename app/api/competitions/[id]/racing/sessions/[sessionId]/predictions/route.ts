@@ -1,3 +1,4 @@
+import { apiError, forbidden, internalError, unauthorized } from "@/lib/api";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isTimePassed } from "@/lib/timeUtils";
@@ -15,10 +16,7 @@ export async function GET(
         const session = await auth();
 
         if (!session?.user?.id) {
-            return NextResponse.json(
-                { error: "Unauthorized" },
-                { status: 401 }
-            );
+            return unauthorized();
         }
 
         const { id: competitionId, sessionId } = await params;
@@ -33,10 +31,7 @@ export async function GET(
         });
 
         if (!member) {
-            return NextResponse.json(
-                { error: "You are not a member of this competition" },
-                { status: 403 }
-            );
+            return forbidden();
         }
 
         const prediction = await prisma.racingPrediction.findUnique({
@@ -57,10 +52,7 @@ export async function GET(
         return NextResponse.json({ prediction });
     } catch (error) {
         console.error("Error fetching prediction:", error);
-        return NextResponse.json(
-            { error: "Internal server error" },
-            { status: 500 }
-        );
+        return internalError();
     }
 }
 
@@ -76,10 +68,7 @@ export async function POST(
         const session = await auth();
 
         if (!session?.user?.id) {
-            return NextResponse.json(
-                { error: "Unauthorized" },
-                { status: 401 }
-            );
+            return unauthorized();
         }
 
         const { id: competitionId, sessionId } = await params;
@@ -100,10 +89,7 @@ export async function POST(
         });
 
         if (!member) {
-            return NextResponse.json(
-                { error: "You are not a member of this competition" },
-                { status: 403 }
-            );
+            return forbidden();
         }
 
         const racingSession = await prisma.racingSession.findUnique({
@@ -126,31 +112,19 @@ export async function POST(
             !racingSession ||
             racingSession.weekend.season.competition.id !== competitionId
         ) {
-            return NextResponse.json(
-                { error: "Session not found" },
-                { status: 404 }
-            );
+            return apiError(404, "SESSION_NOT_FOUND", "Session not found");
         }
 
         if (racingSession.resolved) {
-            return NextResponse.json(
-                { error: "Sesja została już rozliczona" },
-                { status: 400 }
-            );
+            return apiError(400, "SESSION_ALREADY_RESOLVED", "Session has already been resolved");
         }
 
         if (racingSession.votingClosedAt && isTimePassed(racingSession.votingClosedAt)) {
-            return NextResponse.json(
-                { error: "Voting for this session is closed" },
-                { status: 400 }
-            );
+            return apiError(400, "VOTING_CLOSED", "Voting for this session is closed");
         }
 
         if (racingSession.startTime && isTimePassed(racingSession.startTime)) {
-            return NextResponse.json(
-                { error: "Session has already started" },
-                { status: 400 }
-            );
+            return apiError(400, "SESSION_ALREADY_STARTED", "Session has already started");
         }
 
         // Get number of participating drivers
@@ -162,9 +136,10 @@ export async function POST(
         // Podium validation (optional but if provided, must be complete)
         if (isPodiumSession && (firstDriver || secondDriver || thirdDriver)) {
             if (!firstDriver || !secondDriver || !thirdDriver) {
-                return NextResponse.json(
-                    { error: "If providing podium, all three positions are required" },
-                    { status: 400 }
+                return apiError(
+                    400,
+                    "PODIUM_INCOMPLETE",
+                    "If providing podium, all three positions are required"
                 );
             }
 
@@ -174,9 +149,10 @@ export async function POST(
                 firstDriver === thirdDriver ||
                 secondDriver === thirdDriver
             ) {
-                return NextResponse.json(
-                    { error: "Podium drivers must be different" },
-                    { status: 400 }
+                return apiError(
+                    400,
+                    "PODIUM_DUPLICATE_DRIVERS",
+                    "Podium drivers must be different"
                 );
             }
 
@@ -190,9 +166,10 @@ export async function POST(
                 !participantDriverIds.has(secondDriver) ||
                 !participantDriverIds.has(thirdDriver)
             ) {
-                return NextResponse.json(
-                    { error: "Podium drivers must participate in this session" },
-                    { status: 400 }
+                return apiError(
+                    400,
+                    "PODIUM_NOT_PARTICIPATING",
+                    "Podium drivers must participate in this session"
                 );
             }
         }
@@ -200,18 +177,21 @@ export async function POST(
         // Wildcard validation (optional but if provided, must have position)
         if (wildcardPosition) {
             if (!Number.isInteger(wildcardPosition) || wildcardPosition < 1 || wildcardPosition > maxPosition) {
-                return NextResponse.json(
-                    { error: `Position must be between 1 and ${maxPosition}` },
-                    { status: 400 }
+                return apiError(
+                    400,
+                    "POSITION_OUT_OF_RANGE",
+                    `Position must be between 1 and ${maxPosition}`,
+                    { max: maxPosition }
                 );
             }
         }
 
         // At least one prediction must be provided
         if (!wildcardPosition && !(isPodiumSession && firstDriver)) {
-            return NextResponse.json(
-                { error: "Please provide at least wildcard position or podium prediction" },
-                { status: 400 }
+            return apiError(
+                400,
+                "MISSING_PREDICTION_DATA",
+                "Please provide at least wildcard position or podium prediction"
             );
         }
 
@@ -254,9 +234,6 @@ export async function POST(
         return NextResponse.json({ prediction }, { status: 201 });
     } catch (error) {
         console.error("Error creating prediction:", error);
-        return NextResponse.json(
-            { error: "Internal server error" },
-            { status: 500 }
-        );
+        return internalError();
     }
 }

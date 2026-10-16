@@ -4,9 +4,11 @@ import React, { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { useApiError } from "@/lib/useApiError";
 
 export default function CreateCompetitionPage() {
-    const { data: session } = useSession();
+    const { data: session, status } = useSession();
     const router = useRouter();
     const [name, setName] = useState("");
     const [type, setType] = useState("FOOTBALL");
@@ -17,11 +19,16 @@ export default function CreateCompetitionPage() {
     const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(false);
 
+    const t = useTranslations("competitions.create");
+    const tCommon = useTranslations("common");
+    const tErrors = useTranslations("apiErrors");
+    const apiError = useApiError();
+
     useEffect(() => {
-        if (session && session.user?.role !== "ADMIN") {
+        if (status === "authenticated" && session?.user?.role !== "ADMIN") {
             router.push("/dashboard");
         }
-    }, [session, router]);
+    }, [session, status, router]);
 
     const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -30,13 +37,13 @@ export default function CreateCompetitionPage() {
 
         try {
             if (!name || !startDate || !endDate) {
-                setError("Wszystkie pola są wymagane");
+                setError(tErrors("MISSING_FIELDS"));
                 setIsLoading(false);
                 return;
             }
 
             if (new Date(startDate) >= new Date(endDate)) {
-                setError("Data końcowa musi być po dacie początkowej");
+                setError(tErrors("END_DATE_BEFORE_START"));
                 setIsLoading(false);
                 return;
             }
@@ -57,20 +64,20 @@ export default function CreateCompetitionPage() {
             const data = await response.json();
 
             if (!response.ok) {
-                setError(data.message || "Błąd podczas tworzenia konkurencji");
+                setError(apiError(data));
                 setIsLoading(false);
                 return;
             }
 
             router.push("/dashboard/competitions");
         } catch (err) {
-            setError("Coś poszło nie tak");
+            setError(apiError());
             console.error(err);
             setIsLoading(false);
         }
     };
 
-    if (session?.user?.role !== "ADMIN") {
+    if (status === "loading" || session?.user?.role !== "ADMIN") {
         return null;
     }
 
@@ -79,11 +86,8 @@ export default function CreateCompetitionPage() {
             {/* Header */}
             <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-8 border border-zinc-200 dark:border-zinc-800">
                 <h2 className="text-3xl font-bold text-zinc-900 dark:text-white">
-                    Utwórz nową konkurencję
+                    {t("title")}
                 </h2>
-                <p className="text-zinc-600 dark:text-zinc-400 mt-2">
-                    Wypełnij poniższy formularz, aby stworzyć nową konkurencję
-                </p>
             </div>
 
             {/* Form */}
@@ -100,7 +104,7 @@ export default function CreateCompetitionPage() {
                             htmlFor="name"
                             className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
                         >
-                            Nazwa konkurencji
+                            {t("nameLabel")}
                         </label>
                         <input
                             id="name"
@@ -108,7 +112,7 @@ export default function CreateCompetitionPage() {
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-                            placeholder="np. Premier League 2024/2025"
+                            placeholder={t("namePlaceholder")}
                             disabled={isLoading}
                         />
                     </div>
@@ -118,7 +122,7 @@ export default function CreateCompetitionPage() {
                             htmlFor="type"
                             className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
                         >
-                            Typ konkurencji
+                            {t("typeLabel")}
                         </label>
                         <select
                             id="type"
@@ -127,8 +131,8 @@ export default function CreateCompetitionPage() {
                             className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                             disabled={isLoading}
                         >
-                            <option value="FOOTBALL">⚽ Piłka nożna</option>
-                            <option value="RACING">🏎️ Wyścigi</option>
+                            <option value="FOOTBALL">⚽ {tCommon("football")}</option>
+                            <option value="RACING">🏎️ {tCommon("racing")}</option>
                         </select>
                     </div>
 
@@ -137,7 +141,7 @@ export default function CreateCompetitionPage() {
                             htmlFor="season"
                             className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
                         >
-                            Sezon
+                            {t("seasonLabel")}
                         </label>
                         <input
                             id="season"
@@ -145,7 +149,7 @@ export default function CreateCompetitionPage() {
                             value={season}
                             onChange={(e) => setSeason(e.target.value)}
                             className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
-                            placeholder="np. 2024/2025"
+                            placeholder="2026/2027"
                             disabled={isLoading}
                         />
                     </div>
@@ -156,7 +160,7 @@ export default function CreateCompetitionPage() {
                                 htmlFor="startDate"
                                 className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
                             >
-                                Data rozpoczęcia
+                                {t("startDateLabel")}
                             </label>
                             <input
                                 id="startDate"
@@ -173,7 +177,7 @@ export default function CreateCompetitionPage() {
                                 htmlFor="endDate"
                                 className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
                             >
-                                Data zakończenia
+                                {t("endDateLabel")}
                             </label>
                             <input
                                 id="endDate"
@@ -199,7 +203,7 @@ export default function CreateCompetitionPage() {
                             htmlFor="isPublic"
                             className="text-sm font-medium text-zinc-700 dark:text-zinc-300 cursor-pointer"
                         >
-                            {isPublic ? "🌍 Publiczna konkurencja" : "🔒 Prywatna konkurencja (wymaga kodu)"}
+                            {isPublic ? `🌍 ${t("publicOption")}` : `🔒 ${t("privateOption")}`}
                         </label>
                     </div>
 
@@ -209,13 +213,13 @@ export default function CreateCompetitionPage() {
                             disabled={isLoading}
                             className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {isLoading ? "Tworzenie..." : "Utwórz konkurencję"}
+                            {isLoading ? t("submittingButton") : t("submitButton")}
                         </button>
                         <Link
                             href="/dashboard/competitions"
                             className="flex-1 px-4 py-2 bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-900 dark:text-white font-medium rounded-lg transition-colors text-center"
                         >
-                            Anuluj
+                            {tCommon("cancel")}
                         </Link>
                     </div>
                 </form>

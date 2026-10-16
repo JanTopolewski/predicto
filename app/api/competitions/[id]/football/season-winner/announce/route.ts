@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { apiError, internalError } from "@/lib/api";
 
 export async function POST(
     request: NextRequest,
@@ -10,20 +11,14 @@ export async function POST(
         const session = await auth();
 
         if (!session?.user?.id || session.user.role !== "ADMIN") {
-            return NextResponse.json(
-                { error: "Only admins can announce season winner" },
-                { status: 403 }
-            );
+            return apiError(403, "FORBIDDEN", "Only admins can announce season winner");
         }
 
         const competitionId = (await params).id;
         const { winningTeamId } = await request.json();
 
         if (!winningTeamId) {
-            return NextResponse.json(
-                { error: "Winning team ID is required" },
-                { status: 400 }
-            );
+            return apiError(400, "MISSING_FIELDS", "Winning team ID is required");
         }
 
         const competition = await prisma.competition.findUnique({
@@ -42,32 +37,20 @@ export async function POST(
         });
 
         if (!competition || competition.type !== "FOOTBALL") {
-            return NextResponse.json(
-                { error: "Competition not found or is not a football competition" },
-                { status: 404 }
-            );
+            return apiError(404, "COMPETITION_NOT_FOUND", "Competition not found or is not a football competition");
         }
 
         if (competition.createdBy !== session.user.id) {
-            return NextResponse.json(
-                { error: "Only competition creator can announce winner" },
-                { status: 403 }
-            );
+            return apiError(403, "FORBIDDEN", "Only competition creator can announce winner");
         }
 
         if (competition.winnerResolved) {
-            return NextResponse.json(
-                { error: "Season winner already announced" },
-                { status: 400 }
-            );
+            return apiError(400, "WINNER_ALREADY_RESOLVED", "Season winner already announced");
         }
 
         const season = competition.footballSeasons[0];
         if (!season) {
-            return NextResponse.json(
-                { error: "No season found for this competition" },
-                { status: 404 }
-            );
+            return apiError(404, "SEASON_NOT_FOUND", "No season found for this competition");
         }
 
         const team = await prisma.team.findUnique({
@@ -75,10 +58,7 @@ export async function POST(
         });
 
         if (!team) {
-            return NextResponse.json(
-                { error: "Team not found" },
-                { status: 404 }
-            );
+            return apiError(404, "TEAM_NOT_FOUND", "Team not found");
         }
 
         const isTeamInSeason = await prisma.footballMatch.findFirst({
@@ -89,9 +69,10 @@ export async function POST(
         });
 
         if (!isTeamInSeason) {
-            return NextResponse.json(
-                { error: "Wybrana drużyna nie bierze udziału w rozgrywkach tego sezonu" },
-                { status: 400 }
+            return apiError(
+                400,
+                "TEAM_NOT_IN_SEASON",
+                "Selected team does not participate in this season's matches"
             );
         }
 
@@ -144,15 +125,9 @@ export async function POST(
         });
     } catch (error: any) {
         if (error?.message === "ALREADY_RESOLVED") {
-            return NextResponse.json(
-                { error: "Season winner already announced" },
-                { status: 400 }
-            );
+            return apiError(400, "WINNER_ALREADY_RESOLVED", "Season winner already announced");
         }
         console.error("Error announcing season winner:", error);
-        return NextResponse.json(
-            { error: "Internal server error" },
-            { status: 500 }
-        );
+        return internalError();
     }
 }

@@ -1,25 +1,20 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { apiError, unauthorized, internalError } from "@/lib/api";
 
 export async function POST(request: NextRequest) {
     try {
         const session = await auth();
 
         if (!session?.user?.id) {
-            return NextResponse.json(
-                { message: "Unauthorized" },
-                { status: 401 }
-            );
+            return unauthorized();
         }
 
         const { inviteCode } = await request.json();
 
         if (!inviteCode || typeof inviteCode !== "string" || !inviteCode.trim()) {
-            return NextResponse.json(
-                { message: "Kod dostępu jest wymagany" },
-                { status: 400 }
-            );
+            return apiError(400, "MISSING_INVITE_CODE", "Invite code is required");
         }
 
         const competition = await prisma.competition.findUnique({
@@ -27,10 +22,7 @@ export async function POST(request: NextRequest) {
         });
 
         if (!competition) {
-            return NextResponse.json(
-                { message: "Kod dostępu jest nieprawidłowy" },
-                { status: 404 }
-            );
+            return apiError(404, "INVALID_INVITE_CODE", "Invalid invite code");
         }
 
         const existingMember = await prisma.competitionMember.findUnique({
@@ -43,10 +35,7 @@ export async function POST(request: NextRequest) {
         });
 
         if (existingMember) {
-            return NextResponse.json(
-                { message: "Już jesteś członkiem tej konkurencji" },
-                { status: 409 }
-            );
+            return apiError(409, "ALREADY_MEMBER", "You are already a member of this competition");
         }
 
         await prisma.competitionMember.create({
@@ -58,14 +47,11 @@ export async function POST(request: NextRequest) {
         });
 
         return NextResponse.json(
-            { message: "Pomyślnie dołączyłeś do konkurencji" },
+            { message: "Successfully joined the competition" },
             { status: 200 }
         );
     } catch (error) {
         console.error("Error joining competition by code:", error);
-        return NextResponse.json(
-            { message: "Internal server error" },
-            { status: 500 }
-        );
+        return internalError();
     }
 }

@@ -1,3 +1,4 @@
+import { apiError, forbidden, internalError } from "@/lib/api";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
@@ -10,20 +11,14 @@ export async function POST(
         const session = await auth();
 
         if (!session?.user?.id || session.user.role !== "ADMIN") {
-            return NextResponse.json(
-                { error: "Only admins can announce season winner" },
-                { status: 403 }
-            );
+            return forbidden();
         }
 
         const competitionId = (await params).id;
         const { driverId } = await request.json();
 
         if (!driverId) {
-            return NextResponse.json(
-                { error: "Driver ID is required" },
-                { status: 400 }
-            );
+            return apiError(400, "MISSING_FIELDS", "Driver ID is required");
         }
 
         const competition = await prisma.competition.findUnique({
@@ -42,32 +37,20 @@ export async function POST(
         });
 
         if (!competition || competition.type !== "RACING") {
-            return NextResponse.json(
-                { error: "Competition not found or is not a racing competition" },
-                { status: 404 }
-            );
+            return apiError(404, "COMPETITION_NOT_FOUND", "Competition not found or is not a racing competition");
         }
 
         if (competition.createdBy !== session.user.id) {
-            return NextResponse.json(
-                { error: "Only competition creator can announce winner" },
-                { status: 403 }
-            );
+            return apiError(403, "FORBIDDEN", "Only competition creator can announce winner");
         }
 
         if (competition.winnerResolved) {
-            return NextResponse.json(
-                { error: "Season winner already announced" },
-                { status: 400 }
-            );
+            return apiError(400, "WINNER_ALREADY_RESOLVED", "Season winner already announced");
         }
 
         const season = competition.racingSeasons[0];
         if (!season) {
-            return NextResponse.json(
-                { error: "No season found for this competition" },
-                { status: 404 }
-            );
+            return apiError(404, "SEASON_NOT_FOUND", "No season found for this competition");
         }
 
         const driver = await prisma.driver.findUnique({
@@ -75,10 +58,7 @@ export async function POST(
         });
 
         if (!driver) {
-            return NextResponse.json(
-                { error: "Driver not found" },
-                { status: 404 }
-            );
+            return apiError(404, "DRIVER_NOT_FOUND", "Driver not found");
         }
 
         const isDriverInSeason = await prisma.racingSessionParticipant.findFirst({
@@ -93,9 +73,10 @@ export async function POST(
         });
 
         if (!isDriverInSeason) {
-            return NextResponse.json(
-                { error: "Wybrany kierowca nie bierze udziału w sesjach tego sezonu" },
-                { status: 400 }
+            return apiError(
+                400,
+                "DRIVER_NOT_IN_SEASON",
+                "Selected driver does not participate in this season's sessions"
             );
         }
 
@@ -148,15 +129,9 @@ export async function POST(
         });
     } catch (error: any) {
         if (error?.message === "ALREADY_RESOLVED") {
-            return NextResponse.json(
-                { error: "Season winner already announced" },
-                { status: 400 }
-            );
+            return apiError(400, "WINNER_ALREADY_RESOLVED", "Season winner already announced");
         }
         console.error("Error announcing season winner:", error);
-        return NextResponse.json(
-            { error: "Internal server error" },
-            { status: 500 }
-        );
+        return internalError();
     }
 }

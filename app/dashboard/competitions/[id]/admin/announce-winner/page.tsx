@@ -2,8 +2,9 @@
 
 import React, { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { useApiError } from "@/lib/useApiError";
 
 interface Team {
     id: string;
@@ -18,9 +19,11 @@ interface CompetitionDetail {
 }
 
 export default function AnnounceWinnerPage() {
+    const t = useTranslations("matches.admin.announceWinner");
+    const tCommon = useTranslations("common");
+    const apiError = useApiError();
     const params = useParams();
     const router = useRouter();
-    const { data: session } = useSession();
     const [competition, setCompetition] = useState<CompetitionDetail | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -36,25 +39,27 @@ export default function AnnounceWinnerPage() {
                 const response = await fetch(`/api/competitions/${competitionId}`);
 
                 if (!response.ok) {
-                    throw new Error("Nie można pobrać konkurencji");
+                    const data = await response.json().catch(() => null);
+                    setError(apiError(data) || t("loadError"));
+                    return;
                 }
 
                 const data = await response.json();
                 setCompetition(data.competition);
             } catch (err) {
-                setError("Błąd podczas pobierania konkurencji");
                 console.error(err);
+                setError(t("loadError"));
             } finally {
                 setLoading(false);
             }
         };
 
         void fetchCompetition();
-    }, [competitionId]);
+    }, [competitionId, apiError, t]);
 
     const handleAnnounceWinner = async () => {
         if (!selectedTeamId) {
-            setError("Wybierz drużynę");
+            setError(t("selectTeamError"));
             return;
         }
 
@@ -72,8 +77,8 @@ export default function AnnounceWinnerPage() {
             );
 
             if (!response.ok) {
-                const data = await response.json();
-                setError(data.error || "Błąd podczas ogłaszania zwycięzcy");
+                const data = await response.json().catch(() => null);
+                setError(apiError(data));
                 setAnnouncing(false);
                 return;
             }
@@ -82,8 +87,8 @@ export default function AnnounceWinnerPage() {
                 router.push(`/dashboard/competitions/${competitionId}`);
             }, 1000);
         } catch (err) {
-            setError("Błąd podczas ogłaszania zwycięzcy");
             console.error(err);
+            setError(apiError());
             setAnnouncing(false);
         }
     };
@@ -91,27 +96,31 @@ export default function AnnounceWinnerPage() {
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
-                <p className="text-zinc-600 dark:text-zinc-400">Ładowanie konkurencji...</p>
+                <p className="text-zinc-600 dark:text-zinc-400">{tCommon("loading")}</p>
             </div>
         );
     }
 
-    if (error || !competition) {
+    if (error && !competition) {
         return (
             <div className="space-y-4">
                 <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                     <p className="text-sm text-red-700 dark:text-red-400">
-                        {error || "Nie znaleziono konkurencji"}
+                        {error}
                     </p>
                 </div>
                 <Link
                     href={`/dashboard/competitions/${competitionId}`}
                     className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
                 >
-                    Wróć
+                    {tCommon("back")}
                 </Link>
             </div>
         );
+    }
+
+    if (!competition) {
+        return null;
     }
 
     return (
@@ -121,7 +130,7 @@ export default function AnnounceWinnerPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
                         <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-white">
-                            🏆 Ogłoś zwycięzcę sezonu
+                            🏆 {t("title")}
                         </h2>
                         <p className="text-sm sm:text-base text-zinc-600 dark:text-zinc-400 mt-2">
                             {competition.name}
@@ -131,7 +140,7 @@ export default function AnnounceWinnerPage() {
                         href={`/dashboard/competitions/${competitionId}`}
                         className="px-4 sm:px-6 py-2.5 sm:py-2 bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-900 dark:text-white font-medium rounded-lg transition-colors text-center text-sm sm:text-base"
                     >
-                        Wróć
+                        {tCommon("back")}
                     </Link>
                 </div>
             </div>
@@ -146,12 +155,12 @@ export default function AnnounceWinnerPage() {
             {/* Form */}
             <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800">
                 <h3 className="text-lg font-bold text-zinc-900 dark:text-white mb-4">
-                    Wybierz drużynę, która wygra sezon
+                    {t("selectPrompt")}
                 </h3>
 
                 <div className="mb-6">
                     <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
-                        Drużyna
+                        {t("teamLabel")}
                     </label>
                     <select
                         value={selectedTeamId}
@@ -159,7 +168,7 @@ export default function AnnounceWinnerPage() {
                         disabled={announcing}
                         className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                        <option value="">Wybierz drużynę...</option>
+                        <option value="">{t("selectPlaceholder")}</option>
                         {competition.allTeams.map((team) => (
                             <option key={team.id} value={team.id}>
                                 {team.name}
@@ -173,7 +182,7 @@ export default function AnnounceWinnerPage() {
                     disabled={announcing || !selectedTeamId}
                     className="w-full px-4 py-3 bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    {announcing ? "Ogłaszanie..." : "🏆 Ogłoś zwycięzcę"}
+                    {announcing ? t("submitting") : t("submit")}
                 </button>
             </div>
         </div>

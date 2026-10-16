@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isTimePassed } from "@/lib/timeUtils";
 import { NextRequest, NextResponse } from "next/server";
+import { apiError, forbidden, internalError } from "@/lib/api";
 
 export async function PATCH(
     request: NextRequest,
@@ -15,10 +16,7 @@ export async function PATCH(
         const session = await auth();
 
         if (!session?.user?.id || session.user.role !== "ADMIN") {
-            return NextResponse.json(
-                { error: "Only admins can update sessions" },
-                { status: 403 }
-            );
+            return forbidden();
         }
 
         const { id: competitionId, sessionId } = await params;
@@ -45,30 +43,22 @@ export async function PATCH(
             !racingSession ||
             racingSession.weekend.season.competition.id !== competitionId
         ) {
-            return NextResponse.json(
-                { error: "Session not found" },
-                { status: 404 }
-            );
+            return apiError(404, "SESSION_NOT_FOUND", "Session not found");
         }
 
         if (
             racingSession.weekend.season.competition.createdBy !== session.user.id
         ) {
-            return NextResponse.json(
-                { error: "Only competition creator can update sessions" },
-                { status: 403 }
-            );
+            return apiError(403, "FORBIDDEN", "Only competition creator can update sessions");
         }
 
         // Update participants if provided
         if (participatingDriverIds && Array.isArray(participatingDriverIds)) {
             if (racingSession.resolved) {
-                return NextResponse.json(
-                    {
-                        error:
-                            "Nie można modyfikować listy uczestników sesji, która została już rozliczona.",
-                    },
-                    { status: 400 }
+                return apiError(
+                    400,
+                    "CANNOT_MODIFY_RESOLVED_SESSION_PARTICIPANTS",
+                    "Cannot modify participants list of an already resolved session"
                 );
             }
 
@@ -87,15 +77,17 @@ export async function PATCH(
         let parsedVotingClosedAt: Date | null | undefined = undefined;
         if (votingClosedAt !== undefined) {
             if (racingSession.resolved) {
-                return NextResponse.json(
-                    { error: "Nie można modyfikować czasu głosowania dla rozliczonej sesji" },
-                    { status: 400 }
+                return apiError(
+                    400,
+                    "CANNOT_MODIFY_RESOLVED_SESSION",
+                    "Cannot modify voting time for an already resolved session"
                 );
             }
             if (racingSession.startTime && isTimePassed(racingSession.startTime)) {
-                return NextResponse.json(
-                    { error: "Nie można modyfikować czasu głosowania po rozpoczęciu sesji" },
-                    { status: 400 }
+                return apiError(
+                    400,
+                    "CANNOT_MODIFY_PAST_SESSION",
+                    "Cannot modify voting time after session has started"
                 );
             }
 
@@ -104,10 +96,7 @@ export async function PATCH(
             } else {
                 parsedVotingClosedAt = new Date(votingClosedAt);
                 if (isNaN(parsedVotingClosedAt.getTime())) {
-                    return NextResponse.json(
-                        { error: "Invalid votingClosedAt date format" },
-                        { status: 400 }
-                    );
+                    return apiError(400, "INVALID_DATE", "Invalid votingClosedAt date format");
                 }
             }
         }
@@ -130,11 +119,8 @@ export async function PATCH(
 
         return NextResponse.json({ session: updatedSession });
     } catch (error) {
-        console.error("Error updating session:", error);
-        return NextResponse.json(
-            { error: "Internal server error" },
-            { status: 500 }
-        );
+        console.error("Error updating racing session:", error);
+        return internalError();
     }
 }
 
@@ -150,10 +136,7 @@ export async function DELETE(
         const session = await auth();
 
         if (!session?.user?.id || session.user.role !== "ADMIN") {
-            return NextResponse.json(
-                { error: "Only admins can delete sessions" },
-                { status: 403 }
-            );
+            return forbidden();
         }
 
         const { id: competitionId, sessionId } = await params;
@@ -177,28 +160,20 @@ export async function DELETE(
             !racingSession ||
             racingSession.weekend.season.competition.id !== competitionId
         ) {
-            return NextResponse.json(
-                { error: "Session not found" },
-                { status: 404 }
-            );
+            return apiError(404, "SESSION_NOT_FOUND", "Session not found");
         }
 
         if (
             racingSession.weekend.season.competition.createdBy !== session.user.id
         ) {
-            return NextResponse.json(
-                { error: "Only competition creator can delete sessions" },
-                { status: 403 }
-            );
+            return apiError(403, "FORBIDDEN", "Only competition creator can delete sessions");
         }
 
         if (racingSession.resolved) {
-            return NextResponse.json(
-                {
-                    error:
-                        "Nie można usunąć sesji, która została już rozliczona i posiada naliczone punkty.",
-                },
-                { status: 400 }
+            return apiError(
+                400,
+                "CANNOT_DELETE_RESOLVED_SESSION",
+                "Cannot delete session that has already been resolved and points awarded"
             );
         }
 
@@ -210,10 +185,7 @@ export async function DELETE(
             message: "Session deleted successfully",
         });
     } catch (error) {
-        console.error("Error deleting session:", error);
-        return NextResponse.json(
-            { error: "Internal server error" },
-            { status: 500 }
-        );
+        console.error("Error deleting racing session:", error);
+        return internalError();
     }
 }

@@ -92,7 +92,7 @@ describe("PATCH football match (admin)", () => {
         setup({ resolved: true });
         const res = await patch({ votingClosedAt: null });
         expect(res.status).toBe(400);
-        expect((await res.json()).error).toMatch(/rozliczonego meczu/);
+        expect((await res.json()).code).toBe("CANNOT_MODIFY_RESOLVED_MATCH");
         expect(db.footballMatch.update).not.toHaveBeenCalled();
     });
 
@@ -100,7 +100,7 @@ describe("PATCH football match (admin)", () => {
         setup({ kickoff: new Date(Date.now() - 60 * 1000) });
         const res = await patch({ votingClosedAt: null });
         expect(res.status).toBe(400);
-        expect((await res.json()).error).toMatch(/po rozpoczęciu meczu/);
+        expect((await res.json()).code).toBe("CANNOT_MODIFY_PAST_MATCH");
         expect(db.footballMatch.update).not.toHaveBeenCalled();
     });
 });

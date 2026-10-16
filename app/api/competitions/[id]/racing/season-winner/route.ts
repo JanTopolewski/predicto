@@ -1,3 +1,4 @@
+import { apiError, internalError, unauthorized } from "@/lib/api";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
@@ -10,20 +11,14 @@ export async function POST(
         const session = await auth();
 
         if (!session?.user?.id) {
-            return NextResponse.json(
-                { error: "Unauthorized" },
-                { status: 401 }
-            );
+            return unauthorized();
         }
 
         const competitionId = (await params).id;
         const { driverId } = await request.json();
 
         if (!driverId) {
-            return NextResponse.json(
-                { error: "Driver ID is required" },
-                { status: 400 }
-            );
+            return apiError(400, "MISSING_FIELDS", "Driver ID is required");
         }
 
         const member = await prisma.competitionMember.findUnique({
@@ -36,10 +31,7 @@ export async function POST(
         });
 
         if (!member) {
-            return NextResponse.json(
-                { error: "You are not a member of this competition" },
-                { status: 403 }
-            );
+            return apiError(403, "NOT_A_MEMBER", "You are not a member of this competition");
         }
 
         const competition = await prisma.competition.findUnique({
@@ -50,16 +42,14 @@ export async function POST(
         });
 
         if (!competition || competition.type !== "RACING") {
-            return NextResponse.json(
-                { error: "Competition not found or is not a racing competition" },
-                { status: 404 }
-            );
+            return apiError(404, "COMPETITION_NOT_FOUND", "Competition not found or is not a racing competition");
         }
 
         if (competition.winnerResolved) {
-            return NextResponse.json(
-                { error: "Zwycięzca sezonu został już ogłoszony. Głosowanie jest zamknięte." },
-                { status: 400 }
+            return apiError(
+                400,
+                "WINNER_ALREADY_RESOLVED",
+                "Season winner has already been announced. Voting is closed."
             );
         }
 
@@ -81,9 +71,10 @@ export async function POST(
             },
         });
         if (earliestSession && new Date() >= new Date(earliestSession.startTime)) {
-            return NextResponse.json(
-                { error: "Pierwsza sesja sezonu już się rozpoczęła. Nie można już typować zwycięzcy." },
-                { status: 400 }
+            return apiError(
+                400,
+                "SEASON_ALREADY_STARTED",
+                "First session of the season has already started. Season winner prediction is closed."
             );
         }
 
@@ -96,9 +87,10 @@ export async function POST(
             },
         });
         if (existingPrediction) {
-            return NextResponse.json(
-                { error: "Już oddałeś głos na zwycięzcę sezonu. Nie można zmienić typu." },
-                { status: 400 }
+            return apiError(
+                400,
+                "ALREADY_VOTED",
+                "You have already voted for the season winner. Predictions cannot be changed."
             );
         }
 
@@ -107,10 +99,7 @@ export async function POST(
         });
 
         if (!driver) {
-            return NextResponse.json(
-                { error: "Driver not found" },
-                { status: 404 }
-            );
+            return apiError(404, "DRIVER_NOT_FOUND", "Driver not found");
         }
 
         const isDriverInSeason = await prisma.racingSessionParticipant.findFirst({
@@ -125,9 +114,10 @@ export async function POST(
         });
 
         if (!isDriverInSeason) {
-            return NextResponse.json(
-                { error: "Wybrany kierowca nie bierze udziału w sesjach tego sezonu" },
-                { status: 400 }
+            return apiError(
+                400,
+                "DRIVER_NOT_IN_SEASON",
+                "Selected driver does not participate in this season's sessions"
             );
         }
 
@@ -146,10 +136,7 @@ export async function POST(
         return NextResponse.json({ prediction }, { status: 201 });
     } catch (error) {
         console.error("Error creating season winner prediction:", error);
-        return NextResponse.json(
-            { error: "Internal server error" },
-            { status: 500 }
-        );
+        return internalError();
     }
 }
 
@@ -161,10 +148,7 @@ export async function GET(
         const session = await auth();
 
         if (!session?.user?.id) {
-            return NextResponse.json(
-                { error: "Unauthorized" },
-                { status: 401 }
-            );
+            return unauthorized();
         }
 
         const competitionId = (await params).id;
@@ -184,10 +168,7 @@ export async function GET(
         });
 
         if (!competition) {
-            return NextResponse.json(
-                { error: "Competition not found" },
-                { status: 404 }
-            );
+            return apiError(404, "COMPETITION_NOT_FOUND", "Competition not found");
         }
 
         const prediction =
@@ -196,9 +177,6 @@ export async function GET(
         return NextResponse.json({ prediction });
     } catch (error) {
         console.error("Error fetching season winner prediction:", error);
-        return NextResponse.json(
-            { error: "Internal server error" },
-            { status: 500 }
-        );
+        return internalError();
     }
 }

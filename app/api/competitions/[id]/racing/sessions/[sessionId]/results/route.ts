@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { apiError, internalError } from "@/lib/api";
 
 export async function POST(
     request: NextRequest,
@@ -14,20 +15,14 @@ export async function POST(
         const session = await auth();
 
         if (!session?.user?.id || session.user.role !== "ADMIN") {
-            return NextResponse.json(
-                { error: "Only admins can set results" },
-                { status: 403 }
-            );
+            return apiError(403, "FORBIDDEN", "Only admins can set results");
         }
 
         const { id: competitionId, sessionId } = await params;
         const { results } = await request.json();
 
         if (!Array.isArray(results) || results.length === 0) {
-            return NextResponse.json(
-                { error: "Results array is required and cannot be empty" },
-                { status: 400 }
-            );
+            return apiError(400, "MISSING_FIELDS", "Results array is required and cannot be empty");
         }
 
         const racingSession = await prisma.racingSession.findUnique({
@@ -51,17 +46,11 @@ export async function POST(
             !racingSession ||
             racingSession.weekend.season.competition.id !== competitionId
         ) {
-            return NextResponse.json(
-                { error: "Session not found" },
-                { status: 404 }
-            );
+            return apiError(404, "SESSION_NOT_FOUND", "Session not found");
         }
 
         if (racingSession.weekend.season.competition.createdBy !== session.user.id) {
-            return NextResponse.json(
-                { error: "Only competition creator can set results" },
-                { status: 403 }
-            );
+            return apiError(403, "FORBIDDEN", "Only competition creator can set results");
         }
 
         const maxPosition = racingSession.participants.length;
@@ -71,15 +60,19 @@ export async function POST(
 
         for (const item of results) {
             if (!participantDriverIds.has(item.driverId)) {
-                return NextResponse.json(
-                    { error: `Kierowca o ID ${item.driverId} nie uczestniczy w tej sesji` },
-                    { status: 400 }
+                return apiError(
+                    400,
+                    "DRIVER_NOT_IN_SESSION",
+                    `Driver with ID ${item.driverId} does not participate in this session`,
+                    { driverId: item.driverId }
                 );
             }
             if (seenDriverIds.has(item.driverId)) {
-                return NextResponse.json(
-                    { error: `Kierowca o ID ${item.driverId} został podany więcej niż raz` },
-                    { status: 400 }
+                return apiError(
+                    400,
+                    "DUPLICATE_DRIVER_RESULT",
+                    `Driver with ID ${item.driverId} was provided more than once`,
+                    { driverId: item.driverId }
                 );
             }
             seenDriverIds.add(item.driverId);
@@ -89,15 +82,19 @@ export async function POST(
                 item.position < 1 ||
                 item.position > maxPosition
             ) {
-                return NextResponse.json(
-                    { error: `Pozycja musi mieścić się w przedziale 1 - ${maxPosition}` },
-                    { status: 400 }
+                return apiError(
+                    400,
+                    "POSITION_OUT_OF_RANGE",
+                    `Position must be between 1 and ${maxPosition}`,
+                    { max: maxPosition }
                 );
             }
             if (seenPositions.has(item.position)) {
-                return NextResponse.json(
-                    { error: `Pozycja P${item.position} została przypisana więcej niż jednemu kierowcy` },
-                    { status: 400 }
+                return apiError(
+                    400,
+                    "DUPLICATE_POSITION_RESULT",
+                    `Position P${item.position} has been assigned to more than one driver`,
+                    { position: item.position }
                 );
             }
             seenPositions.add(item.position);
@@ -125,13 +122,10 @@ export async function POST(
         });
 
         return NextResponse.json({
-            message: "Wyniki zostały zapisane, a głosowanie zablokowane",
+            message: "Results saved and voting locked successfully",
         });
     } catch (error) {
         console.error("Error setting session results:", error);
-        return NextResponse.json(
-            { error: "Internal server error" },
-            { status: 500 }
-        );
+        return internalError();
     }
 }

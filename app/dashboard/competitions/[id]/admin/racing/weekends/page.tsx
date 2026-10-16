@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
+import { useTranslations, useLocale } from "next-intl";
+import { useApiError } from "@/lib/useApiError";
 
 interface RacingWeekend {
     id: string;
@@ -21,7 +23,11 @@ interface RacingSession {
 }
 
 export default function RacingWeekendsPage() {
-    const { data: session } = useSession();
+    const t = useTranslations("racing.admin.weekends");
+    const tCommon = useTranslations("common");
+    const locale = useLocale();
+    const apiError = useApiError();
+    const { data: session, status } = useSession();
     const router = useRouter();
     const params = useParams();
     const competitionId = params.id as string;
@@ -38,35 +44,37 @@ export default function RacingWeekendsPage() {
     });
 
     useEffect(() => {
-        if (session?.user?.role !== "ADMIN") {
+        if (status === "authenticated" && session?.user?.role !== "ADMIN") {
             router.push("/dashboard");
         }
-    }, [session, router]);
+    }, [session, status, router]);
+
+    const fetchWeekends = useCallback(async () => {
+        try {
+            setLoading(true);
+            const response = await fetch(
+                `/api/competitions/${competitionId}/racing/weekends`
+            );
+
+            if (!response.ok) {
+                const data = await response.json().catch(() => null);
+                setError(apiError(data) || t("loadError"));
+                return;
+            }
+
+            const data = await response.json();
+            setWeekends(data.weekends || []);
+        } catch (err) {
+            console.error(err);
+            setError(t("loadError"));
+        } finally {
+            setLoading(false);
+        }
+    }, [competitionId, apiError, t]);
 
     useEffect(() => {
-        const fetchWeekends = async () => {
-            try {
-                setLoading(true);
-                const response = await fetch(
-                    `/api/competitions/${competitionId}/racing/weekends`
-                );
-
-                if (!response.ok) {
-                    throw new Error("Failed to fetch weekends");
-                }
-
-                const data = await response.json();
-                setWeekends(data.weekends || []);
-            } catch (err) {
-                setError("Error loading weekends");
-                console.error(err);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchWeekends();
-    }, [competitionId]);
+        void fetchWeekends();
+    }, [fetchWeekends]);
 
     const handleCreateWeekend = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -74,7 +82,7 @@ export default function RacingWeekendsPage() {
         setSuccess("");
 
         if (!formData.grandPrix || !formData.country || !formData.raceDate) {
-            setError("All fields are required");
+            setError(apiError({ code: "MISSING_FIELDS", error: "Please fill in all required fields" }));
             return;
         }
 
@@ -89,24 +97,24 @@ export default function RacingWeekendsPage() {
             );
 
             if (!response.ok) {
-                const data = await response.json();
-                setError(data.error || "Failed to create weekend");
+                const data = await response.json().catch(() => null);
+                setError(apiError(data));
                 return;
             }
 
             const data = await response.json();
             setWeekends([...weekends, data.weekend]);
             setFormData({ grandPrix: "", country: "", raceDate: "" });
-            setSuccess("Weekend created successfully!");
+            setSuccess(t("weekendCreated"));
             setTimeout(() => setSuccess(""), 3000);
         } catch (err) {
-            setError("Error creating weekend");
             console.error(err);
+            setError(apiError());
         }
     };
 
     const handleDeleteWeekend = async (weekendId: string) => {
-        if (!confirm("Are you sure you want to delete this weekend?")) return;
+        if (!confirm(t("deleteConfirm"))) return;
 
         try {
             const response = await fetch(
@@ -115,27 +123,20 @@ export default function RacingWeekendsPage() {
             );
 
             if (!response.ok) {
-                setError("Failed to delete weekend");
+                const data = await response.json().catch(() => null);
+                setError(apiError(data));
                 return;
             }
 
             setWeekends(weekends.filter((w) => w.id !== weekendId));
-            setSuccess("Weekend deleted successfully!");
-            setTimeout(() => setSuccess(""), 3000);
         } catch (err) {
-            setError("Error deleting weekend");
             console.error(err);
+            setError(apiError());
         }
     };
 
-    if (!session?.user?.id) {
-        return (
-            <div className="p-8 text-center bg-white dark:bg-zinc-900 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-800">
-                <p className="text-zinc-600 dark:text-zinc-400">
-                    Please login first
-                </p>
-            </div>
-        );
+    if (status === "loading" || session?.user?.role !== "ADMIN") {
+        return null;
     }
 
     return (
@@ -143,13 +144,13 @@ export default function RacingWeekendsPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">
-                    Racing Weekends
+                    {t("title")}
                 </h1>
                 <Link
-                    href={`/dashboard/competitions/${competitionId}`}
+                    href={`/dashboard/competitions/${competitionId}/admin/racing`}
                     className="px-4 py-2 bg-gray-600 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
                 >
-                    Back
+                    {tCommon("back")}
                 </Link>
             </div>
 
@@ -171,13 +172,13 @@ export default function RacingWeekendsPage() {
             {/* Create Form */}
             <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800">
                 <h2 className="text-xl font-bold text-zinc-900 dark:text-white mb-4">
-                    Create New Weekend
+                    {t("createTitle")}
                 </h2>
                 <form onSubmit={handleCreateWeekend} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <input
                             type="text"
-                            placeholder="Grand Prix Name"
+                            placeholder={t("grandPrixLabel")}
                             value={formData.grandPrix}
                             onChange={(e) =>
                                 setFormData({
@@ -189,7 +190,7 @@ export default function RacingWeekendsPage() {
                         />
                         <input
                             type="text"
-                            placeholder="Country"
+                            placeholder={t("countryLabel")}
                             value={formData.country}
                             onChange={(e) =>
                                 setFormData({
@@ -208,14 +209,14 @@ export default function RacingWeekendsPage() {
                                     raceDate: e.target.value,
                                 })
                             }
-                            className="px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
                     <button
                         type="submit"
-                        className="px-6 py-2 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white font-medium rounded-lg transition-colors"
+                        className="px-6 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
                     >
-                        Create Weekend
+                        {t("createButton")}
                     </button>
                 </form>
             </div>
@@ -224,52 +225,56 @@ export default function RacingWeekendsPage() {
             {loading ? (
                 <div className="p-8 text-center bg-white dark:bg-zinc-900 rounded-lg shadow-lg">
                     <p className="text-zinc-600 dark:text-zinc-400">
-                        Loading weekends...
+                        {tCommon("loading")}
                     </p>
                 </div>
             ) : weekends.length === 0 ? (
                 <div className="p-8 text-center bg-white dark:bg-zinc-900 rounded-lg shadow-lg">
                     <p className="text-zinc-600 dark:text-zinc-400">
-                        No weekends created yet
+                        {t("noWeekends")}
                     </p>
                 </div>
             ) : (
-                <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {weekends.map((weekend) => (
                         <div
                             key={weekend.id}
                             className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800"
                         >
-                            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                            <div className="flex justify-between items-start mb-4">
                                 <div>
-                                    <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
+                                    <h3 className="text-xl font-bold text-zinc-900 dark:text-white">
                                         {weekend.grandPrix}
                                     </h3>
-                                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                                        {weekend.country} •{" "}
-                                        {new Date(weekend.raceDate).toLocaleDateString()}
+                                    <p className="text-zinc-600 dark:text-zinc-400">
+                                        {weekend.country}
                                     </p>
-                                    <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2">
-                                        {weekend.sessions.length} sessions
+                                    <p className="text-sm text-zinc-500 dark:text-zinc-500">
+                                        {new Date(
+                                            weekend.raceDate
+                                        ).toLocaleDateString(locale, { timeZone: "Europe/Warsaw" })}
                                     </p>
                                 </div>
-                                <div className="flex gap-2">
-                                    <Link
-                                        href={`/dashboard/competitions/${competitionId}/admin/racing/sessions/${weekend.id}`}
-                                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
-                                    >
-                                        Manage Sessions
-                                    </Link>
-                                    <button
-                                        onClick={() =>
-                                            handleDeleteWeekend(weekend.id)
-                                        }
-                                        className="px-4 py-2 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white font-medium rounded-lg transition-colors"
-                                    >
-                                        Delete
-                                    </button>
-                                </div>
+                                <button
+                                    onClick={() =>
+                                        handleDeleteWeekend(weekend.id)
+                                    }
+                                    className="px-3 py-1 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white text-sm font-medium rounded transition-colors"
+                                >
+                                    {t("deleteWeekend")}
+                                </button>
                             </div>
+
+                            <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+                                {tCommon("season")}: {weekend.sessions?.length || 0}
+                            </p>
+
+                            <Link
+                                href={`/dashboard/competitions/${competitionId}/admin/racing/sessions/${weekend.id}`}
+                                className="inline-block px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors text-sm"
+                            >
+                                {t("manageSessions")}
+                            </Link>
                         </div>
                     ))}
                 </div>

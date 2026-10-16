@@ -22,12 +22,16 @@ describe("POST /api/auth/register", () => {
         db.user.findFirst.mockResolvedValue({ email: valid.email, username: "x" });
         const r1 = await call(valid);
         expect(r1.status).toBe(409);
-        expect((await r1.json()).message).toMatch(/Email/);
+        const b1 = await r1.json();
+        expect(b1.code).toBe("EMAIL_TAKEN");
+        expect(b1.error).toMatch(/Email/i);
 
         db.user.findFirst.mockResolvedValue({ email: "inny@test.pl", username: valid.username });
         const r2 = await call(valid);
         expect(r2.status).toBe(409);
-        expect((await r2.json()).message).toMatch(/Nazwa/);
+        const b2 = await r2.json();
+        expect(b2.code).toBe("USERNAME_TAKEN");
+        expect(b2.error).toMatch(/Username/i);
     });
 
     it("stores a bcrypt hash (not the plain password) that verifies, incl. non-ASCII passwords", async () => {

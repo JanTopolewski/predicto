@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
+import { apiError, unauthorized, forbidden, internalError } from "@/lib/api";
 
 export async function GET(
     _request: NextRequest,
@@ -12,10 +13,7 @@ export async function GET(
         const session = await auth();
 
         if (!session?.user?.id) {
-            return NextResponse.json(
-                { message: "Unauthorized" },
-                { status: 401 }
-            );
+            return unauthorized();
         }
 
         const user = await prisma.user.findUnique({
@@ -24,10 +22,7 @@ export async function GET(
         });
 
         if (user?.role !== "ADMIN") {
-            return NextResponse.json(
-                { message: "Forbidden" },
-                { status: 403 }
-            );
+            return forbidden();
         }
 
         const driver = await prisma.driver.findUnique({
@@ -35,19 +30,13 @@ export async function GET(
         });
 
         if (!driver) {
-            return NextResponse.json(
-                { message: "Kierowca nie znaleziony" },
-                { status: 404 }
-            );
+            return apiError(404, "DRIVER_NOT_FOUND", "Driver not found");
         }
 
         return NextResponse.json({ driver });
     } catch (error) {
         console.error("Error fetching driver:", error);
-        return NextResponse.json(
-            { message: "Internal server error" },
-            { status: 500 }
-        );
+        return internalError();
     }
 }
 
@@ -61,10 +50,7 @@ export async function PUT(
         const session = await auth();
 
         if (!session?.user?.id) {
-            return NextResponse.json(
-                { message: "Unauthorized" },
-                { status: 401 }
-            );
+            return unauthorized();
         }
 
         const user = await prisma.user.findUnique({
@@ -73,26 +59,17 @@ export async function PUT(
         });
 
         if (user?.role !== "ADMIN") {
-            return NextResponse.json(
-                { message: "Forbidden" },
-                { status: 403 }
-            );
+            return forbidden();
         }
 
         const { name, number, team } = await request.json();
 
         if (!name || !number || !team) {
-            return NextResponse.json(
-                { message: "Nazwa, numer i zespół są wymagane" },
-                { status: 400 }
-            );
+            return apiError(400, "MISSING_FIELDS", "Name, number and team are required");
         }
 
         if (!Number.isInteger(number) || number < 1) {
-            return NextResponse.json(
-                { message: "Numer musi być liczbą dodatnią" },
-                { status: 400 }
-            );
+            return apiError(400, "INVALID_NUMBER", "Number must be a positive integer");
         }
 
         const existingDriver = await prisma.driver.findUnique({
@@ -100,10 +77,7 @@ export async function PUT(
         });
 
         if (!existingDriver) {
-            return NextResponse.json(
-                { message: "Kierowca nie znaleziony" },
-                { status: 404 }
-            );
+            return apiError(404, "DRIVER_NOT_FOUND", "Driver not found");
         }
 
         const numberExists = await prisma.driver.findUnique({
@@ -111,10 +85,7 @@ export async function PUT(
         });
 
         if (numberExists && numberExists.id !== id) {
-            return NextResponse.json(
-                { message: "Kierowca z takim numerem już istnieje" },
-                { status: 409 }
-            );
+            return apiError(409, "DRIVER_NUMBER_TAKEN", "Driver with this number already exists");
         }
 
         const updatedDriver = await prisma.driver.update({
@@ -129,10 +100,7 @@ export async function PUT(
         return NextResponse.json({ driver: updatedDriver });
     } catch (error) {
         console.error("Error updating driver:", error);
-        return NextResponse.json(
-            { message: "Internal server error" },
-            { status: 500 }
-        );
+        return internalError();
     }
 }
 
@@ -146,10 +114,7 @@ export async function DELETE(
         const session = await auth();
 
         if (!session?.user?.id) {
-            return NextResponse.json(
-                { message: "Unauthorized" },
-                { status: 401 }
-            );
+            return unauthorized();
         }
 
         const user = await prisma.user.findUnique({
@@ -158,10 +123,7 @@ export async function DELETE(
         });
 
         if (user?.role !== "ADMIN") {
-            return NextResponse.json(
-                { message: "Forbidden" },
-                { status: 403 }
-            );
+            return forbidden();
         }
 
         const driver = await prisma.driver.findUnique({
@@ -182,10 +144,7 @@ export async function DELETE(
         });
 
         if (!driver) {
-            return NextResponse.json(
-                { message: "Kierowca nie znaleziony" },
-                { status: 404 }
-            );
+            return apiError(404, "DRIVER_NOT_FOUND", "Driver not found");
         }
 
         const isUsed =
@@ -198,12 +157,10 @@ export async function DELETE(
             driver._count.racingPredictionThirds > 0;
 
         if (isUsed) {
-            return NextResponse.json(
-                {
-                    message:
-                        "Nie można usunąć kierowcy, który bierze udział w sesjach wyścigowych lub posiada przypisane wyniki/predykcje.",
-                },
-                { status: 409 }
+            return apiError(
+                409,
+                "CANNOT_DELETE_USED_DRIVER",
+                "Cannot delete driver with associated sessions, results or predictions"
             );
         }
 
@@ -211,12 +168,9 @@ export async function DELETE(
             where: { id },
         });
 
-        return NextResponse.json({ message: "Kierowca usunięty" });
+        return NextResponse.json({ message: "Driver deleted successfully" });
     } catch (error) {
         console.error("Error deleting driver:", error);
-        return NextResponse.json(
-            { message: "Internal server error" },
-            { status: 500 }
-        );
+        return internalError();
     }
 }

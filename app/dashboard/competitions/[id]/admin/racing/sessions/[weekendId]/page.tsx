@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
+import { useTranslations, useLocale } from "next-intl";
+import { useApiError } from "@/lib/useApiError";
 
 interface Driver {
     id: string;
@@ -35,7 +37,11 @@ const SESSION_TYPES = [
 ];
 
 export default function RacingSessionsPage() {
-    const { data: session } = useSession();
+    const t = useTranslations("racing.admin.sessions");
+    const tCommon = useTranslations("common");
+    const locale = useLocale();
+    const apiError = useApiError();
+    const { data: session, status } = useSession();
     const router = useRouter();
     const params = useParams();
     const competitionId = params.id as string;
@@ -63,41 +69,44 @@ export default function RacingSessionsPage() {
     });
 
     useEffect(() => {
-        if (session?.user?.role !== "ADMIN") {
+        if (status === "authenticated" && session?.user?.role !== "ADMIN") {
             router.push("/dashboard");
         }
-    }, [session, router]);
+    }, [session, status, router]);
+
+    const fetchData = useCallback(async () => {
+        try {
+            setLoading(true);
+
+            // Fetch drivers
+            const driversResponse = await fetch("/api/drivers");
+            if (driversResponse.ok) {
+                const driversData = await driversResponse.json();
+                setDrivers(driversData.drivers || []);
+            }
+
+            // Fetch sessions for this specific weekend
+            const weekendResponse = await fetch(
+                `/api/competitions/${competitionId}/racing/weekends/${weekendId}`
+            );
+            if (weekendResponse.ok) {
+                const weekendData = await weekendResponse.json();
+                setSessions(weekendData.weekend?.sessions || []);
+            } else {
+                const data = await weekendResponse.json().catch(() => null);
+                setError(apiError(data) || t("loadError"));
+            }
+        } catch (err) {
+            console.error(err);
+            setError(t("loadError"));
+        } finally {
+            setLoading(false);
+        }
+    }, [competitionId, weekendId, apiError, t]);
 
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                setLoading(true);
-
-                // Fetch drivers
-                const driversResponse = await fetch("/api/drivers");
-                if (driversResponse.ok) {
-                    const driversData = await driversResponse.json();
-                    setDrivers(driversData.drivers || []);
-                }
-
-                // Fetch sessions for this specific weekend
-                const weekendResponse = await fetch(
-                    `/api/competitions/${competitionId}/racing/weekends/${weekendId}`
-                );
-                if (weekendResponse.ok) {
-                    const weekendData = await weekendResponse.json();
-                    setSessions(weekendData.weekend?.sessions || []);
-                }
-            } catch (err) {
-                setError("Error loading data");
-                console.error(err);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchData();
-    }, [competitionId, weekendId]);
+        void fetchData();
+    }, [fetchData]);
 
     const handleToggleDriver = (driverId: string) => {
         setFormData((prev) => ({
@@ -108,7 +117,7 @@ export default function RacingSessionsPage() {
         }));
     };
 
-    const handleCreateSession = async (e: React.SubmitEvent) => {
+    const handleCreateSession = async (e: React.SubmitEvent<HTMLFormElement>) => {
         e.preventDefault();
         setError("");
         setSuccess("");
@@ -120,12 +129,12 @@ export default function RacingSessionsPage() {
             !formData.startTime ||
             formData.selectedDrivers.length === 0
         ) {
-            setError("All fields are required and select at least one driver");
+            setError(t("fieldsRequiredError"));
             return;
         }
 
         if (!isPodiumType && !formData.wildcardDriverId) {
-            setError("Kierowca Wildcard jest wymagany dla tej sesji (brak podium)");
+            setError(t("wildcardRequiredValidation"));
             return;
         }
 
@@ -147,8 +156,8 @@ export default function RacingSessionsPage() {
             );
 
             if (!response.ok) {
-                const data = await response.json();
-                setError(data.error || "Failed to create session");
+                const data = await response.json().catch(() => null);
+                setError(apiError(data));
                 return;
             }
 
@@ -161,16 +170,16 @@ export default function RacingSessionsPage() {
                 selectedDrivers: [],
                 wildcardDriverId: "",
             });
-            setSuccess("Session created successfully!");
+            setSuccess(t("sessionCreated"));
             setTimeout(() => setSuccess(""), 3000);
         } catch (err) {
-            setError("Error creating session");
             console.error(err);
+            setError(apiError());
         }
     };
 
     const handleDeleteSession = async (sessionId: string) => {
-        if (!confirm("Are you sure you want to delete this session?")) return;
+        if (!confirm(t("deleteConfirm"))) return;
 
         try {
             const response = await fetch(
@@ -179,28 +188,29 @@ export default function RacingSessionsPage() {
             );
 
             if (!response.ok) {
-                setError("Failed to delete session");
+                const data = await response.json().catch(() => null);
+                setError(apiError(data));
                 return;
             }
 
             setSessions(sessions.filter((s) => s.id !== sessionId));
-            setSuccess("Session deleted successfully!");
+            setSuccess(t("sessionDeleted"));
             setTimeout(() => setSuccess(""), 3000);
         } catch (err) {
-            setError("Error deleting session");
             console.error(err);
+            setError(apiError());
         }
     };
 
     const handleSaveAndCalculate = async (racingSession: RacingSession) => {
-    setIsSubmittingResults(true);
-    setError("");
-    setSuccess("");
+        setIsSubmittingResults(true);
+        setError("");
+        setSuccess("");
         const isPodiumSession = racingSession.type === "SPRINT" || racingSession.type === "RACE";
         const wildcard = racingSession.wildcards?.[0];
         const resultsPayload: { driverId: string; position: number }[] = [];
 
-        // Jeśli sesja nie jest podium i nie ma wildcarda (np. zwykły trening bez typów), wystarczy oznaczyć ją jako zakończoną
+        // If session is not podium and has no wildcard (e.g. regular practice without predictions), just mark finished
         if (!isPodiumSession && !wildcard) {
             try {
                 const patchRes = await fetch(
@@ -211,9 +221,12 @@ export default function RacingSessionsPage() {
                         body: JSON.stringify({ votingClosedAt: new Date().toISOString() }),
                     }
                 );
-                if (!patchRes.ok) throw new Error("Błąd zamykania sesji");
+                if (!patchRes.ok) {
+                    const data = await patchRes.json().catch(() => null);
+                    throw new Error(apiError(data));
+                }
 
-                setSuccess("✓ Sesja oznaczona jako zakończona!");
+                setSuccess(t("sessionMarkedClosed"));
                 setResolvingSessionId(null);
                 const weekendResponse = await fetch(
                     `/api/competitions/${competitionId}/racing/weekends/${weekendId}`
@@ -222,8 +235,9 @@ export default function RacingSessionsPage() {
                     const weekendData = await weekendResponse.json();
                     setSessions(weekendData.weekend?.sessions || []);
                 }
-            } catch (err: any) {
-                setError(err.message || "Wystąpił błąd");
+            } catch (err: unknown) {
+                const msg = err instanceof Error ? err.message : apiError();
+                setError(msg);
             } finally {
                 setIsSubmittingResults(false);
             }
@@ -232,12 +246,12 @@ export default function RacingSessionsPage() {
 
         if (isPodiumSession) {
             if (!firstDriverId || !secondDriverId || !thirdDriverId) {
-                setError("Wybierz kierowców dla pozycji 1, 2 i 3");
+                setError(t("podiumRequiredError"));
                 setIsSubmittingResults(false);
                 return;
             }
             if (firstDriverId === secondDriverId || firstDriverId === thirdDriverId || secondDriverId === thirdDriverId) {
-                setError("Miejsca na podium muszą zajmować różni kierowcy");
+                setError(t("podiumDistinctError"));
                 setIsSubmittingResults(false);
                 return;
             }
@@ -250,7 +264,7 @@ export default function RacingSessionsPage() {
         if (wildcard && wildcardPosition) {
             const pos = parseInt(wildcardPosition);
             if (isNaN(pos) || pos < 1 || pos > maxPos) {
-                setError(`Pozycja Wildcard musi być liczbą od 1 do ${maxPos}`);
+                setError(t("wildcardRangeError", { max: maxPos }));
                 setIsSubmittingResults(false);
                 return;
             }
@@ -273,8 +287,8 @@ export default function RacingSessionsPage() {
             );
 
             if (!saveRes.ok) {
-                const data = await saveRes.json();
-                throw new Error(data.error || "Błąd zapisu wyników");
+                const data = await saveRes.json().catch(() => null);
+                throw new Error(apiError(data));
             }
 
             const calcRes = await fetch(
@@ -283,11 +297,11 @@ export default function RacingSessionsPage() {
             );
 
             if (!calcRes.ok) {
-                const data = await calcRes.json();
-                throw new Error(data.error || "Błąd podliczania punktów");
+                const data = await calcRes.json().catch(() => null);
+                throw new Error(apiError(data));
             }
 
-            setSuccess("✓ Wyniki zatwierdzone, głosowanie zablokowane i punkty podliczone!");
+            setSuccess(t("resultsCalculated"));
             setResolvingSessionId(null);
 
             const weekendResponse = await fetch(
@@ -297,21 +311,16 @@ export default function RacingSessionsPage() {
                 const weekendData = await weekendResponse.json();
                 setSessions(weekendData.weekend?.sessions || []);
             }
-        } catch (err: any) {
-            setError(err.message || "Wystąpił błąd");
+        } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : apiError();
+            setError(msg);
         } finally {
             setIsSubmittingResults(false);
         }
     };
 
-    if (!session?.user?.id) {
-        return (
-            <div className="p-8 text-center bg-white dark:bg-zinc-900 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-800">
-                <p className="text-zinc-600 dark:text-zinc-400">
-                    Please login first
-                </p>
-            </div>
-        );
+    if (status === "loading" || session?.user?.role !== "ADMIN") {
+        return null;
     }
 
     return (
@@ -319,13 +328,13 @@ export default function RacingSessionsPage() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <h1 className="text-3xl font-bold text-zinc-900 dark:text-white">
-                    Racing Sessions
+                    {t("title")}
                 </h1>
                 <Link
                     href={`/dashboard/competitions/${competitionId}/admin/racing/weekends`}
                     className="px-4 py-2 bg-gray-600 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 text-white font-medium rounded-lg transition-colors"
                 >
-                    Back
+                    {tCommon("back")}
                 </Link>
             </div>
 
@@ -347,13 +356,13 @@ export default function RacingSessionsPage() {
             {/* Create Form */}
             <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800">
                 <h2 className="text-xl font-bold text-zinc-900 dark:text-white mb-4">
-                    Create New Session
+                    {t("createTitle")}
                 </h2>
                 <form onSubmit={handleCreateSession} className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <input
                             type="text"
-                            placeholder="Session Name"
+                            placeholder={t("sessionName")}
                             value={formData.name}
                             onChange={(e) =>
                                 setFormData({
@@ -395,7 +404,10 @@ export default function RacingSessionsPage() {
                     {/* Wildcard Driver Selection */}
                     <div>
                         <h3 className="text-sm font-semibold text-zinc-900 dark:text-white mb-3">
-                            Select Wildcard Driver {formData.type === "SPRINT" || formData.type === "RACE" ? "(Optional)" : "(Required for this session)"}
+                            {t("selectWildcard")}{" "}
+                            {formData.type === "SPRINT" || formData.type === "RACE"
+                                ? t("wildcardOptional")
+                                : t("wildcardRequired")}
                         </h3>
                         <select
                             value={formData.wildcardDriverId}
@@ -408,11 +420,11 @@ export default function RacingSessionsPage() {
                             className="w-full px-4 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                             {(formData.type === "SPRINT" || formData.type === "RACE") ? (
-                                <option value="">No wildcard</option>
+                                <option value="">{t("noWildcard")}</option>
                             ) : (
-                                <option value="" disabled>Wybierz kierowcę Wildcard (wymagany)</option>
+                                <option value="" disabled>{t("selectWildcardPrompt")}</option>
                             )}
-                            <option value="RANDOM" className="font-bold text-amber-600">🎲 Random Driver</option>
+                            <option value="RANDOM" className="font-bold text-amber-600">{t("randomDriver")}</option>
                             <option disabled>────────────</option>
                             {drivers.map((driver) => (
                                 <option key={driver.id} value={driver.id}>
@@ -422,15 +434,15 @@ export default function RacingSessionsPage() {
                         </select>
                         <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-2">
                             {formData.wildcardDriverId === "RANDOM" 
-                                ? "A random driver will be selected from participants"
-                                : "Players will predict this driver's finishing position"}
+                                ? t("randomHelp")
+                                : t("predictHelp")}
                         </p>
                     </div>
 
                     {/* Driver Selection */}
                     <div>
                         <h3 className="text-sm font-semibold text-zinc-900 dark:text-white mb-3">
-                            Select Participating Drivers
+                            {t("participatingDrivers")}
                         </h3>
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-64 overflow-y-auto p-3 bg-zinc-50 dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700">
                             {drivers.map((driver) => (
@@ -455,7 +467,7 @@ export default function RacingSessionsPage() {
                             ))}
                         </div>
                         <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-2">
-                            Selected: {formData.selectedDrivers.length} drivers
+                            {t("selectedCount", { count: formData.selectedDrivers.length })}
                         </p>
                     </div>
 
@@ -463,7 +475,7 @@ export default function RacingSessionsPage() {
                         type="submit"
                         className="px-6 py-2 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white font-medium rounded-lg transition-colors"
                     >
-                        Create Session
+                        {t("createButton")}
                     </button>
                 </form>
             </div>
@@ -472,13 +484,13 @@ export default function RacingSessionsPage() {
             {loading ? (
                 <div className="p-8 text-center bg-white dark:bg-zinc-900 rounded-lg shadow-lg">
                     <p className="text-zinc-600 dark:text-zinc-400">
-                        Loading sessions...
+                        {tCommon("loading")}
                     </p>
                 </div>
             ) : sessions.length === 0 ? (
                 <div className="p-8 text-center bg-white dark:bg-zinc-900 rounded-lg shadow-lg">
                     <p className="text-zinc-600 dark:text-zinc-400">
-                        No sessions created yet
+                        {t("noSessions")}
                     </p>
                 </div>
             ) : (
@@ -487,7 +499,6 @@ export default function RacingSessionsPage() {
                         const isPodiumSession = racingSession.type === "SPRINT" || racingSession.type === "RACE";
                         const wildcard = racingSession.wildcards?.[0];
                         const isEditingThis = resolvingSessionId === racingSession.id;
-                        // Przygotowanie mapy zapisanych już wyników do podglądu
                         const resultsMap = new Map(
                             racingSession.results?.map((r) => [r.position, r.driver]) || []
                         );
@@ -504,36 +515,36 @@ export default function RacingSessionsPage() {
                                             </h3>
                                             {racingSession.resolved ? (
                                                 <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                                                    ✓ Rozliczona
+                                                    ✓ {t("resolved")}
                                                 </span>
                                             ) : (
                                                 <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
-                                                    ⏳ Oczekuje na wyniki
+                                                    ⏳ {t("pending")}
                                                 </span>
                                             )}
                                             {racingSession.votingClosedAt && (
                                                 <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
-                                                    🔒 Głosowanie zablokowane
+                                                    🔒 {t("votingClosed")}
                                                 </span>
                                             )}
                                         </div>
                                         <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-                                            Typ: <span className="font-semibold">{racingSession.type}</span> | Start:{" "}
-                                            {new Date(racingSession.startTime).toLocaleString("pl-PL", { timeZone: "Europe/Warsaw" })}
+                                            {tCommon("type")}: <span className="font-semibold">{racingSession.type}</span> | {tCommon("actions")}:{" "}
+                                            {new Date(racingSession.startTime).toLocaleString(locale, { timeZone: "Europe/Warsaw" })}
                                         </p>
                                         <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                                            Uczestnicy: {racingSession.participants.length} kierowców
+                                            {t("participantsCount", { count: racingSession.participants.length })}
                                             {wildcard && (
                                                 <span className="ml-2 text-amber-600 font-medium">
-                                                    | Wildcard: #{wildcard.driver.number} {wildcard.driver.name}
+                                                    | {t("wildcardInfo", { number: wildcard.driver.number, name: wildcard.driver.name })}
                                                 </span>
                                             )}
                                         </p>
-                                        {/* Podgląd wprowadzonych wyników */}
+                                        {/* Saved Results Preview */}
                                         {racingSession.results && racingSession.results.length > 0 && (
                                             <div className="mt-3 p-3 bg-zinc-50 dark:bg-zinc-800/60 rounded-lg border border-zinc-200 dark:border-zinc-700">
                                                 <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-1">
-                                                    Zatwierdzone wyniki:
+                                                    {t("confirmedResults")}
                                                 </p>
                                                 <div className="flex flex-wrap gap-4 text-sm text-zinc-800 dark:text-zinc-200">
                                                     {resultsMap.get(1) && <span>🥇 P1: {resultsMap.get(1)?.name}</span>}
@@ -548,7 +559,7 @@ export default function RacingSessionsPage() {
                                             </div>
                                         )}
                                     </div>
-                                    {/* Przyciski akcji */}
+                                    {/* Action Buttons */}
                                     <div className="flex flex-wrap items-center gap-2">
                                         <button
                                             onClick={() => {
@@ -556,7 +567,6 @@ export default function RacingSessionsPage() {
                                                     setResolvingSessionId(null);
                                                 } else {
                                                     setResolvingSessionId(racingSession.id);
-                                                    // Załaduj istniejące wartości do edycji jeśli są
                                                     const p1 = racingSession.results?.find(r => r.position === 1)?.driverId || "";
                                                     const p2 = racingSession.results?.find(r => r.position === 2)?.driverId || "";
                                                     const p3 = racingSession.results?.find(r => r.position === 3)?.driverId || "";
@@ -577,35 +587,35 @@ export default function RacingSessionsPage() {
                                                     : "bg-blue-600 hover:bg-blue-700"
                                             }`}
                                         >
-                                            {isEditingThis ? "Anuluj" : racingSession.resolved ? "Edytuj wyniki" : "Wprowadź wyniki"}
+                                            {isEditingThis ? tCommon("cancel") : racingSession.resolved ? t("editResults") : t("enterResults")}
                                         </button>
                                         <button
                                             onClick={() => handleDeleteSession(racingSession.id)}
                                             className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors text-sm"
                                         >
-                                            Usuń
+                                            {t("deleteSession")}
                                         </button>
                                     </div>
                                 </div>
-                                {/* Formularz wprowadzania wyników */}
+                                {/* Form for Entering Results */}
                                 {isEditingThis && (
                                     <div className="mt-6 pt-6 border-t border-zinc-200 dark:border-zinc-800">
                                         <h4 className="text-md font-semibold text-zinc-900 dark:text-white mb-3">
-                                            Wprowadź oficjalne wyniki sesji
+                                            {t("enterResultsTitle")}
                                         </h4>
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                                             {isPodiumSession && (
                                                 <>
                                                     <div>
                                                         <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                                                            🥇 1. Miejsce (P1)
+                                                            {t("p1Label")}
                                                         </label>
                                                         <select
                                                             value={firstDriverId}
                                                             onChange={(e) => setFirstDriverId(e.target.value)}
                                                             className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm"
                                                         >
-                                                            <option value="">Wybierz kierowcę</option>
+                                                            <option value="">{tCommon("actions")}</option>
                                                             {racingSession.participants.map((p) => (
                                                                 <option key={p.driver.id} value={p.driver.id}>
                                                                     #{p.driver.number} {p.driver.name} ({p.driver.team})
@@ -615,14 +625,14 @@ export default function RacingSessionsPage() {
                                                     </div>
                                                     <div>
                                                         <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                                                            🥈 2. Miejsce (P2)
+                                                            {t("p2Label")}
                                                         </label>
                                                         <select
                                                             value={secondDriverId}
                                                             onChange={(e) => setSecondDriverId(e.target.value)}
                                                             className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm"
                                                         >
-                                                            <option value="">Wybierz kierowcę</option>
+                                                            <option value="">{tCommon("actions")}</option>
                                                             {racingSession.participants.map((p) => (
                                                                 <option key={p.driver.id} value={p.driver.id}>
                                                                     #{p.driver.number} {p.driver.name} ({p.driver.team})
@@ -632,14 +642,14 @@ export default function RacingSessionsPage() {
                                                     </div>
                                                     <div>
                                                         <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                                                            🥉 3. Miejsce (P3)
+                                                            {t("p3Label")}
                                                         </label>
                                                         <select
                                                             value={thirdDriverId}
                                                             onChange={(e) => setThirdDriverId(e.target.value)}
                                                             className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm"
                                                         >
-                                                            <option value="">Wybierz kierowcę</option>
+                                                            <option value="">{tCommon("actions")}</option>
                                                             {racingSession.participants.map((p) => (
                                                                 <option key={p.driver.id} value={p.driver.id}>
                                                                     #{p.driver.number} {p.driver.name} ({p.driver.team})
@@ -652,7 +662,7 @@ export default function RacingSessionsPage() {
                                             {wildcard && (
                                                 <div>
                                                     <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                                                        🎯 Pozycja Wildcard: #{wildcard.driver.number} {wildcard.driver.name}
+                                                        {t("wildcardPosLabel", { number: wildcard.driver.number, name: wildcard.driver.name })}
                                                     </label>
                                                     <input
                                                         type="number"
@@ -664,7 +674,7 @@ export default function RacingSessionsPage() {
                                                         className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm"
                                                     />
                                                     <span className="text-xs text-zinc-500">
-                                                        Limit: 1 - {racingSession.participants.length}
+                                                        {t("wildcardPosLimit", { max: racingSession.participants.length })}
                                                     </span>
                                                 </div>
                                             )}
@@ -674,7 +684,7 @@ export default function RacingSessionsPage() {
                                             onClick={() => handleSaveAndCalculate(racingSession)}
                                             className="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors text-sm disabled:opacity-50 flex items-center gap-2"
                                         >
-                                            {isSubmittingResults ? "Zapisywanie i podliczanie..." : "✓ Zatwierdź wyniki i podlicz punkty"}
+                                            {isSubmittingResults ? t("calculating") : t("submitAndCalculate")}
                                         </button>
                                     </div>
                                 )}
