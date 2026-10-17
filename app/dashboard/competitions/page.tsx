@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useApiError } from "@/lib/useApiError";
+import { CheckIcon, GlobeIcon, LockIcon, ClipboardIcon } from "@/components/Icons";
 
 interface Competition {
     id: string;
@@ -207,9 +208,10 @@ export default function CompetitionsPage() {
 
             {/* Success Message */}
             {successMessage && (
-                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg">
+                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg flex items-center gap-2">
+                    <CheckIcon className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
                     <p className="text-sm text-emerald-700 dark:text-emerald-400">
-                        ✓ {successMessage}
+                        {successMessage}
                     </p>
                 </div>
             )}
@@ -297,13 +299,23 @@ export default function CompetitionsPage() {
                                         </td>
                                         <td className="px-6 py-4">
                                                 <span
-                                                    className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                                                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
                                                         comp.isPublic
                                                             ? "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300"
                                                             : "bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300"
                                                     }`}
                                                 >
-                                                    {comp.isPublic ? `🌍 ${tCommon("public")}` : `🔒 ${tCommon("private")}`}
+                                                    {comp.isPublic ? (
+                                                        <>
+                                                            <GlobeIcon className="w-3.5 h-3.5" />
+                                                            <span>{tCommon("public")}</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <LockIcon className="w-3.5 h-3.5" />
+                                                            <span>{tCommon("private")}</span>
+                                                        </>
+                                                    )}
                                                 </span>
                                         </td>
                                         <td className="px-6 py-4">
@@ -318,10 +330,10 @@ export default function CompetitionsPage() {
                                                             setSuccessMessage(t("codeCopied"));
                                                             setTimeout(() => setSuccessMessage(""), 3000);
                                                         }}
-                                                        className="text-xs px-2 py-1 bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 rounded transition-colors"
+                                                        className="p-1.5 bg-zinc-200 dark:bg-zinc-700 hover:bg-zinc-300 dark:hover:bg-zinc-600 rounded text-zinc-700 dark:text-zinc-300 transition-colors"
                                                         title={t("copyInviteCode")}
                                                     >
-                                                        📋
+                                                        <ClipboardIcon className="w-3.5 h-3.5" />
                                                     </button>
                                                 </div>
                                             ) : (
@@ -402,12 +414,22 @@ export default function CompetitionsPage() {
 
                                     <div className="bg-zinc-50 dark:bg-zinc-800 p-2 rounded">
                                         <p className="text-xs text-zinc-600 dark:text-zinc-400">{tCommon("status")}</p>
-                                        <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium mt-1 ${
+                                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium mt-1 ${
                                             comp.isPublic
                                                 ? "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300"
                                                 : "bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300"
                                         }`}>
-                                            {comp.isPublic ? `🌍 ${tCommon("public")}` : `🔒 ${tCommon("private")}`}
+                                            {comp.isPublic ? (
+                                                <>
+                                                    <GlobeIcon className="w-3 h-3" />
+                                                    <span>{tCommon("public")}</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <LockIcon className="w-3 h-3" />
+                                                    <span>{tCommon("private")}</span>
+                                                </>
+                                            )}
                                         </span>
                                     </div>
 
@@ -424,10 +446,10 @@ export default function CompetitionsPage() {
                                                         setSuccessMessage(t("codeCopied"));
                                                         setTimeout(() => setSuccessMessage(""), 3000);
                                                     }}
-                                                    className="p-1 text-xs"
+                                                    className="p-1 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
                                                     title={t("copyInviteCode")}
                                                 >
-                                                    📋
+                                                    <ClipboardIcon className="w-3.5 h-3.5" />
                                                 </button>
                                             </div>
                                         </div>

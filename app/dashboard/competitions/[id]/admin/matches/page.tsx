@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
 import { useApiError } from "@/lib/useApiError";
 import { Locale } from "@/i18n/config";
+import { CheckIcon, LockIcon, PencilIcon, TrashIcon, AlertTriangleIcon } from "@/components/Icons";
 
 interface Team {
     id: string;
@@ -147,7 +148,7 @@ export default function AdminMatchesPage() {
             }
 
             setMatches([...matches, data.match]);
-            setSuccessMessage(`✓ ${t("matchCreated")}`);
+            setSuccessMessage(t("matchCreated"));
 
             // Reset form
             setHomeTeamId("");
@@ -202,7 +203,7 @@ export default function AdminMatchesPage() {
                 matches.map((m) => (m.id === matchId ? data.match : m))
             );
 
-            setSuccessMessage(`✓ ${t("saveResult")}`);
+            setSuccessMessage(t("saveResult"));
             setEditingMatchId(null);
             setEditHomeGoals("");
             setEditAwayGoals("");
@@ -217,7 +218,7 @@ export default function AdminMatchesPage() {
                 );
 
                 if (calculateResponse.ok) {
-                    setSuccessMessage(`✓ ${t("resultUpdated")}`);
+                    setSuccessMessage(t("resultUpdated"));
                 } else {
                     const errorData = await calculateResponse.json();
                     setError(apiError(errorData));
@@ -259,7 +260,7 @@ export default function AdminMatchesPage() {
                 return;
             }
 
-            setSuccessMessage(`✓ ${t("pointsCalculated")}`);
+            setSuccessMessage(t("pointsCalculated"));
             setIsCalculating("");
 
             setTimeout(() => setSuccessMessage(""), 3000);
@@ -294,7 +295,7 @@ export default function AdminMatchesPage() {
             }
 
             setMatches(matches.filter((m) => m.id !== matchId));
-            setSuccessMessage(`✓ ${t("matchDeleted")}`);
+            setSuccessMessage(t("matchDeleted"));
 
             setTimeout(() => setSuccessMessage(""), 3000);
         } catch (err) {
@@ -331,15 +332,17 @@ export default function AdminMatchesPage() {
 
             {/* Messages */}
             {error && (
-                <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2">
+                    <AlertTriangleIcon className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0" />
                     <p className="text-sm text-red-700 dark:text-red-400">
-                        ⚠️ {error}
+                        {error}
                     </p>
                 </div>
             )}
 
             {successMessage && (
-                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg">
+                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg flex items-center gap-2">
+                    <CheckIcon className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
                     <p className="text-sm text-emerald-700 dark:text-emerald-400">
                         {successMessage}
                     </p>
@@ -494,8 +497,9 @@ export default function AdminMatchesPage() {
                                 </div>
 
                                 {match.resolved && (
-                                    <div className="px-4 py-2 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 rounded-lg text-sm font-medium">
-                                        ✓ {tCommon("status")}
+                                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 rounded-lg text-sm font-medium">
+                                        <CheckIcon className="w-4 h-4" />
+                                        <span>{tCommon("status")}</span>
                                     </div>
                                 )}
                             </div>
@@ -602,18 +606,20 @@ export default function AdminMatchesPage() {
                                                         match.awayGoals.toString()
                                                     );
                                             }}
-                                            className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded text-sm transition-colors"
+                                            className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded text-sm transition-colors"
                                         >
-                                            ✏️ {t("editResult")}
+                                            <PencilIcon className="w-3.5 h-3.5" />
+                                            <span>{t("editResult")}</span>
                                         </button>
 
                                         <button
                                             onClick={() =>
                                                 handleDeleteMatch(match.id)
                                             }
-                                            className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white font-medium rounded text-sm transition-colors"
+                                            className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white font-medium rounded text-sm transition-colors"
                                         >
-                                            🗑️ {t("deleteMatch")}
+                                            <TrashIcon className="w-3.5 h-3.5" />
+                                            <span>{t("deleteMatch")}</span>
                                         </button>
                                     </div>
                                 </>
