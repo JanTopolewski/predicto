@@ -29,6 +29,16 @@
     "warning": "Ostrzeżenie",
     "pointsShort": "pkt"
   },
+  "notifications": {
+    "enable": "Włącz powiadomienia",
+    "disable": "Wyłącz powiadomienia",
+    "enabled": "Powiadomienia są włączone",
+    "disabled": "Powiadomienia są wyłączone",
+    "notSupported": "Twoja przeglądarka nie obsługuje powiadomień Push",
+    "permissionDenied": "Powiadomienia zablokowane w przeglądarce",
+    "subscribedSuccess": "Powiadomienia włączone pomyślnie!",
+    "unsubscribedSuccess": "Powiadomienia wyłączone"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "competitions": "Konkurencje",

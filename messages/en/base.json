@@ -29,6 +29,16 @@
     "warning": "Warning",
     "pointsShort": "pts"
   },
+  "notifications": {
+    "enable": "Enable notifications",
+    "disable": "Disable notifications",
+    "enabled": "Notifications are enabled",
+    "disabled": "Notifications are disabled",
+    "notSupported": "Your browser does not support Push notifications",
+    "permissionDenied": "Notifications blocked in browser settings",
+    "subscribedSuccess": "Notifications enabled successfully!",
+    "unsubscribedSuccess": "Notifications disabled"
+  },
   "nav": {
     "dashboard": "Dashboard",
     "competitions": "Competitions",
