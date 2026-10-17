@@ -249,7 +249,7 @@ export default function MatchesPage() {
                                             </span>
                                         </div>
                                         {match.resolved && (
-                                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-200 dark:bg-emerald-800 text-emerald-900 dark:text-emerald-100">
+                                            <span className="inline-flex items-center justify-center text-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-200 dark:bg-emerald-800 text-emerald-900 dark:text-emerald-100 whitespace-nowrap leading-normal">
                                                 {t("pointsEarned", { points: match.predictions[0].points })}
                                             </span>
                                         )}
