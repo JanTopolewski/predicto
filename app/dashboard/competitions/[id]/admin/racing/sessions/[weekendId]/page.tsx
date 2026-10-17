@@ -640,10 +640,10 @@ export default function RacingSessionsPage() {
                                             <div className="p-3 sm:p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-zinc-200 dark:border-zinc-700">
                                                 <div className="flex items-center justify-between mb-3">
                                                     <p className="text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
-                                                        Podium (P2 - P1 - P3)
+                                                        {t("podiumSectionTitle")}
                                                     </p>
                                                     <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                                                        Oficjalne pozycje na podium
+                                                        {t("podiumSectionSubtitle")}
                                                     </span>
                                                 </div>
 
