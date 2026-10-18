@@ -301,3 +301,44 @@ export function PlusIcon({ className = "w-4 h-4", ...props }: IconProps) {
     );
 }
 
+export function BellIcon({ className = "w-5 h-5", ...props }: IconProps) {
+    return (
+        <svg
+            className={className}
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.75}
+            stroke="currentColor"
+            aria-hidden="true"
+            {...props}
+        >
+            <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"
+            />
+        </svg>
+    );
+}
+
+export function BellSlashIcon({ className = "w-5 h-5", ...props }: IconProps) {
+    return (
+        <svg
+            className={className}
+            fill="none"
+            viewBox="0 0 24 24"
+            strokeWidth={1.75}
+            stroke="currentColor"
+            aria-hidden="true"
+            {...props}
+        >
+            <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M9.143 17.082a24.248 24.248 0 003.857.418m-3.857-.418a23.85 23.85 0 01-4.83-1.077c-.504-.2-.843-.7-.843-1.246 0-3.328 1.488-6.31 3.86-8.324M14.857 17.082a24.255 24.255 0 01-1.857.418m1.857-.418c1.895-.225 3.722-.67 5.455-1.31A8.967 8.967 0 0018 9.75v-.7V9a6 6 0 00-6-6c-1.35 0-2.6.446-3.615 1.2M3 3l18 18m-6-3.918a3 3 0 01-3 3"
+            />
+        </svg>
+    );
+}
+
+

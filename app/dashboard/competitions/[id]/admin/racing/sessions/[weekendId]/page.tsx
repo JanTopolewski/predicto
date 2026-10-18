@@ -149,7 +149,7 @@ export default function RacingSessionsPage() {
                         weekendId,
                         type: formData.type,
                         name: formData.name,
-                        startTime: formData.startTime,
+                        startTime: new Date(formData.startTime).toISOString(),
                         participatingDriverIds: formData.selectedDrivers,
                         wildcardDriverId: formData.wildcardDriverId || null,
                     }),

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslations, useLocale } from "next-intl";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { NotificationToggle } from "@/components/NotificationToggle";
 import { Locale } from "@/i18n/config";
 
 export default function DashboardLayout({
@@ -63,7 +64,8 @@ export default function DashboardLayout({
                                 </Link>
                             ))}
 
-                            {/* Language Switcher */}
+                            {/* Notifications & Language Switcher */}
+                            <NotificationToggle />
                             <LanguageSwitcher currentLocale={locale} />
 
                             {/* User Info & Logout */}
@@ -91,6 +93,7 @@ export default function DashboardLayout({
 
                         {/* Mobile Menu Button & Switcher */}
                         <div className="flex md:hidden items-center gap-2">
+                            <NotificationToggle />
                             <LanguageSwitcher currentLocale={locale} />
                             <button
                                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
