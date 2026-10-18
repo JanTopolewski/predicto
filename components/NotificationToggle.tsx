@@ -39,15 +39,16 @@ export function NotificationToggle() {
   const checkSubscription = async () => {
     try {
       setLoading(true);
-      const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
+      const registration = await navigator.serviceWorker.getRegistration();
 
-      if (subscription) {
-        setIsSubscribed(true);
+      if (registration) {
+        const subscription = await registration.pushManager.getSubscription();
+        setIsSubscribed(Boolean(subscription));
       } else {
         setIsSubscribed(false);
       }
-    } catch {
+    } catch (err) {
+      console.error("Error checking push subscription:", err);
       setIsSubscribed(false);
     } finally {
       setLoading(false);
@@ -63,18 +64,20 @@ export function NotificationToggle() {
     try {
       if (isSubscribed) {
         // DISABLE NOTIFICATIONS
-        const registration = await navigator.serviceWorker.ready;
-        const subscription = await registration.pushManager.getSubscription();
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (registration) {
+          const subscription = await registration.pushManager.getSubscription();
 
-        if (subscription) {
-          const endpoint = subscription.endpoint;
-          await subscription.unsubscribe();
+          if (subscription) {
+            const endpoint = subscription.endpoint;
+            await subscription.unsubscribe();
 
-          await fetch("/api/push/subscription", {
-            method: "DELETE",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ endpoint }),
-          });
+            await fetch("/api/push/subscription", {
+              method: "DELETE",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ endpoint }),
+            });
+          }
         }
         setIsSubscribed(false);
       } else {
@@ -88,7 +91,6 @@ export function NotificationToggle() {
 
         // Register service worker
         const registration = await navigator.serviceWorker.register("/sw.js");
-        await navigator.serviceWorker.ready;
 
         const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
         if (!publicKey) {

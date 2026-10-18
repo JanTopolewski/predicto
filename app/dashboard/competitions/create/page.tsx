@@ -56,8 +56,8 @@ export default function CreateCompetitionPage() {
                     name,
                     type,
                     season,
-                    startDate,
-                    endDate,
+                    startDate: new Date(startDate).toISOString(),
+                    endDate: new Date(endDate).toISOString(),
                     isPublic,
                 }),
             });

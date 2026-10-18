@@ -243,7 +243,7 @@ export default function RacingPage() {
                                                     <p className="text-sm text-zinc-600 dark:text-zinc-400">
                                                         {new Date(
                                                             racingSession.startTime
-                                                        ).toLocaleString(locale, { timeZone: "Europe/Warsaw" })}
+                                                        ).toLocaleString(locale)}
                                                     </p>
                                                 </div>
                                                 {isStarted && (

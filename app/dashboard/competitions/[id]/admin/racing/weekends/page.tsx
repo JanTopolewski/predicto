@@ -93,7 +93,10 @@ export default function RacingWeekendsPage() {
                 {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(formData),
+                    body: JSON.stringify({
+                        ...formData,
+                        raceDate: new Date(formData.raceDate).toISOString(),
+                    }),
                 }
             );
 
