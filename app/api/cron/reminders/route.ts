@@ -70,9 +70,9 @@ export async function POST(request: NextRequest) {
 
     let sentCount = 0;
 
-    // =========================================================================
+    // -------------------------------------------------------------------------
     // 2. FOOTBALL MATCHES
-    // =========================================================================
+    // -------------------------------------------------------------------------
 
     // Fetch upcoming scheduled matches within the 24h window
     const upcomingMatches = await prisma.footballMatch.findMany({
@@ -116,88 +116,100 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    for (const match of upcomingMatches) {
-      const isLateStage = match.kickoff <= plus4Hours;
-      const stage: NotificationStage = isLateStage ? "LATE" : "EARLY";
-
-      // Set of user IDs who have already submitted a prediction
-      const usersWithPrediction = new Set(match.predictions.map((p) => p.userId));
-
-      // Check who has already received a notification for this stage and match
-      const existingLogs = await prisma.notificationLog.findMany({
+    if (upcomingMatches.length > 0) {
+      // Batch fetch existing logs for all upcoming matches to prevent N+1 queries
+      const matchIds = upcomingMatches.map((m) => m.id);
+      const existingMatchLogs = await prisma.notificationLog.findMany({
         where: {
-          targetId: match.id,
+          targetId: { in: matchIds },
           type: "MATCH",
-          stage: stage,
         },
-        select: { userId: true },
+        select: { userId: true, targetId: true, stage: true },
       });
-      const alreadyNotifiedUsers = new Set(existingLogs.map((l) => l.userId));
 
-      const members = match.season.competition.members;
-      const competitionId = match.season.competitionId;
+      const notifiedMatchSet = new Set(
+        existingMatchLogs.map((l) => `${l.targetId}:${l.userId}:${l.stage}`)
+      );
 
-      for (const member of members) {
-        const userId = member.userId;
-        const userSubs = member.user.pushSubscriptions;
+      const matchPushTasks: Array<() => Promise<void>> = [];
 
-        // Conditions: has push subscription, has not voted, has not been notified yet
-        if (
-          userSubs.length > 0 &&
-          !usersWithPrediction.has(userId) &&
-          !alreadyNotifiedUsers.has(userId)
-        ) {
-          const home = match.homeTeam.shortName || match.homeTeam.name;
-          const away = match.awayTeam.shortName || match.awayTeam.name;
+      for (const match of upcomingMatches) {
+        const isLateStage = match.kickoff <= plus4Hours;
+        const stage: NotificationStage = isLateStage ? "LATE" : "EARLY";
 
-          const title: LocalizedText =
-            stage === "EARLY"
-              ? { pl: "Mecz za 1 dzień!", en: "Match in 1 day!" }
-              : { pl: "Mecz za 4 godziny!", en: "Match in 4 hours!" };
+        // Set of user IDs who have already submitted a prediction
+        const usersWithPrediction = new Set(match.predictions.map((p) => p.userId));
+        const members = match.season.competition.members;
+        const competitionId = match.season.competitionId;
 
-          const body: LocalizedText =
-            stage === "EARLY"
-              ? {
-                  pl: `Jutro mecz ${home} vs ${away}. Nie zapomnij oddać typu!`,
-                  en: `Tomorrow: ${home} vs ${away}. Don't forget to submit your prediction!`,
-                }
-              : {
-                  pl: `Zostały ostatnie godziny na typowanie meczu ${home} vs ${away}!`,
-                  en: `Only a few hours left to predict ${home} vs ${away}!`,
-                };
+        for (const member of members) {
+          const userId = member.userId;
+          const userSubs = member.user.pushSubscriptions;
+          const key = `${match.id}:${userId}:${stage}`;
 
-          await sendPushToUser(
-            userId,
-            {
-              title,
-              body,
-              url: `/dashboard/competitions/${competitionId}/matches`,
-            },
-            userSubs
-          );
+          // Conditions: has push subscription, has not voted, has not been notified yet
+          if (
+            userSubs.length > 0 &&
+            !usersWithPrediction.has(userId) &&
+            !notifiedMatchSet.has(key)
+          ) {
+            notifiedMatchSet.add(key);
 
-          // Save notification log
-          try {
-            await prisma.notificationLog.create({
-              data: {
+            const home = match.homeTeam.shortName || match.homeTeam.name;
+            const away = match.awayTeam.shortName || match.awayTeam.name;
+
+            const title: LocalizedText =
+              stage === "EARLY"
+                ? { pl: "Mecz za 1 dzień!", en: "Match in 1 day!" }
+                : { pl: "Mecz za 4 godziny!", en: "Match in 4 hours!" };
+
+            const body: LocalizedText =
+              stage === "EARLY"
+                ? {
+                    pl: `Jutro mecz ${home} vs ${away}. Nie zapomnij oddać typu!`,
+                    en: `Tomorrow: ${home} vs ${away}. Don't forget to submit your prediction!`,
+                  }
+                : {
+                    pl: `Zostały ostatnie godziny na typowanie meczu ${home} vs ${away}!`,
+                    en: `Only a few hours left to predict ${home} vs ${away}!`,
+                  };
+
+            matchPushTasks.push(async () => {
+              await sendPushToUser(
                 userId,
-                type: "MATCH",
-                targetId: match.id,
-                stage: stage,
-              },
+                {
+                  title,
+                  body,
+                  url: `/dashboard/competitions/${competitionId}/matches`,
+                },
+                userSubs
+              );
+
+              try {
+                await prisma.notificationLog.create({
+                  data: {
+                    userId,
+                    type: "MATCH",
+                    targetId: match.id,
+                    stage: stage,
+                  },
+                });
+                sentCount++;
+              } catch {
+                // Ignore unique constraint collision (race condition)
+              }
             });
-            alreadyNotifiedUsers.add(userId);
-            sentCount++;
-          } catch {
-            // Ignore unique constraint collision (race condition)
           }
         }
       }
+
+      // Execute tasks concurrently in parallel batches
+      await Promise.allSettled(matchPushTasks.map((task) => task()));
     }
 
-    // =========================================================================
+    // -------------------------------------------------------------------------
     // 3. RACING SESSIONS
-    // =========================================================================
+    // -------------------------------------------------------------------------
 
     // Fetch upcoming sessions within the 20h window
     const upcomingSessions = await prisma.racingSession.findMany({
@@ -242,77 +254,91 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    for (const session of upcomingSessions) {
-      const isLateStage = session.startTime <= plus4Hours;
-      const stage: NotificationStage = isLateStage ? "LATE" : "EARLY";
-
-      const usersWithPrediction = new Set(session.predictions.map((p) => p.userId));
-
-      const existingLogs = await prisma.notificationLog.findMany({
+    if (upcomingSessions.length > 0) {
+      // Batch fetch existing logs for all upcoming racing sessions
+      const sessionIds = upcomingSessions.map((s) => s.id);
+      const existingSessionLogs = await prisma.notificationLog.findMany({
         where: {
-          targetId: session.id,
+          targetId: { in: sessionIds },
           type: "RACING_SESSION",
-          stage: stage,
         },
-        select: { userId: true },
+        select: { userId: true, targetId: true, stage: true },
       });
-      const alreadyNotifiedUsers = new Set(existingLogs.map((l) => l.userId));
 
-      const members = session.weekend.season.competition.members;
-      const competitionId = session.weekend.season.competitionId;
-      const gpName = session.weekend.grandPrix;
+      const notifiedSessionSet = new Set(
+        existingSessionLogs.map((l) => `${l.targetId}:${l.userId}:${l.stage}`)
+      );
 
-      for (const member of members) {
-        const userId = member.userId;
-        const userSubs = member.user.pushSubscriptions;
+      const sessionPushTasks: Array<() => Promise<void>> = [];
 
-        if (
-          userSubs.length > 0 &&
-          !usersWithPrediction.has(userId) &&
-          !alreadyNotifiedUsers.has(userId)
-        ) {
-          const title: LocalizedText =
-            stage === "EARLY"
-              ? { pl: "Sesja wyścigowa za 20 godzin!", en: "Racing session in 20 hours!" }
-              : { pl: "Sesja wyścigowa za 4 godziny!", en: "Racing session in 4 hours!" };
+      for (const session of upcomingSessions) {
+        const isLateStage = session.startTime <= plus4Hours;
+        const stage: NotificationStage = isLateStage ? "LATE" : "EARLY";
 
-          const body: LocalizedText =
-            stage === "EARLY"
-              ? {
-                  pl: `Przed nami ${gpName} (${session.name}). Nie zapomnij oddać typu!`,
-                  en: `Upcoming: ${gpName} (${session.name}). Don't forget to submit your prediction!`,
-                }
-              : {
-                  pl: `Zostały 4 godziny do startu ${gpName} (${session.name}). Oddaj swój typ!`,
-                  en: `Only 4 hours left until ${gpName} (${session.name}). Submit your prediction!`,
-                };
+        const usersWithPrediction = new Set(session.predictions.map((p) => p.userId));
+        const members = session.weekend.season.competition.members;
+        const competitionId = session.weekend.season.competitionId;
+        const gpName = session.weekend.grandPrix;
 
-          await sendPushToUser(
-            userId,
-            {
-              title,
-              body,
-              url: `/dashboard/competitions/${competitionId}/racing`,
-            },
-            userSubs
-          );
+        for (const member of members) {
+          const userId = member.userId;
+          const userSubs = member.user.pushSubscriptions;
+          const key = `${session.id}:${userId}:${stage}`;
 
-          try {
-            await prisma.notificationLog.create({
-              data: {
+          if (
+            userSubs.length > 0 &&
+            !usersWithPrediction.has(userId) &&
+            !notifiedSessionSet.has(key)
+          ) {
+            notifiedSessionSet.add(key);
+
+            const title: LocalizedText =
+              stage === "EARLY"
+                ? { pl: "Sesja wyścigowa za 20 godzin!", en: "Racing session in 20 hours!" }
+                : { pl: "Sesja wyścigowa za 4 godziny!", en: "Racing session in 4 hours!" };
+
+            const body: LocalizedText =
+              stage === "EARLY"
+                ? {
+                    pl: `Przed nami ${gpName} (${session.name}). Nie zapomnij oddać typu!`,
+                    en: `Upcoming: ${gpName} (${session.name}). Don't forget to submit your prediction!`,
+                  }
+                : {
+                    pl: `Zostały 4 godziny do startu ${gpName} (${session.name}). Oddaj swój typ!`,
+                    en: `Only 4 hours left until ${gpName} (${session.name}). Submit your prediction!`,
+                  };
+
+            sessionPushTasks.push(async () => {
+              await sendPushToUser(
                 userId,
-                type: "RACING_SESSION",
-                targetId: session.id,
-                stage: stage,
-              },
+                {
+                  title,
+                  body,
+                  url: `/dashboard/competitions/${competitionId}/racing`,
+                },
+                userSubs
+              );
+
+              try {
+                await prisma.notificationLog.create({
+                  data: {
+                    userId,
+                    type: "RACING_SESSION",
+                    targetId: session.id,
+                    stage: stage,
+                  },
+                });
+                sentCount++;
+              } catch {
+                // Ignore unique constraint collisions
+              }
             });
-            alreadyNotifiedUsers.add(userId);
-            sentCount++;
-          } catch {
-            // Ignore unique constraint collisions
           }
         }
       }
+
+      // Execute tasks concurrently in parallel batches
+      await Promise.allSettled(sessionPushTasks.map((task) => task()));
     }
 
     return NextResponse.json({

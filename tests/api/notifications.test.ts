@@ -174,7 +174,9 @@ describe("Cron Reminders API", () => {
     ]);
 
     // Użytkownik ma już log wysłania
-    db.notificationLog.findMany.mockResolvedValue([{ userId: "user1" }]);
+    db.notificationLog.findMany.mockResolvedValue([
+      { userId: "user1", targetId: "match1", stage: "EARLY" },
+    ]);
     db.racingSession.findMany.mockResolvedValue([]);
 
     const res = await cronReminders(req);
