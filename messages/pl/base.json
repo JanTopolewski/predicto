@@ -44,6 +44,7 @@
     "competitions": "Konkurencje",
     "manageUsers": "Zarządzanie użytkownikami",
     "manageTeams": "Zarządzanie drużynami",
+    "profile": "Profil i ustawienia",
     "changePassword": "Zmień hasło",
     "logout": "Wyloguj się"
   },
@@ -88,6 +89,18 @@
       "backToDashboard": "Wróć do panelu",
       "passwordMismatch": "Nowe hasła nie są identyczne",
       "passwordTooShort": "Nowe hasło musi mieć co najmniej 8 znaków"
+    },
+    "deleteAccount": {
+      "sectionTitle": "Zarządzanie kontem",
+      "title": "Usuń konto",
+      "subtitle": "Trwałe usunięcie konta i wszystkich Twoich danych. Ta operacja jest nieodwracalna.",
+      "button": "Usuń konto",
+      "modalTitle": "Czy na pewno chcesz usunąć konto?",
+      "modalDescription": "Twoje konto, subskrypcje powiadomień oraz Twoje typy zostaną trwale usunięte. Jeśli utworzyłeś jakieś konkurencje, przejdą one pod zarząd systemu, aby pozostali uczestnicy mogli kontynuować grę.",
+      "passwordPrompt": "Wpisz swoje aktualne hasło, aby potwierdzić usunięcie konta:",
+      "passwordPlaceholder": "Wpisz hasło",
+      "confirmButton": "Tak, trwale usuń moje konto",
+      "deleting": "Usuwanie konta..."
     }
   },
   "dashboard": {

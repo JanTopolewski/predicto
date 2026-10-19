@@ -44,6 +44,7 @@
     "competitions": "Competitions",
     "manageUsers": "Manage users",
     "manageTeams": "Manage teams & drivers",
+    "profile": "Profile & settings",
     "changePassword": "Change password",
     "logout": "Log out"
   },
@@ -88,6 +89,18 @@
       "backToDashboard": "Back to dashboard",
       "passwordMismatch": "New passwords do not match",
       "passwordTooShort": "New password must be at least 8 characters"
+    },
+    "deleteAccount": {
+      "sectionTitle": "Account Management",
+      "title": "Delete account",
+      "subtitle": "Permanently delete your account and all your data. This action cannot be undone.",
+      "button": "Delete account",
+      "modalTitle": "Are you sure you want to delete your account?",
+      "modalDescription": "Your account, push subscriptions, and predictions will be permanently removed. If you created any competitions, they will be transferred to system management so other participants can continue playing.",
+      "passwordPrompt": "Enter your current password to confirm account deletion:",
+      "passwordPlaceholder": "Enter password",
+      "confirmButton": "Yes, permanently delete my account",
+      "deleting": "Deleting account..."
     }
   },
   "dashboard": {

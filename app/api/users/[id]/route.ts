@@ -5,26 +5,63 @@ import { NextRequest, NextResponse } from "next/server";
 import { apiError, forbidden, internalError } from "@/lib/api";
 
 export async function DELETE(
-    _request: NextRequest,
+    request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const session = await auth();
 
-        if (!session || session.user?.role !== "ADMIN") {
+        if (!session?.user?.id) {
             return forbidden();
         }
 
         const { id } = await params;
         const userId = id;
+        const isSelf = session.user.id === userId;
+        const isAdmin = session.user.role === "ADMIN";
 
-        if (session.user?.id === userId) {
-            return apiError(400, "CANNOT_DELETE_SELF", "You cannot delete your own account");
+        if (!isSelf && !isAdmin) {
+            return forbidden();
         }
 
-        await prisma.user.delete({
-            where: { id: userId },
-        });
+        // If a user deletes their own account, verify their current password
+        if (isSelf) {
+            let password = "";
+            try {
+                const body = await request.json();
+                password = body?.password || "";
+            } catch {
+                // empty body
+            }
+
+            if (!password) {
+                return apiError(400, "MISSING_FIELDS", "Password is required to delete your account");
+            }
+
+            const currentUser = await prisma.user.findUnique({
+                where: { id: userId },
+            });
+
+            if (!currentUser) {
+                return apiError(404, "USER_NOT_FOUND", "User not found");
+            }
+
+            const passwordMatch = await bcrypt.compare(password, currentUser.passwordHash);
+            if (!passwordMatch) {
+                return apiError(400, "INVALID_CURRENT_PASSWORD", "Current password is incorrect");
+            }
+        }
+
+        // Atomically reassign user's created competitions to "SYSTEM" and delete the user
+        await prisma.$transaction([
+            prisma.competition.updateMany({
+                where: { createdBy: userId },
+                data: { createdBy: "SYSTEM" },
+            }),
+            prisma.user.delete({
+                where: { id: userId },
+            }),
+        ]);
 
         return NextResponse.json(
             { message: "User deleted successfully" },

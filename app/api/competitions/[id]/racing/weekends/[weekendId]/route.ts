@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { apiError, unauthorized, internalError } from "@/lib/api";
+import { apiError, unauthorized, internalError, canManageCompetition } from "@/lib/api";
 
 export async function GET(
     _request: NextRequest,
@@ -116,7 +116,7 @@ export async function DELETE(
             return apiError(404, "WEEKEND_NOT_FOUND", "Weekend not found");
         }
 
-        if (weekend.season.competition.createdBy !== session.user.id) {
+        if (!canManageCompetition(session.user, weekend.season.competition.createdBy)) {
             return apiError(403, "FORBIDDEN", "Only competition creator can delete weekends");
         }
 

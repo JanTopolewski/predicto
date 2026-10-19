@@ -344,7 +344,7 @@ export default function CompetitionsPage() {
                                         </td>
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex gap-2 justify-end">
-                                                {comp.isMember || (isAdmin && comp.createdBy === session?.user?.id) ? (
+                                                {comp.isMember || (isAdmin && (comp.createdBy === session?.user?.id || comp.createdBy === "SYSTEM")) ? (
                                                     <>
                                                         <Link
                                                             href={`/dashboard/competitions/${comp.id}`}
@@ -458,7 +458,7 @@ export default function CompetitionsPage() {
 
                                 {/* Actions */}
                                 <div className="pt-2 border-t border-zinc-200 dark:border-zinc-800">
-                                    {comp.isMember || (isAdmin && comp.createdBy === session?.user?.id) ? (
+                                    {comp.isMember || (isAdmin && (comp.createdBy === session?.user?.id || comp.createdBy === "SYSTEM")) ? (
                                         <Link
                                             href={`/dashboard/competitions/${comp.id}`}
                                             className="block w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white text-sm font-medium rounded transition-colors text-center"

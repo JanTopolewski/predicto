@@ -1,4 +1,4 @@
-import { apiError, forbidden, internalError } from "@/lib/api";
+import { apiError, forbidden, internalError, canManageCompetition } from "@/lib/api";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
@@ -48,9 +48,7 @@ export async function POST(
             return apiError(404, "SESSION_NOT_FOUND", "Session not found");
         }
 
-        if (
-            racingSession.weekend.season.competition.createdBy !== session.user.id
-        ) {
+        if (!canManageCompetition(session.user, racingSession.weekend.season.competition.createdBy)) {
             return apiError(
                 403,
                 "FORBIDDEN",

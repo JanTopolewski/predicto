@@ -75,11 +75,11 @@ export default function DashboardLayout({
                                         {session?.user?.name}
                                     </p>
                                     <Link
-                                        key="change password link"
-                                        href="/dashboard/users/reset"
+                                        key="profile link"
+                                        href="/dashboard/profile"
                                         className="text-xs text-zinc-600 dark:text-zinc-400 hover:underline"
                                     >
-                                        {t("changePassword")}
+                                        {t("profile")}
                                     </Link>
                                 </div>
                                 <button
@@ -140,11 +140,12 @@ export default function DashboardLayout({
                                         {session?.user?.name}
                                     </p>
                                     <Link
-                                        key="change password link"
-                                        href="/dashboard/users/reset"
+                                        key="profile link"
+                                        href="/dashboard/profile"
                                         className="text-xs text-zinc-600 dark:text-zinc-400 hover:underline"
+                                        onClick={() => setMobileMenuOpen(false)}
                                     >
-                                        {t("changePassword")}
+                                        {t("profile")}
                                     </Link>
                                 </div>
                                 <button

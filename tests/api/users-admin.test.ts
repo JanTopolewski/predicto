@@ -26,16 +26,57 @@ describe("/api/users/[id] - access control", () => {
 });
 
 describe("DELETE /api/users/[id]", () => {
-    it("an admin cannot delete their own account", async () => {
+    it("an admin deletes another user without password and competitions transfer to SYSTEM", async () => {
         asAdmin("admin1");
-        expect((await del("admin1")).status).toBe(400);
+        expect((await del("user9")).status).toBe(200);
+        expect(db.competition.updateMany).toHaveBeenCalledWith({
+            where: { createdBy: "user9" },
+            data: { createdBy: "SYSTEM" },
+        });
+        expect(db.user.delete).toHaveBeenCalledWith({ where: { id: "user9" } });
+    });
+
+    it("a regular user cannot delete another user", async () => {
+        asUser("user1");
+        expect((await del("user2")).status).toBe(403);
         expect(db.user.delete).not.toHaveBeenCalled();
     });
 
-    it("an admin deletes another user", async () => {
-        asAdmin("admin1");
-        expect((await del("user9")).status).toBe(200);
-        expect(db.user.delete).toHaveBeenCalledWith({ where: { id: "user9" } });
+    it("a user can delete their own account with valid password", async () => {
+        asUser("user1");
+        db.user.findUnique.mockResolvedValue({
+            id: "user1",
+            // bcrypt hash for "secret123"
+            passwordHash: "$2a$10$wT3WfCqI6nN7x0U3oMh19u9V0p67W/jL9gI6aZk8nO8JkH.123456",
+        });
+        const bcrypt = await import("bcryptjs");
+        const hash = await bcrypt.hash("secret123", 10);
+        db.user.findUnique.mockResolvedValue({ id: "user1", passwordHash: hash });
+
+        const req = jsonReq({ password: "secret123" }, "DELETE");
+        const res = await DELETE(req, ctx({ id: "user1" }));
+        expect(res.status).toBe(200);
+        expect(db.competition.updateMany).toHaveBeenCalledWith({
+            where: { createdBy: "user1" },
+            data: { createdBy: "SYSTEM" },
+        });
+        expect(db.user.delete).toHaveBeenCalledWith({ where: { id: "user1" } });
+    });
+
+    it("a user cannot delete their own account without password or with wrong password", async () => {
+        asUser("user1");
+        // No password
+        const reqNoPw = jsonReq({}, "DELETE");
+        expect((await DELETE(reqNoPw, ctx({ id: "user1" }))).status).toBe(400);
+
+        // Wrong password
+        const bcrypt = await import("bcryptjs");
+        const hash = await bcrypt.hash("correct123", 10);
+        db.user.findUnique.mockResolvedValue({ id: "user1", passwordHash: hash });
+
+        const reqWrongPw = jsonReq({ password: "wrong" }, "DELETE");
+        expect((await DELETE(reqWrongPw, ctx({ id: "user1" }))).status).toBe(400);
+        expect(db.user.delete).not.toHaveBeenCalled();
     });
 });
 

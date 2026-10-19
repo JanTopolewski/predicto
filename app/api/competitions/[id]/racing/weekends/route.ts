@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { apiError, unauthorized, internalError } from "@/lib/api";
+import { apiError, unauthorized, internalError, canManageCompetition } from "@/lib/api";
 
 export async function GET(
     _request: NextRequest,
@@ -51,7 +51,7 @@ export async function GET(
         }
 
         // Allow if user is admin of this competition OR member
-        const isAdmin = session.user.role === "ADMIN" && competition.createdBy === session.user.id;
+        const isAdmin = canManageCompetition(session.user, competition.createdBy);
 
         if (!isAdmin) {
             const member = await prisma.competitionMember.findUnique({
@@ -105,7 +105,7 @@ export async function POST(
             return apiError(404, "COMPETITION_NOT_FOUND", "Competition not found or is not a racing competition");
         }
 
-        if (competition.createdBy !== session.user.id) {
+        if (!canManageCompetition(session.user, competition.createdBy)) {
             return apiError(403, "FORBIDDEN", "Only competition creator can create weekends");
         }
 

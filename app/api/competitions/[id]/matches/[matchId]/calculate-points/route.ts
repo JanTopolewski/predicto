@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { apiError, forbidden, internalError } from "@/lib/api";
+import { apiError, forbidden, internalError, canManageCompetition } from "@/lib/api";
 
 export async function POST(
     _request: NextRequest,
@@ -40,7 +40,7 @@ export async function POST(
             return apiError(404, "MATCH_NOT_FOUND", "Match not found");
         }
 
-        if (match.season.competition.createdBy !== session.user.id) {
+        if (!canManageCompetition(session.user, match.season.competition.createdBy)) {
             return apiError(403, "FORBIDDEN", "Only competition creator can calculate points");
         }
 
