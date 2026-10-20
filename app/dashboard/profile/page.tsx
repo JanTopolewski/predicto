@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { useTranslations } from "next-intl";
@@ -9,14 +8,22 @@ import { useApiError } from "@/lib/useApiError";
 import { CheckIcon, AlertTriangleIcon } from "@/components/Icons";
 
 export default function ProfilePage() {
-    const router = useRouter();
-    const { data: session } = useSession();
+    const { data: session, update } = useSession();
+
+    // User details state
+    const [username, setUsername] = useState("");
+    const [email, setEmail] = useState("");
+    const [profileLoading, setProfileLoading] = useState(false);
+    const [profileSuccess, setProfileSuccess] = useState("");
+    const [profileError, setProfileError] = useState("");
+
+    // Password state
     const [currentPassword, setCurrentPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
-    const [error, setError] = useState("");
-    const [successMessage, setSuccessMessage] = useState("");
-    const [isLoading, setIsLoading] = useState(false);
+    const [passwordError, setPasswordError] = useState("");
+    const [passwordSuccess, setPasswordSuccess] = useState("");
+    const [passwordLoading, setPasswordLoading] = useState(false);
 
     // Delete account state
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -30,27 +37,89 @@ export default function ProfilePage() {
     const tErrors = useTranslations("apiErrors");
     const apiError = useApiError();
 
-    const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
+    useEffect(() => {
+        if (session?.user) {
+            setUsername(session.user.name || "");
+            setEmail(session.user.email || "");
+        }
+    }, [session]);
+
+    const handleUpdateProfile = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError("");
-        setSuccessMessage("");
-        setIsLoading(true);
+        setProfileError("");
+        setProfileSuccess("");
+        setProfileLoading(true);
+
+        if (!username || !email) {
+            setProfileError(tErrors("MISSING_FIELDS"));
+            setProfileLoading(false);
+            return;
+        }
+
+        try {
+            const hasUsernameChange = username.trim() !== (session?.user?.name || "");
+            const hasEmailChange = email.trim().toLowerCase() !== (session?.user?.email || "").toLowerCase();
+
+            if (!hasUsernameChange && !hasEmailChange) {
+                setProfileSuccess(t("noChanges"));
+                setProfileLoading(false);
+                return;
+            }
+
+            const response = await fetch(`/api/users/${session?.user?.id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    username: username.trim(),
+                    email: email.trim().toLowerCase(),
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                setProfileError(apiError(data));
+                setProfileLoading(false);
+                return;
+            }
+
+            // Update client session with new name and email
+            await update({
+                user: {
+                    name: data.user.username,
+                    email: data.user.email,
+                },
+            });
+
+            setProfileSuccess(t("profileUpdated"));
+        } catch {
+            setProfileError(tErrors("INTERNAL_ERROR"));
+        } finally {
+            setProfileLoading(false);
+        }
+    };
+
+    const handlePasswordSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setPasswordError("");
+        setPasswordSuccess("");
+        setPasswordLoading(true);
 
         if (!currentPassword || !newPassword || !confirmPassword) {
-            setError(tErrors("MISSING_FIELDS"));
-            setIsLoading(false);
+            setPasswordError(tErrors("MISSING_FIELDS"));
+            setPasswordLoading(false);
             return;
         }
 
         if (newPassword.length < 8) {
-            setError(t("passwordTooShort"));
-            setIsLoading(false);
+            setPasswordError(t("passwordTooShort"));
+            setPasswordLoading(false);
             return;
         }
 
         if (newPassword !== confirmPassword) {
-            setError(t("passwordMismatch"));
-            setIsLoading(false);
+            setPasswordError(t("passwordMismatch"));
+            setPasswordLoading(false);
             return;
         }
 
@@ -69,23 +138,19 @@ export default function ProfilePage() {
             const data = await response.json();
 
             if (!response.ok) {
-                setError(apiError(data));
-                setIsLoading(false);
+                setPasswordError(apiError(data));
+                setPasswordLoading(false);
                 return;
             }
 
-            setSuccessMessage(t("successMessage"));
+            setPasswordSuccess(t("successMessage"));
             setCurrentPassword("");
             setNewPassword("");
             setConfirmPassword("");
-            setIsLoading(false);
-
-            setTimeout(() => {
-                router.push("/dashboard");
-            }, 2000);
-        } catch (_err) {
-            setError(apiError());
-            setIsLoading(false);
+        } catch {
+            setPasswordError(tErrors("INTERNAL_ERROR"));
+        } finally {
+            setPasswordLoading(false);
         }
     };
 
@@ -128,56 +193,144 @@ export default function ProfilePage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-950 dark:to-zinc-900 px-4 sm:px-6 py-8 sm:py-0">
-            <div className="w-full max-w-md">
-                <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 sm:p-8 border border-zinc-200 dark:border-zinc-800">
-                    <div className="mb-6 sm:mb-8">
-                        <h1 className="text-2xl sm:text-3xl font-bold text-center text-zinc-900 dark:text-white mb-2">
-                            {tCommon("appName")}
-                        </h1>
-                        <p className="text-center text-sm sm:text-base text-zinc-600 dark:text-zinc-400">
-                            {t("title")}
+        <div className="w-full max-w-3xl mx-auto space-y-6">
+            <div className="mb-2">
+                <Link
+                    href="/dashboard"
+                    className="text-xs sm:text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
+                >
+                    ← {t("backToDashboard")}
+                </Link>
+                <h1 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:white mt-2">
+                    {t("pageTitle")}
+                </h1>
+                <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mt-1">
+                    {t("pageSubtitle")}
+                </p>
+            </div>
+
+            {/* User Info & Edit Profile Form */}
+            <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800 p-6 sm:p-8">
+                <div className="mb-6">
+                    <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-white">
+                        {t("userDataTitle")}
+                    </h2>
+                    <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mt-0.5">
+                        {t("userDataSubtitle")}
+                    </p>
+                </div>
+
+                {profileSuccess && (
+                    <div className="mb-4 p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg flex items-center gap-2">
+                        <CheckIcon className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                        <p className="text-sm text-emerald-700 dark:text-emerald-400">
+                            {profileSuccess}
                         </p>
                     </div>
+                )}
 
-                    {successMessage && (
-                        <div className="mb-4 p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg flex items-center gap-2">
-                            <CheckIcon className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-                            <p className="text-sm text-emerald-700 dark:text-emerald-400">
-                                {successMessage}
-                            </p>
-                        </div>
-                    )}
+                {profileError && (
+                    <div className="mb-4 p-3 sm:p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                        <p className="text-xs sm:text-sm text-red-700 dark:text-red-400">{profileError}</p>
+                    </div>
+                )}
 
-                    {error && (
-                        <div className="mb-4 p-3 sm:p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                            <p className="text-xs sm:text-sm text-red-700 dark:text-red-400">{error}</p>
-                        </div>
-                    )}
-
-                    <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
+                <form onSubmit={handleUpdateProfile} className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            <label
-                                htmlFor="currentPassword"
-                                className="block text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
-                            >
-                                {t("currentPassword")}
+                            <label className="block text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
+                                {t("usernameLabel")}
                             </label>
                             <input
-                                id="currentPassword"
-                                type="password"
-                                value={currentPassword}
-                                onChange={(e) => setCurrentPassword(e.target.value)}
-                                className="w-full px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-sm"
-                                placeholder="••••••••"
-                                disabled={isLoading}
+                                type="text"
+                                value={username}
+                                onChange={(e) => setUsername(e.target.value)}
+                                className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                disabled={profileLoading}
+                                required
                             />
                         </div>
 
                         <div>
+                            <label className="block text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5">
+                                {t("emailLabel")}
+                            </label>
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                disabled={profileLoading}
+                                required
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2">
+                        <div className="text-xs text-zinc-500 dark:text-zinc-400">
+                            {t("systemRole")} <span className="font-semibold text-zinc-700 dark:text-zinc-300">{session?.user?.role || "USER"}</span>
+                        </div>
+                        <button
+                            type="submit"
+                            disabled={profileLoading}
+                            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors text-sm disabled:opacity-50 cursor-pointer"
+                        >
+                            {profileLoading ? tCommon("loading") : tCommon("save")}
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            {/* Change Password Card */}
+            <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800 p-6 sm:p-8">
+                <div className="mb-6">
+                    <h2 className="text-lg sm:text-xl font-bold text-zinc-900 dark:text-white">
+                        {t("title")}
+                    </h2>
+                    <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mt-0.5">
+                        {t("subtitle")}
+                    </p>
+                </div>
+
+                {passwordSuccess && (
+                    <div className="mb-4 p-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg flex items-center gap-2">
+                        <CheckIcon className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                        <p className="text-sm text-emerald-700 dark:text-emerald-400">
+                            {passwordSuccess}
+                        </p>
+                    </div>
+                )}
+
+                {passwordError && (
+                    <div className="mb-4 p-3 sm:p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                        <p className="text-xs sm:text-sm text-red-700 dark:text-red-400">{passwordError}</p>
+                    </div>
+                )}
+
+                <form onSubmit={handlePasswordSubmit} className="space-y-4">
+                    <div>
+                        <label
+                            htmlFor="currentPassword"
+                            className="block text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5"
+                        >
+                            {t("currentPassword")}
+                        </label>
+                        <input
+                            id="currentPassword"
+                            type="password"
+                            value={currentPassword}
+                            onChange={(e) => setCurrentPassword(e.target.value)}
+                            className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            placeholder="••••••••"
+                            disabled={passwordLoading}
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
                             <label
                                 htmlFor="newPassword"
-                                className="block text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
+                                className="block text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5"
                             >
                                 {t("newPassword")}
                             </label>
@@ -186,16 +339,16 @@ export default function ProfilePage() {
                                 type="password"
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}
-                                className="w-full px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-sm"
+                                className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 placeholder="••••••••"
-                                disabled={isLoading}
+                                disabled={passwordLoading}
                             />
                         </div>
 
                         <div>
                             <label
                                 htmlFor="confirmPassword"
-                                className="block text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2"
+                                className="block text-xs sm:text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1.5"
                             >
                                 {t("confirmNewPassword")}
                             </label>
@@ -204,63 +357,56 @@ export default function ProfilePage() {
                                 type="password"
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
-                                className="w-full px-3 sm:px-4 py-2.5 sm:py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 text-sm"
+                                className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white placeholder-zinc-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 placeholder="••••••••"
-                                disabled={isLoading}
+                                disabled={passwordLoading}
                             />
                         </div>
+                    </div>
 
+                    <div className="flex justify-end pt-2">
                         <button
                             type="submit"
-                            disabled={isLoading}
-                            className="w-full px-4 py-2.5 sm:py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base"
+                            disabled={passwordLoading}
+                            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors text-sm disabled:opacity-50 cursor-pointer"
                         >
-                            {isLoading ? t("submittingButton") : t("submitButton")}
+                            {passwordLoading ? t("submittingButton") : t("submitButton")}
                         </button>
-                    </form>
+                    </div>
+                </form>
+            </div>
 
-                    <div className="mt-4 sm:mt-6 text-center">
-                        <Link
-                            href="/dashboard"
-                            className="text-xs sm:text-sm font-medium text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors"
-                        >
-                            ← {t("backToDashboard")}
-                        </Link>
+            {/* Delete Account Card */}
+            <div className="bg-white dark:bg-zinc-900 rounded-xl shadow-sm border border-zinc-200 dark:border-zinc-800 p-6 sm:p-8">
+                <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 shrink-0">
+                        <AlertTriangleIcon className="w-5 h-5" />
+                    </div>
+                    <div>
+                        <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                            {tDelete("sectionTitle")}
+                        </h2>
+                        <h3 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white mt-1">
+                            {tDelete("title")}
+                        </h3>
+                        <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mt-1">
+                            {tDelete("subtitle")}
+                        </p>
                     </div>
                 </div>
 
-                {/* Delete Account */}
-                <div className="mt-6 bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 sm:p-8 border border-zinc-200 dark:border-zinc-800">
-                    <div className="flex items-start gap-3">
-                        <div className="p-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 shrink-0">
-                            <AlertTriangleIcon className="w-5 h-5" />
-                        </div>
-                        <div>
-                            <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                                {tDelete("sectionTitle")}
-                            </h2>
-                            <h3 className="text-base sm:text-lg font-bold text-zinc-900 dark:text-white mt-1">
-                                {tDelete("title")}
-                            </h3>
-                            <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-                                {tDelete("subtitle")}
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="mt-5">
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setDeleteError("");
-                                setDeletePassword("");
-                                setIsDeleteModalOpen(true);
-                            }}
-                            className="w-full px-4 py-2.5 border border-red-300 dark:border-red-800/60 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 font-medium rounded-lg transition-colors text-sm cursor-pointer"
-                        >
-                            {tDelete("button")}
-                        </button>
-                    </div>
+                <div className="mt-5 flex justify-end">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setDeleteError("");
+                            setDeletePassword("");
+                            setIsDeleteModalOpen(true);
+                        }}
+                        className="px-5 py-2.5 border border-red-300 dark:border-red-800/60 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 font-medium rounded-lg transition-colors text-sm cursor-pointer"
+                    >
+                        {tDelete("button")}
+                    </button>
                 </div>
             </div>
 
@@ -297,7 +443,7 @@ export default function ProfilePage() {
                                     value={deletePassword}
                                     onChange={(e) => setDeletePassword(e.target.value)}
                                     placeholder={tDelete("passwordPlaceholder")}
-                                    className="w-full px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                                    className="w-full px-3.5 py-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
                                     disabled={isDeleting}
                                     autoFocus
                                 />
@@ -327,4 +473,3 @@ export default function ProfilePage() {
         </div>
     );
 }
-

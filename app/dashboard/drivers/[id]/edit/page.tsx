@@ -115,7 +115,7 @@ export default function EditDriverPage() {
 
     if (error && !driver) {
         return (
-            <div className="max-w-2xl mx-auto space-y-6">
+            <div className="w-full space-y-6">
                 <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
                     <p className="text-sm text-red-700 dark:text-red-400">{error}</p>
                 </div>
@@ -130,7 +130,7 @@ export default function EditDriverPage() {
     }
 
     return (
-        <div className="max-w-2xl mx-auto space-y-6">
+        <div className="w-full space-y-6">
             {/* Header */}
             <div className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-8 border border-zinc-200 dark:border-zinc-800">
                 <h2 className="text-3xl font-bold text-zinc-900 dark:text-white">

@@ -82,6 +82,15 @@
       "privacyLink": "Privacy Policy"
     },
     "reset": {
+      "pageTitle": "Profile & Settings",
+      "pageSubtitle": "Manage your personal details, email address, and password",
+      "userDataTitle": "User Information",
+      "userDataSubtitle": "You can update your email address or username",
+      "usernameLabel": "Username",
+      "emailLabel": "Email address",
+      "systemRole": "System role:",
+      "profileUpdated": "Profile details updated successfully!",
+      "noChanges": "No changes to save",
       "title": "Change password",
       "subtitle": "Enter your current password and choose a new one",
       "currentPassword": "Current password",
@@ -509,7 +518,7 @@
         },
         "account": {
           "title": "2. Registration and Account",
-          "content": "Users agree to provide accurate information upon registration and keep their login credentials confidential. Each user may hold only one active account."
+          "content": "Users agree to provide accurate information upon registration and keep their login credentials confidential. Holding a separate administrative account alongside a personal participant account is permitted. Creating multiple accounts to manipulate scores or bypass fair play rules is prohibited."
         },
         "competitions": {
           "title": "3. Competition Continuity",
@@ -532,7 +541,7 @@
       "sections": {
         "admin": {
           "title": "1. Data Controller",
-          "content": "The data controller of the Predicto platform is the service administrator. You can reach out with data privacy questions using the contact address provided on the website."
+          "content": "The data controller of the Predicto platform is the service administrator. You can reach out with data privacy questions or requests to: jankotopolewski@gmail.com."
         },
         "dataScope": {
           "title": "2. Scope of Data Collected",

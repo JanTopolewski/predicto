@@ -82,6 +82,15 @@
       "privacyLink": "Politykę Prywatności"
     },
     "reset": {
+      "pageTitle": "Profil i ustawienia",
+      "pageSubtitle": "Zarządzaj swoimi danymi osobowymi, adresem e-mail oraz hasłem",
+      "userDataTitle": "Dane użytkownika",
+      "userDataSubtitle": "Możesz zmienić swój adres e-mail lub nazwę użytkownika",
+      "usernameLabel": "Nazwa użytkownika",
+      "emailLabel": "Adres e-mail",
+      "systemRole": "Rola w systemie:",
+      "profileUpdated": "Dane profilu zostały pomyślnie zaktualizowane!",
+      "noChanges": "Brak zmian do zapisania",
       "title": "Zmień hasło",
       "subtitle": "Podaj aktualne hasło i wybierz nowe",
       "currentPassword": "Aktualne hasło",
@@ -509,7 +518,7 @@
         },
         "account": {
           "title": "2. Rejestracja i konto użytkownika",
-          "content": "Użytkownik zobowiązuje się do podawania prawdziwych danych podczas rejestracji oraz zabezpieczenia hasła do swojego konta przed dostępem osób trzecich. Każdy użytkownik może posiadać jedno konto w serwisie."
+          "content": "Użytkownik zobowiązuje się do podawania prawdziwych danych podczas rejestracji oraz zabezpieczenia hasła do swojego konta przed dostępem osób trzecich. Dozwolone jest posiadanie odrębnego konta o uprawnieniach administracyjnych oraz konta prywatnego przeznaczonego do udziału w rozgrywkach. Zabronione jest tworzenie wielu kont w celu manipulowania wynikami lub obchodzenia zasad uczciwej rywalizacji."
         },
         "competitions": {
           "title": "3. Zasady tworzenia konkurencji i ciągłości rozgrywek",
@@ -532,7 +541,7 @@
       "sections": {
         "admin": {
           "title": "1. Administrator danych",
-          "content": "Administratorem Twoich danych osobowych przetwarzanych w ramach aplikacji Predicto jest właściciel i operator serwisu. W sprawach związanych z danymi osobowymi możesz skontaktować się pod adresem e-mail podanym w serwisie."
+          "content": "Administratorem Twoich danych osobowych przetwarzanych w ramach aplikacji Predicto jest właściciel i operator serwisu. W sprawach związanych z danymi osobowymi i realizacją Twoich praw możesz skontaktować się pod adresem e-mail: jankotopolewski@gmail.com."
         },
         "dataScope": {
           "title": "2. Zakres zbieranych danych i cel przetwarzania",

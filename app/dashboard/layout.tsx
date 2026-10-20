@@ -44,7 +44,7 @@ export default function DashboardLayout({
         <div className="min-h-screen flex flex-col bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-950 dark:to-zinc-900">
             {/* Header Navigation */}
             <header className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-50">
-                <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <nav className="w-full md:w-[85%] lg:w-[80%] xl:w-[75%] min-w-0 md:min-w-[768px] mx-auto px-4 sm:px-6">
                     <div className="flex justify-between items-center h-16">
                         {/* Logo */}
                         <div className="flex items-center gap-4">
@@ -64,13 +64,15 @@ export default function DashboardLayout({
                                     {link.label}
                                 </Link>
                             ))}
+                        </div>
 
-                            {/* Notifications & Language Switcher */}
+                        {/* User Menu & Actions */}
+                        <div className="hidden md:flex items-center gap-4">
                             <NotificationToggle />
-                            <LanguageSwitcher currentLocale={locale} />
+                            <LanguageSwitcher />
 
-                            {/* User Info & Logout */}
-                            <div className="flex items-center gap-4 pl-4 border-l border-zinc-200 dark:border-zinc-800">
+                            {/* User Info */}
+                            <div className="flex items-center gap-3 pl-4 border-l border-zinc-200 dark:border-zinc-800">
                                 <div className="text-right">
                                     <p className="text-sm font-medium text-zinc-900 dark:text-white">
                                         {session?.user?.name}
@@ -92,29 +94,35 @@ export default function DashboardLayout({
                             </div>
                         </div>
 
-                        {/* Mobile Menu Button & Switcher */}
-                        <div className="flex md:hidden items-center gap-2">
+                        {/* Mobile Menu Button */}
+                        <div className="md:hidden flex items-center gap-2">
                             <NotificationToggle />
-                            <LanguageSwitcher currentLocale={locale} />
+                            <LanguageSwitcher />
                             <button
                                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                                aria-label="Menu"
-                                aria-expanded={mobileMenuOpen}
-                                className="p-2 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                                className="p-2 rounded-lg text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
                             >
                                 <svg
-                                    aria-hidden="true"
                                     className="w-6 h-6"
                                     fill="none"
                                     stroke="currentColor"
                                     viewBox="0 0 24 24"
                                 >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d={mobileMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"}
-                                    />
+                                    {mobileMenuOpen ? (
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M6 18L18 6M6 6l12 12"
+                                        />
+                                    ) : (
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth={2}
+                                            d="M4 6h16M4 12h16M4 18h16"
+                                        />
+                                    )}
                                 </svg>
                             </button>
                         </div>
@@ -162,15 +170,15 @@ export default function DashboardLayout({
             </header>
 
             {/* Main Content */}
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 flex-1">
+            <main className="w-full md:w-[85%] lg:w-[80%] xl:w-[75%] min-w-0 md:min-w-[768px] mx-auto px-4 sm:px-6 py-6 sm:py-8 flex-1">
                 {children}
             </main>
 
             {/* Footer */}
             <footer className="border-t border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm mt-auto">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                <div className="w-full md:w-[85%] lg:w-[80%] xl:w-[75%] min-w-0 md:min-w-[768px] mx-auto px-4 sm:px-6 py-6">
                     <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-zinc-500 dark:text-zinc-400">
-                        <p className="text-center md:text-left max-w-2xl">
+                        <p className="text-center md:text-left">
                             {tLegal("disclaimer")}
                         </p>
                         <div className="flex items-center gap-4 shrink-0">
