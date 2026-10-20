@@ -71,6 +71,7 @@
     "CANNOT_DELETE_RESOLVED_SESSION": "Cannot delete session that has already been resolved",
     "CANNOT_DELETE_RESOLVED_WEEKEND": "Cannot delete race weekend that has already been resolved",
     "CANNOT_DELETE_USED_DRIVER": "Cannot delete driver who is assigned to existing sessions or results",
-    "CANNOT_DELETE_USED_TEAM": "Cannot delete team that is assigned to existing seasons or matches"
+    "CANNOT_DELETE_USED_TEAM": "Cannot delete team that is assigned to existing seasons or matches",
+    "TERMS_NOT_ACCEPTED": "You must accept the terms of service and privacy policy to register"
   }
 }

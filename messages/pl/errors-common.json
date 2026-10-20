@@ -71,6 +71,7 @@
     "CANNOT_DELETE_RESOLVED_SESSION": "Nie można usunąć sesji, która została już rozliczona",
     "CANNOT_DELETE_RESOLVED_WEEKEND": "Nie można usunąć weekendu wyścigowego, który został już rozliczony",
     "CANNOT_DELETE_USED_DRIVER": "Nie można usunąć kierowcy przypisanego do istniejących sesji lub wyników",
-    "CANNOT_DELETE_USED_TEAM": "Nie można usunąć drużyny przypisanej do istniejących sezonów lub meczów"
+    "CANNOT_DELETE_USED_TEAM": "Nie można usunąć drużyny przypisanej do istniejących sezonów lub meczów",
+    "TERMS_NOT_ACCEPTED": "Musisz zaakceptować regulamin oraz politykę prywatności, aby założyć konto"
   }
 }

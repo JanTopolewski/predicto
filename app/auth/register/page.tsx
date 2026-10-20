@@ -14,6 +14,7 @@ export default function RegisterPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
+    const [acceptTerms, setAcceptTerms] = useState(false);
     const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(false);
 
@@ -44,10 +45,15 @@ export default function RegisterPage() {
                 return;
             }
 
+            if (!acceptTerms) {
+                setError(tErrors("TERMS_NOT_ACCEPTED"));
+                return;
+            }
+
             const response = await fetch("/api/auth/register", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username, email, password }),
+                body: JSON.stringify({ username, email, password, acceptTerms: true }),
             });
 
             const data = await response.json();
@@ -158,6 +164,36 @@ export default function RegisterPage() {
                                 placeholder="••••••••"
                                 disabled={isLoading}
                             />
+                        </div>
+
+                        <div className="flex items-start gap-2.5 pt-1">
+                            <input
+                                id="acceptTerms"
+                                type="checkbox"
+                                checked={acceptTerms}
+                                onChange={(e) => setAcceptTerms(e.target.checked)}
+                                disabled={isLoading}
+                                className="mt-1 h-4 w-4 rounded border-zinc-300 dark:border-zinc-700 text-blue-600 focus:ring-blue-500 dark:bg-zinc-800 cursor-pointer"
+                            />
+                            <label htmlFor="acceptTerms" className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed cursor-pointer">
+                                {t("termsAgreement")}{" "}
+                                <Link
+                                    href="/terms"
+                                    target="_blank"
+                                    className="font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                                >
+                                    {t("termsLink")}
+                                </Link>{" "}
+                                {t("and")}{" "}
+                                <Link
+                                    href="/privacy"
+                                    target="_blank"
+                                    className="font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                                >
+                                    {t("privacyLink")}
+                                </Link>
+                                .
+                            </label>
                         </div>
 
                         <button

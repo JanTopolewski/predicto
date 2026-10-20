@@ -75,7 +75,11 @@
       "submitButton": "Create account",
       "submittingButton": "Creating...",
       "haveAccount": "Already have an account?",
-      "loginLink": "Log in"
+      "loginLink": "Log in",
+      "termsAgreement": "I declare that I have read and agree to the",
+      "termsLink": "Terms of Service",
+      "and": "and",
+      "privacyLink": "Privacy Policy"
     },
     "reset": {
       "title": "Change password",
@@ -491,6 +495,68 @@
       "fieldsRequired": "All fields are required",
       "numberPositive": "Number must be a positive integer",
       "loadError": "Failed to load driver"
+    }
+  },
+  "legal": {
+    "terms": {
+      "title": "Terms of Service",
+      "lastUpdated": "Last updated: October 20, 2026",
+      "intro": "These Terms of Service govern your use of the Predicto application.",
+      "sections": {
+        "nature": {
+          "title": "1. Nature of the Service (No Real Money Gambling)",
+          "content": "Predicto is a free, hobby community platform intended solely for recreational sports prediction games (predictor/typer). The service is NOT a gambling or betting operator. No monetary stakes or entry fees are accepted, and virtual points earned have no cash value and cannot be exchanged for prizes or monetary rewards."
+        },
+        "account": {
+          "title": "2. Registration and Account",
+          "content": "Users agree to provide accurate information upon registration and keep their login credentials confidential. Each user may hold only one active account."
+        },
+        "competitions": {
+          "title": "3. Competition Continuity",
+          "content": "Administrators may create public or private competitions. If a creator decides to delete their account, competitions created by them will not be deleted, but transferred to system management (SYSTEM) to preserve gameplay and scores for remaining players."
+        },
+        "disclaimer": {
+          "title": "4. Intellectual Property & Fair Use",
+          "content": "All team names, driver names, club emblems, and trademarks (such as Formula 1, football leagues) appearing on the service are used strictly for informational and identification purposes under nominative fair use. Predicto is not affiliated with, endorsed, or sponsored by FIA, Formula One Licensing B.V., or any football associations."
+        },
+        "termination": {
+          "title": "5. Account Deletion",
+          "content": "Users may permanently delete their account at any time free of charge via the Profile & Settings page."
+        }
+      }
+    },
+    "privacy": {
+      "title": "Privacy and Cookie Policy",
+      "lastUpdated": "Last updated: October 20, 2026",
+      "intro": "We respect your privacy. This policy explains how we collect, process, and protect your personal data in accordance with the GDPR and ePrivacy regulations.",
+      "sections": {
+        "admin": {
+          "title": "1. Data Controller",
+          "content": "The data controller of the Predicto platform is the service administrator. You can reach out with data privacy questions using the contact address provided on the website."
+        },
+        "dataScope": {
+          "title": "2. Scope of Data Collected",
+          "content": "We only collect data necessary to provide the service: username, email address, password hash (bcrypt), prediction history, and scores. If you enable push notifications, we store a technical Web Push subscription token. Processing is based on Art. 6(1)(b) GDPR (service contract execution)."
+        },
+        "cookies": {
+          "title": "3. Cookies and Local Storage",
+          "content": "We only use strictly necessary technical session cookies (via NextAuth) to keep you securely signed in, and browser local storage (localStorage) for theme preferences (dark/light). We do NOT use third-party tracking, analytics, or advertising cookies."
+        },
+        "rights": {
+          "title": "4. Your Rights (Right to be Forgotten)",
+          "content": "You have the right to access, rectify, restrict processing of, and permanently delete your personal data. You can delete your account directly inside Profile & Settings. Upon password confirmation, your data is permanently removed."
+        },
+        "security": {
+          "title": "5. Data Security",
+          "content": "We use strong security measures: bcrypt hashing for passwords, SSL/TLS encryption for all traffic, and HTTP security headers to protect against common web vulnerabilities."
+        }
+      }
+    },
+    "footer": {
+      "disclaimer": "Predicto is an independent hobby platform for entertainment purposes only. No real money gambling or betting takes place. All team and driver names are used purely for informational identification.",
+      "terms": "Terms of Service",
+      "privacy": "Privacy & Cookies",
+      "rights": "All rights reserved."
     }
   }
 }

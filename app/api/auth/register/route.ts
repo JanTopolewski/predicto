@@ -5,7 +5,11 @@ import { apiError, internalError } from "@/lib/api";
 
 export async function POST(request: NextRequest) {
     try {
-        const { username, email, password } = await request.json();
+        const { username, email, password, acceptTerms } = await request.json();
+
+        if (acceptTerms !== undefined && !acceptTerms) {
+            return apiError(400, "TERMS_NOT_ACCEPTED", "You must accept the terms of service and privacy policy");
+        }
 
         if (!username || !email || !password) {
             return apiError(400, "MISSING_FIELDS", "All fields are required");

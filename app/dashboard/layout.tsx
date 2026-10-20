@@ -19,6 +19,7 @@ export default function DashboardLayout({
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const t = useTranslations("nav");
     const tCommon = useTranslations("common");
+    const tLegal = useTranslations("legal.footer");
     const locale = useLocale() as Locale;
 
     const handleLogout = async () => {
@@ -40,7 +41,7 @@ export default function DashboardLayout({
     ];
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-950 dark:to-zinc-900">
+        <div className="min-h-screen flex flex-col bg-gradient-to-br from-zinc-50 to-zinc-100 dark:from-zinc-950 dark:to-zinc-900">
             {/* Header Navigation */}
             <header className="bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-50">
                 <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -161,9 +162,29 @@ export default function DashboardLayout({
             </header>
 
             {/* Main Content */}
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 flex-1">
                 {children}
             </main>
+
+            {/* Footer */}
+            <footer className="border-t border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm mt-auto">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-zinc-500 dark:text-zinc-400">
+                        <p className="text-center md:text-left max-w-2xl">
+                            {tLegal("disclaimer")}
+                        </p>
+                        <div className="flex items-center gap-4 shrink-0">
+                            <Link href="/terms" className="hover:text-zinc-900 dark:hover:text-white transition-colors">
+                                {tLegal("terms")}
+                            </Link>
+                            <span>•</span>
+                            <Link href="/privacy" className="hover:text-zinc-900 dark:hover:text-white transition-colors">
+                                {tLegal("privacy")}
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            </footer>
         </div>
     );
 }

@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-    title: "Predicto - Betting Matches & Racing",
+    title: "Predicto - Football & Racing Predictions",
     description: "App for football matches and racing predictions",
 };
 
