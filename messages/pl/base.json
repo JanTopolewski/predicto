@@ -62,7 +62,7 @@
     },
     "register": {
       "title": "Utwórz nowe konto",
-      "subtitle": "Dołącz do rywalizacji i obstawiaj wyniki meczów",
+      "subtitle": "Dołącz do rywalizacji i typuj wyniki meczów",
       "usernameLabel": "Nazwa użytkownika",
       "usernamePlaceholder": "np. jan_kowalski",
       "emailLabel": "Adres email",
@@ -182,7 +182,7 @@
       "votingLocked": "Głosowanie na zwycięzcę sezonu jest zablokowane.",
       "winnerAnnounced": "Ogłoszono zwycięzcę sezonu:",
       "pickRegistered": "Głos został zarejestrowany i nie można go modyfikować.",
-      "seasonAlreadyStarted": "Pierwsze wydarzenie się już zaczęło - nie możesz już obstawiać zwycięzcy sezonu.",
+      "seasonAlreadyStarted": "Pierwsze wydarzenie się już zaczęło - nie możesz już typować zwycięzcy sezonu.",
       "savePrediction": "Zapisz predykcję",
       "saving": "Zapisywanie...",
       "predictionSaved": "Twoja predykcja została zapisana"
@@ -191,9 +191,9 @@
       "notFound": "Nie znaleziono konkurencji",
       "backToList": "Wróć do listy",
       "matchesTitle": "Mecze",
-      "browseMatches": "Przeglądaj i obstawiaj mecze →",
+      "browseMatches": "Przeglądaj i typuj mecze →",
       "racingTitle": "Sesje wyścigowe",
-      "browseRacing": "Przeglądaj i obstawiaj sesje →",
+      "browseRacing": "Przeglądaj i typuj sesje →",
       "noMembers": "Brak członków w konkurencji",
       "youIndicator": "(Ty)",
       "adminPanel": "Panel administratora",
@@ -237,7 +237,7 @@
     "pointsEarned": "+{points} pkt",
     "scoreRequired": "Podaj wynik obu drużyn",
     "scoreRangeError": "Wynik musi być z zakresu 0-20",
-    "matchFinishedNoVoting": "Mecz zakończony - brak możliwości obstawiania",
+    "matchFinishedNoVoting": "Mecz zakończony - brak możliwości typowania",
     "admin": {
       "title": "Zarządzanie meczami",
       "subtitle": "Tworzenie, edycja i liczenie punktów",

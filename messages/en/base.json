@@ -1,7 +1,7 @@
 {
   "common": {
     "appName": "Predicto",
-    "appTagline": "Betting matches and F1 races",
+    "appTagline": "Predicting football matches and F1 races",
     "loading": "Loading...",
     "save": "Save",
     "saved": "Saved",
@@ -62,7 +62,7 @@
     },
     "register": {
       "title": "Create a new account",
-      "subtitle": "Join the competition and bet on match results",
+      "subtitle": "Join the competition and predict match results",
       "usernameLabel": "Username",
       "usernamePlaceholder": "e.g. jan_kowalski",
       "emailLabel": "Email address",
