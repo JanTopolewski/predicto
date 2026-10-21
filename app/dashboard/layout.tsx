@@ -69,7 +69,7 @@ export default function DashboardLayout({
                         {/* User Menu & Actions */}
                         <div className="hidden md:flex items-center gap-4">
                             <NotificationToggle />
-                            <LanguageSwitcher />
+                            <LanguageSwitcher currentLocale={locale} />
 
                             {/* User Info */}
                             <div className="flex items-center gap-3 pl-4 border-l border-zinc-200 dark:border-zinc-800">
@@ -97,7 +97,7 @@ export default function DashboardLayout({
                         {/* Mobile Menu Button */}
                         <div className="md:hidden flex items-center gap-2">
                             <NotificationToggle />
-                            <LanguageSwitcher />
+                            <LanguageSwitcher currentLocale={locale} />
                             <button
                                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                                 className="p-2 rounded-lg text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
