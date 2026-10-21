@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
     try {
         const { username, email, password, acceptTerms } = await request.json();
 
-        if (acceptTerms !== undefined && !acceptTerms) {
+        if (!acceptTerms) {
             return apiError(400, "TERMS_NOT_ACCEPTED", "You must accept the terms of service and privacy policy");
         }
 
@@ -25,6 +25,11 @@ export async function POST(request: NextRequest) {
 
         const normalizedUsername = username.trim();
         const normalizedEmail = email.trim().toLowerCase();
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(normalizedEmail)) {
+            return apiError(400, "VALIDATION_FAILED", "Invalid email format");
+        }
 
         if (!normalizedUsername || !normalizedEmail) {
             return apiError(400, "MISSING_FIELDS", "All fields are required");

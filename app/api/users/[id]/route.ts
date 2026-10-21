@@ -161,6 +161,10 @@ export async function PATCH(
                 return apiError(400, "VALIDATION_FAILED", "Invalid email format");
             }
             const normalizedEmail = email.trim().toLowerCase();
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(normalizedEmail)) {
+                return apiError(400, "VALIDATION_FAILED", "Invalid email format");
+            }
             if (normalizedEmail !== existingUser.email.toLowerCase()) {
                 const userWithSameEmail = await prisma.user.findFirst({
                     where: {

@@ -94,6 +94,9 @@ describe("PATCH /api/users/[id]", () => {
         [{ password: "krótkie" }, "too short password"],
         [{ password: "          " }, "whitespace-only password"],
         [{ password: 12345678 }, "non-string password"],
+        [{ email: "invalid-email" }, "invalid email format"],
+        [{ email: "" }, "empty email"],
+        [{ username: "" }, "empty username"],
     ])("returns 400: %j (%s)", async (body, _label) => {
         asAdmin();
         db.user.findUnique.mockResolvedValue({ id: "u2" });
