@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { apiError, internalError } from "@/lib/api";
+import { apiError, internalError, canManageCompetition } from "@/lib/api";
 
 export async function POST(
     request: NextRequest,
@@ -49,7 +49,7 @@ export async function POST(
             return apiError(404, "SESSION_NOT_FOUND", "Session not found");
         }
 
-        if (racingSession.weekend.season.competition.createdBy !== session.user.id) {
+        if (!canManageCompetition(session.user, racingSession.weekend.season.competition.createdBy)) {
             return apiError(403, "FORBIDDEN", "Only competition creator can set results");
         }
 

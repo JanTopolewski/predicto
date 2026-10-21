@@ -462,7 +462,7 @@ export default function AdminMatchesPage() {
                 </div>
             )}
 
-            {/* Matches List */}
+            {/* Matches List in a responsive grid on desktop */}
             {loading ? (
                 <div className="p-8 text-center bg-white dark:bg-zinc-900 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-800">
                     <p className="text-zinc-600 dark:text-zinc-400">
@@ -476,154 +476,158 @@ export default function AdminMatchesPage() {
                     </p>
                 </div>
             ) : (
-                <div className="space-y-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                     {matches.map((match) => (
                         <div
                             key={match.id}
-                            className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800 space-y-4"
+                            className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800 space-y-4 flex flex-col justify-between"
                         >
-                            {/* Match Header */}
-                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                                <div>
-                                    <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
-                                        {match.homeTeam.name} vs{" "}
-                                        {match.awayTeam.name}
-                                    </h3>
-                                    <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-                                        {new Date(match.kickoff).toLocaleString(
-                                            locale
-                                        )}
-                                    </p>
-                                </div>
-
-                                {match.resolved && (
-                                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 rounded-lg text-sm font-medium">
-                                        <CheckIcon className="w-4 h-4" />
-                                        <span>{tCommon("status")}</span>
+                            <div>
+                                {/* Match Header */}
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                    <div>
+                                        <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
+                                            {match.homeTeam.name} vs{" "}
+                                            {match.awayTeam.name}
+                                        </h3>
+                                        <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
+                                            {new Date(match.kickoff).toLocaleString(
+                                                locale
+                                            )}
+                                        </p>
                                     </div>
-                                )}
+
+                                    {match.resolved && (
+                                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-300 rounded-lg text-sm font-medium">
+                                            <CheckIcon className="w-4 h-4" />
+                                            <span>{tCommon("status")}</span>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
                             {/* Edit Score Section */}
-                            {editingMatchId === match.id ? (
-                                <div className="bg-zinc-50 dark:bg-zinc-800 p-4 rounded-lg space-y-4">
-                                    <h4 className="font-medium text-zinc-900 dark:text-white">
-                                        {t("editResult")}
-                                    </h4>
+                            <div>
+                                {editingMatchId === match.id ? (
+                                    <div className="bg-zinc-50 dark:bg-zinc-800 p-4 rounded-lg space-y-4">
+                                        <h4 className="font-medium text-zinc-900 dark:text-white">
+                                            {t("editResult")}
+                                        </h4>
 
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm text-zinc-700 dark:text-zinc-300 mb-1">
-                                                {match.homeTeam.shortName}
-                                            </label>
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                value={editHomeGoals}
-                                                onChange={(e) =>
-                                                    setEditHomeGoals(
-                                                        e.target.value
-                                                    )
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm text-zinc-700 dark:text-zinc-300 mb-1">
+                                                    {match.homeTeam.shortName}
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    value={editHomeGoals}
+                                                    onChange={(e) =>
+                                                        setEditHomeGoals(
+                                                            e.target.value
+                                                        )
+                                                    }
+                                                    disabled={isUpdating}
+                                                    className="w-full px-3 py-2 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm text-zinc-700 dark:text-zinc-300 mb-1">
+                                                    {match.awayTeam.shortName}
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    value={editAwayGoals}
+                                                    onChange={(e) =>
+                                                        setEditAwayGoals(
+                                                            e.target.value
+                                                        )
+                                                    }
+                                                    disabled={isUpdating}
+                                                    className="w-full px-3 py-2 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() =>
+                                                    handleUpdateMatch(match.id)
                                                 }
                                                 disabled={isUpdating}
-                                                className="w-full px-3 py-2 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            />
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-sm text-zinc-700 dark:text-zinc-300 mb-1">
-                                                {match.awayTeam.shortName}
-                                            </label>
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                value={editAwayGoals}
-                                                onChange={(e) =>
-                                                    setEditAwayGoals(
-                                                        e.target.value
-                                                    )
-                                                }
+                                                className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white text-sm font-medium rounded transition-colors disabled:opacity-50"
+                                            >
+                                                {isUpdating
+                                                    ? tCommon("loading")
+                                                    : t("saveResult")}
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setEditingMatchId(null);
+                                                    setEditHomeGoals("");
+                                                    setEditAwayGoals("");
+                                                }}
                                                 disabled={isUpdating}
-                                                className="w-full px-3 py-2 rounded border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            />
+                                                className="flex-1 px-3 py-2 bg-zinc-300 hover:bg-zinc-400 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-900 dark:text-white text-sm font-medium rounded transition-colors"
+                                            >
+                                                {tCommon("cancel")}
+                                            </button>
                                         </div>
                                     </div>
+                                ) : (
+                                    <>
+                                        {/* Score Display */}
+                                        {match.resolved ? (
+                                            <div className="bg-zinc-50 dark:bg-zinc-800 p-4 rounded-lg text-center">
+                                                <p className="text-3xl font-bold text-zinc-900 dark:text-white">
+                                                    {match.homeGoals} :{" "}
+                                                    {match.awayGoals}
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <div className="bg-zinc-50 dark:bg-zinc-800 p-4 rounded-lg text-center">
+                                                <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                                                    {t("noResult")}
+                                                </p>
+                                            </div>
+                                        )}
 
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() =>
-                                                handleUpdateMatch(match.id)
-                                            }
-                                            disabled={isUpdating}
-                                            className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white text-sm font-medium rounded transition-colors disabled:opacity-50"
-                                        >
-                                            {isUpdating
-                                                ? tCommon("loading")
-                                                : t("saveResult")}
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                setEditingMatchId(null);
-                                                setEditHomeGoals("");
-                                                setEditAwayGoals("");
-                                            }}
-                                            disabled={isUpdating}
-                                            className="flex-1 px-3 py-2 bg-zinc-300 hover:bg-zinc-400 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-zinc-900 dark:text-white text-sm font-medium rounded transition-colors"
-                                        >
-                                            {tCommon("cancel")}
-                                        </button>
-                                    </div>
-                                </div>
-                            ) : (
-                                <>
-                                    {/* Score Display */}
-                                    {match.resolved ? (
-                                        <div className="bg-zinc-50 dark:bg-zinc-800 p-4 rounded-lg text-center">
-                                            <p className="text-3xl font-bold text-zinc-900 dark:text-white">
-                                                {match.homeGoals} :{" "}
-                                                {match.awayGoals}
-                                            </p>
+                                        {/* Actions */}
+                                        <div className="flex flex-col sm:flex-row gap-2 mt-4">
+                                            <button
+                                                onClick={() => {
+                                                    setEditingMatchId(match.id);
+                                                    if (match.homeGoals !== null)
+                                                        setEditHomeGoals(
+                                                            match.homeGoals.toString()
+                                                        );
+                                                    if (match.awayGoals !== null)
+                                                        setEditAwayGoals(
+                                                            match.awayGoals.toString()
+                                                        );
+                                                }}
+                                                className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded text-sm transition-colors"
+                                            >
+                                                <PencilIcon className="w-3.5 h-3.5" />
+                                                <span>{t("editResult")}</span>
+                                            </button>
+
+                                            <button
+                                                onClick={() =>
+                                                    handleDeleteMatch(match.id)
+                                                }
+                                                className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white font-medium rounded text-sm transition-colors"
+                                            >
+                                                <TrashIcon className="w-3.5 h-3.5" />
+                                                <span>{t("deleteMatch")}</span>
+                                            </button>
                                         </div>
-                                    ) : (
-                                        <div className="bg-zinc-50 dark:bg-zinc-800 p-4 rounded-lg text-center">
-                                            <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                                                {t("noResult")}
-                                            </p>
-                                        </div>
-                                    )}
-
-                                    {/* Actions */}
-                                    <div className="flex flex-col sm:flex-row gap-2">
-                                        <button
-                                            onClick={() => {
-                                                setEditingMatchId(match.id);
-                                                if (match.homeGoals !== null)
-                                                    setEditHomeGoals(
-                                                        match.homeGoals.toString()
-                                                    );
-                                                if (match.awayGoals !== null)
-                                                    setEditAwayGoals(
-                                                        match.awayGoals.toString()
-                                                    );
-                                            }}
-                                            className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded text-sm transition-colors"
-                                        >
-                                            <PencilIcon className="w-3.5 h-3.5" />
-                                            <span>{t("editResult")}</span>
-                                        </button>
-
-                                        <button
-                                            onClick={() =>
-                                                handleDeleteMatch(match.id)
-                                            }
-                                            className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white font-medium rounded text-sm transition-colors"
-                                        >
-                                            <TrashIcon className="w-3.5 h-3.5" />
-                                            <span>{t("deleteMatch")}</span>
-                                        </button>
-                                    </div>
-                                </>
-                            )}
+                                    </>
+                                )}
+                            </div>
                         </div>
                     ))}
                 </div>

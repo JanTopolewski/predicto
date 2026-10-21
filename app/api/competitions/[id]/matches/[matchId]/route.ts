@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isTimePassed } from "@/lib/timeUtils";
 import { NextRequest, NextResponse } from "next/server";
-import { apiError, forbidden, internalError } from "@/lib/api";
+import { apiError, forbidden, internalError, canManageCompetition } from "@/lib/api";
 
 export async function PATCH(
     request: NextRequest,
@@ -71,7 +71,7 @@ export async function PATCH(
         }
 
         const competition = match.season.competition;
-        if (competition.createdBy !== session.user.id) {
+        if (!canManageCompetition(session.user, competition.createdBy)) {
             return apiError(403, "FORBIDDEN", "Only competition creator can update matches");
         }
 
@@ -150,7 +150,7 @@ export async function DELETE(
             return apiError(404, "MATCH_NOT_FOUND", "Match not found");
         }
 
-        if (match.season.competition.createdBy !== session.user.id) {
+        if (!canManageCompetition(session.user, match.season.competition.createdBy)) {
             return apiError(403, "FORBIDDEN", "Only competition creator can delete matches");
         }
 

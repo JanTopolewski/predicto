@@ -173,7 +173,6 @@ describe("Cron Reminders API", () => {
       },
     ]);
 
-    // Użytkownik ma już log wysłania
     db.notificationLog.findMany.mockResolvedValue([
       { userId: "user1", targetId: "match1", stage: "EARLY" },
     ]);

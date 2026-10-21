@@ -4,7 +4,7 @@ import { POST } from "../../app/api/auth/register/route";
 import { db, jsonReq } from "../helpers";
 
 const PL_PASSWORD = "zażółćGęśląJaźń123!";
-const valid = { username: "Żaneta_Kowalska", email: "zaneta@test.pl", password: PL_PASSWORD };
+const valid = { username: "Żaneta_Kowalska", email: "zaneta@test.pl", password: PL_PASSWORD, acceptTerms: true };
 const call = (body: unknown) => POST(jsonReq(body));
 
 describe("POST /api/auth/register", () => {
@@ -12,7 +12,10 @@ describe("POST /api/auth/register", () => {
         [{}],
         [{ ...valid, username: "" }],
         [{ ...valid, email: undefined }],
+        [{ ...valid, email: "invalid-email" }],
         [{ ...valid, password: "1234567" }],
+        [{ ...valid, acceptTerms: false }],
+        [{ ...valid, acceptTerms: undefined }],
     ])("returns 400 for invalid data %j", async (body) => {
         expect((await call(body)).status).toBe(400);
         expect(db.user.create).not.toHaveBeenCalled();

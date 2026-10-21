@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isTimePassed } from "@/lib/timeUtils";
 import { NextRequest, NextResponse } from "next/server";
-import { apiError, forbidden, internalError } from "@/lib/api";
+import { apiError, forbidden, internalError, canManageCompetition } from "@/lib/api";
 
 export async function PATCH(
     request: NextRequest,
@@ -46,9 +46,7 @@ export async function PATCH(
             return apiError(404, "SESSION_NOT_FOUND", "Session not found");
         }
 
-        if (
-            racingSession.weekend.season.competition.createdBy !== session.user.id
-        ) {
+        if (!canManageCompetition(session.user, racingSession.weekend.season.competition.createdBy)) {
             return apiError(403, "FORBIDDEN", "Only competition creator can update sessions");
         }
 
@@ -163,9 +161,7 @@ export async function DELETE(
             return apiError(404, "SESSION_NOT_FOUND", "Session not found");
         }
 
-        if (
-            racingSession.weekend.season.competition.createdBy !== session.user.id
-        ) {
+        if (!canManageCompetition(session.user, racingSession.weekend.season.competition.createdBy)) {
             return apiError(403, "FORBIDDEN", "Only competition creator can delete sessions");
         }
 

@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { apiError, internalError } from "@/lib/api";
+import { apiError, internalError, canManageCompetition } from "@/lib/api";
 
 export async function DELETE(
     _request: NextRequest,
@@ -24,7 +24,7 @@ export async function DELETE(
             return apiError(404, "COMPETITION_NOT_FOUND", "Competition not found");
         }
 
-        if (competition.createdBy !== session.user.id) {
+        if (!canManageCompetition(session.user, competition.createdBy)) {
             return apiError(403, "FORBIDDEN", "Only competition creator can delete it");
         }
 

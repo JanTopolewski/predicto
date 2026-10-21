@@ -81,7 +81,7 @@ export default function CompetitionDetailPage() {
     const competitionId = params.id as string;
     const isMember = competition?.members.some(m => m.id === session?.user?.id);
     const isAdmin = session?.user?.role === "ADMIN";
-    const isOwner = competition?.createdBy === session?.user?.id;
+    const isOwner = competition?.createdBy === session?.user?.id || (isAdmin && competition?.createdBy === "SYSTEM");
 
     const fetchCompetition = useCallback(async () => {
         try {

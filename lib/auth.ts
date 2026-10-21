@@ -56,10 +56,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         maxAge: 2 * 24 * 60 * 60, // 2 days
     },
     callbacks: {
-        async jwt({ token, user }) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        async jwt({ token, user, trigger, session }: any) {
             if (user) {
                 token.id = user.id;
                 token.email = user.email;
+                token.name = user.name;
 
                 // Pobierz rolę z bazy danych
                 const dbUser = await prisma.user.findUnique({
@@ -68,12 +70,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 });
                 token.role = dbUser?.role;
             }
+
+            if (trigger === "update" && session?.user) {
+                if (session.user.name) token.name = session.user.name;
+                if (session.user.email) token.email = session.user.email;
+            }
+
             return token;
         },
-        async session({ session, token }) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        async session({ session, token }: any) {
             if (session.user) {
                 session.user.id = token.id as string;
                 session.user.email = token.email as string;
+                session.user.name = token.name as string;
                 session.user.role = token.role as string;
             }
             return session;

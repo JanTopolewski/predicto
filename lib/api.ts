@@ -23,3 +23,15 @@ export function apiError(
 export const unauthorized = () => apiError(401, "UNAUTHORIZED", "Unauthorized");
 export const forbidden = () => apiError(403, "FORBIDDEN", "Forbidden");
 export const internalError = () => apiError(500, "INTERNAL_ERROR", "Internal server error");
+
+/**
+ * Returns true if the session user is an ADMIN and owns the competition,
+ * or if the competition is a system-managed competition ("SYSTEM").
+ */
+export function canManageCompetition(
+    user: { id?: string; role?: string } | null | undefined,
+    competitionCreatedBy: string
+): boolean {
+    if (!user || user.role !== "ADMIN" || !user.id) return false;
+    return competitionCreatedBy === user.id || competitionCreatedBy === "SYSTEM";
+}

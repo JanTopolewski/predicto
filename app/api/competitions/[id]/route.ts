@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { apiError, forbidden, internalError } from "@/lib/api";
+import { apiError, forbidden, internalError, canManageCompetition } from "@/lib/api";
 
 export async function GET(
     _request: NextRequest,
@@ -64,10 +64,9 @@ export async function GET(
         }
 
         const isMember = competition.members.some((m) => m.userId === session?.user?.id);
-        const isAdmin = session?.user?.role === "ADMIN";
-        const isOwner = competition.createdBy === session?.user?.id;
+        const isOwner = canManageCompetition(session?.user, competition.createdBy);
 
-        if (!session?.user?.id || (!isMember && !(isAdmin && isOwner))) {
+        if (!session?.user?.id || (!isMember && !isOwner)) {
             return forbidden();
         }
 

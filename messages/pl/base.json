@@ -1,7 +1,7 @@
 {
   "common": {
     "appName": "Predicto",
-    "appTagline": "Obstawianie meczy i wyścigów F1",
+    "appTagline": "Typowanie meczów piłkarskich i wyścigów F1",
     "loading": "Ładowanie...",
     "save": "Zapisz",
     "saved": "Zapisano",
@@ -44,6 +44,7 @@
     "competitions": "Konkurencje",
     "manageUsers": "Zarządzanie użytkownikami",
     "manageTeams": "Zarządzanie drużynami",
+    "profile": "Profil i ustawienia",
     "changePassword": "Zmień hasło",
     "logout": "Wyloguj się"
   },
@@ -61,7 +62,7 @@
     },
     "register": {
       "title": "Utwórz nowe konto",
-      "subtitle": "Dołącz do rywalizacji i obstawiaj wyniki meczów",
+      "subtitle": "Dołącz do rywalizacji i typuj wyniki meczów",
       "usernameLabel": "Nazwa użytkownika",
       "usernamePlaceholder": "np. jan_kowalski",
       "emailLabel": "Adres email",
@@ -74,9 +75,22 @@
       "submitButton": "Zarejestruj się",
       "submittingButton": "Rejestracja...",
       "haveAccount": "Masz już konto?",
-      "loginLink": "Zaloguj się"
+      "loginLink": "Zaloguj się",
+      "termsAgreement": "Oświadczam, że zapoznałem(-am) się i akceptuję",
+      "termsLink": "Regulamin",
+      "and": "oraz",
+      "privacyLink": "Politykę Prywatności"
     },
     "reset": {
+      "pageTitle": "Profil i ustawienia",
+      "pageSubtitle": "Zarządzaj swoimi danymi osobowymi, adresem e-mail oraz hasłem",
+      "userDataTitle": "Dane użytkownika",
+      "userDataSubtitle": "Możesz zmienić swój adres e-mail lub nazwę użytkownika",
+      "usernameLabel": "Nazwa użytkownika",
+      "emailLabel": "Adres e-mail",
+      "systemRole": "Rola w systemie:",
+      "profileUpdated": "Dane profilu zostały pomyślnie zaktualizowane!",
+      "noChanges": "Brak zmian do zapisania",
       "title": "Zmień hasło",
       "subtitle": "Podaj aktualne hasło i wybierz nowe",
       "currentPassword": "Aktualne hasło",
@@ -88,11 +102,23 @@
       "backToDashboard": "Wróć do panelu",
       "passwordMismatch": "Nowe hasła nie są identyczne",
       "passwordTooShort": "Nowe hasło musi mieć co najmniej 8 znaków"
+    },
+    "deleteAccount": {
+      "sectionTitle": "Zarządzanie kontem",
+      "title": "Usuń konto",
+      "subtitle": "Trwałe usunięcie konta i wszystkich Twoich danych. Ta operacja jest nieodwracalna.",
+      "button": "Usuń konto",
+      "modalTitle": "Czy na pewno chcesz usunąć konto?",
+      "modalDescription": "Twoje konto, subskrypcje powiadomień oraz Twoje typy zostaną trwale usunięte. Jeśli utworzyłeś jakieś konkurencje, przejdą one pod zarząd systemu, aby pozostali uczestnicy mogli kontynuować grę.",
+      "passwordPrompt": "Wpisz swoje aktualne hasło, aby potwierdzić usunięcie konta:",
+      "passwordPlaceholder": "Wpisz hasło",
+      "confirmButton": "Tak, trwale usuń moje konto",
+      "deleting": "Usuwanie konta..."
     }
   },
   "dashboard": {
     "welcome": "Witaj, {name}!",
-    "welcomeSub": "Witaj w aplikacji Predicto - twojej platformie do obstawiania meczy i wyścigów.",
+    "welcomeSub": "Witaj w aplikacji Predicto - twojej platformie do typowania meczów i wyścigów.",
     "myCompetitions": "Moje konkurencje",
     "myCompetitionsSub": "Konkurencje, w których jesteś członkiem",
     "browseCompetitions": "Przeglądaj konkurencje",
@@ -156,7 +182,7 @@
       "votingLocked": "Głosowanie na zwycięzcę sezonu jest zablokowane.",
       "winnerAnnounced": "Ogłoszono zwycięzcę sezonu:",
       "pickRegistered": "Głos został zarejestrowany i nie można go modyfikować.",
-      "seasonAlreadyStarted": "Pierwsze wydarzenie się już zaczęło - nie możesz już obstawiać zwycięzcy sezonu.",
+      "seasonAlreadyStarted": "Pierwsze wydarzenie się już zaczęło - nie możesz już typować zwycięzcy sezonu.",
       "savePrediction": "Zapisz predykcję",
       "saving": "Zapisywanie...",
       "predictionSaved": "Twoja predykcja została zapisana"
@@ -165,9 +191,9 @@
       "notFound": "Nie znaleziono konkurencji",
       "backToList": "Wróć do listy",
       "matchesTitle": "Mecze",
-      "browseMatches": "Przeglądaj i obstawiaj mecze →",
+      "browseMatches": "Przeglądaj i typuj mecze →",
       "racingTitle": "Sesje wyścigowe",
-      "browseRacing": "Przeglądaj i obstawiaj sesje →",
+      "browseRacing": "Przeglądaj i typuj sesje →",
       "noMembers": "Brak członków w konkurencji",
       "youIndicator": "(Ty)",
       "adminPanel": "Panel administratora",
@@ -211,7 +237,7 @@
     "pointsEarned": "+{points} pkt",
     "scoreRequired": "Podaj wynik obu drużyn",
     "scoreRangeError": "Wynik musi być z zakresu 0-20",
-    "matchFinishedNoVoting": "Mecz zakończony - brak możliwości obstawiania",
+    "matchFinishedNoVoting": "Mecz zakończony - brak możliwości typowania",
     "admin": {
       "title": "Zarządzanie meczami",
       "subtitle": "Tworzenie, edycja i liczenie punktów",
@@ -478,6 +504,68 @@
       "fieldsRequired": "Wszystkie pola są wymagane",
       "numberPositive": "Numer musi być liczbą dodatnią",
       "loadError": "Nie można pobrać kierowcy"
+    }
+  },
+  "legal": {
+    "terms": {
+      "title": "Regulamin Serwisu",
+      "lastUpdated": "Ostatnia aktualizacja: 20 października 2026 r.",
+      "intro": "Niniejszy Regulamin określa zasady korzystania z aplikacji Predicto, dostępnej pod adresem internetowym w domenie serwisu.",
+      "sections": {
+        "nature": {
+          "title": "1. Charakter serwisu (Brak gier na pieniądze)",
+          "content": "Predicto jest hobbystyczną, bezpłatną platformą społecznościową służącą wyłącznie do zabawy w typowanie wyników wydarzeń sportowych (formuła tzw. typera). Serwis NIE JEST podmiotem prowadzącym zakłady wzajemne ani gry losowe w rozumieniu ustawy o grach hazardowych. W serwisie nie są przyjmowane żadne stawki pieniężne, nie ma wpisowego, a punkty zdobywane w grze mają charakter wyłącznie wirtualny i nie podlegają wymianie na środki pieniężne ani nagrody rzeczowe o wartości materialnej."
+        },
+        "account": {
+          "title": "2. Rejestracja i konto użytkownika",
+          "content": "Użytkownik zobowiązuje się do podawania prawdziwych danych podczas rejestracji oraz zabezpieczenia hasła do swojego konta przed dostępem osób trzecich. Dozwolone jest posiadanie odrębnego konta o uprawnieniach administracyjnych oraz konta prywatnego przeznaczonego do udziału w rozgrywkach. Zabronione jest tworzenie wielu kont w celu manipulowania wynikami lub obchodzenia zasad uczciwej rywalizacji."
+        },
+        "competitions": {
+          "title": "3. Zasady tworzenia konkurencji i ciągłości rozgrywek",
+          "content": "Użytkownicy posiadający uprawnienia administratora mogą zakładać konkurencje publiczne lub prywatne. W przypadku, gdy twórca konkurencji podejmie decyzję o usunięciu swojego konta, stworzona przez niego konkurencja nie ulega usunięciu, lecz przechodzi pod zarząd systemowy serwisu (SYSTEM). Rozwiązanie to ma na celu ochronę zaangażowania pozostałych uczestników i zapewnienie im możliwości dokończenia rozgrywek."
+        },
+        "disclaimer": {
+          "title": "4. Prawa własności intelektualnej i znaki towarowe",
+          "content": "Wszelkie nazwy zespołów sportowych, kierowców, klubów, logotypy tekstowe oraz oznaczenia wydarzeń sportowych (w tym Formula 1, ligi piłkarskie) pojawiające się w serwisie zostały użyte wyłącznie w celach informacyjnych, faktograficznych i identyfikacyjnych (zgodnie z zasadą dozwolonego użytku referencyjnego). Serwis Predicto nie jest powiązany, sponsorowany ani rekomendowany przez FIA, Formula One Licensing B.V. ani żadne związki i federacje piłkarskie."
+        },
+        "termination": {
+          "title": "5. Usunięcie konta i zakończenie korzystania",
+          "content": "Użytkownik może w każdej chwili, bez ponoszenia żadnych opłat, trwale usunąć swoje konto korzystając z dedykowanej opcji w zakładce Profil i ustawienia."
+        }
+      }
+    },
+    "privacy": {
+      "title": "Polityka Prywatności i Plików Cookies",
+      "lastUpdated": "Ostatnia aktualizacja: 20 października 2026 r.",
+      "intro": "Szanujemy Twoją prywatność. Poniższy dokument wyjaśnia, w jaki sposób zbieramy, przetwarzamy i chronimy Twoje dane osobowe zgodnie z Rozporządzeniem Ogólnym o Ochronie Danych (RODO / GDPR) oraz przepisami o łączności elektronicznej (ePrivacy).",
+      "sections": {
+        "admin": {
+          "title": "1. Administrator danych",
+          "content": "Administratorem Twoich danych osobowych przetwarzanych w ramach aplikacji Predicto jest właściciel i operator serwisu. W sprawach związanych z danymi osobowymi i realizacją Twoich praw możesz skontaktować się pod adresem e-mail: jankotopolewski@gmail.com."
+        },
+        "dataScope": {
+          "title": "2. Zakres zbieranych danych i cel przetwarzania",
+          "content": "Przetwarzamy dane niezbędne do świadczenia usługi drogą elektroniczną: nazwę użytkownika, adres e-mail, zaszyfrowany skrót hasła (hash bcrypt), historię oddanych typów oraz zdobyte punkty. Jeśli wyrazisz zgodę na powiadomienia, przetwarzamy również unikalny techniczny token subskrypcji Web Push. Dane te przetwarzane są na podstawie art. 6 ust. 1 lit. b RODO (wykonanie umowy o świadczenie usługi drogą elektroniczną)."
+        },
+        "cookies": {
+          "title": "3. Pliki Cookies i pamięć lokalna",
+          "content": "Serwis wykorzystuje wyłącznie ściśle niezbędne, techniczne pliki cookie (obsługiwane przez mechanizm sesyjny NextAuth do bezpiecznego utrzymania logowania) oraz pamięć lokalną przeglądarki (localStorage) do zapisania preferencji motywu (jasny/ciemny). Serwis NIE KORZYSTA z marketingowych, analitycznych ani śledzących plików cookie podmiotów trzecich."
+        },
+        "rights": {
+          "title": "4. Twoje prawa (w tym prawo do bycia zapomnianym)",
+          "content": "Przysługuje Ci prawo wglądu do swoich danych, ich sprostowania, ograniczenia przetwarzania oraz pełnego usunięcia („prawo do bycia zapomnianym”). Możesz usunąć swoje konto natychmiastowo i samodzielnie z poziomu zakładki Profil i ustawienia. Po potwierdzeniu hasłem Twoje dane osobowe zostają bezpowrotnie skasowane z bazy danych."
+        },
+        "security": {
+          "title": "5. Bezpieczeństwo danych",
+          "content": "Stosujemy nowoczesne środki techniczne zabezpieczające dane: bezpieczne haszowanie haseł algorytmem bcrypt, szyfrowanie transmisji SSL/TLS (HTTPS) oraz nagłówki ochronne HTTP (m.in. Content-Type-Options, Frame-Options)."
+        }
+      }
+    },
+    "footer": {
+      "disclaimer": "Predicto jest niezależną, hobbystyczną platformą społecznościową o charakterze wyłącznie rozrywkowym. W serwisie nie są prowadzone zakłady wzajemne na pieniądze ani gry losowe. Wszelkie nazwy drużyn, kierowców i oznaczenia zostały użyte w celach czysto informacyjnych.",
+      "terms": "Regulamin",
+      "privacy": "Prywatność i Cookies",
+      "rights": "Wszelkie prawa zastrzeżone."
     }
   }
 }

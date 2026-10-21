@@ -184,7 +184,7 @@ export default function MatchesPage() {
                 </div>
             )}
 
-            {/* Matches List */}
+            {/* Matches List in a responsive grid on desktop */}
             {loading ? (
                 <div className="p-8 text-center bg-white dark:bg-zinc-900 rounded-lg shadow-lg border border-zinc-200 dark:border-zinc-800">
                     <p className="text-zinc-600 dark:text-zinc-400">
@@ -198,170 +198,174 @@ export default function MatchesPage() {
                     </p>
                 </div>
             ) : (
-                <div className="space-y-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                     {matches.map((match) => (
                         <div
                             key={match.id}
-                            className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800"
+                            className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-6 border border-zinc-200 dark:border-zinc-800 flex flex-col justify-between"
                         >
-                            {/* Match Info */}
-                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-                                <div>
-                                    <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
-                                        {match.homeTeam.name} vs{" "}
-                                        {match.awayTeam.name}
-                                    </h3>
-                                    <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
-                                        {new Date(match.kickoff).toLocaleString(
-                                            locale
-                                        )}
-                                    </p>
+                            <div>
+                                {/* Match Info */}
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                                    <div>
+                                        <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
+                                            {match.homeTeam.name} vs{" "}
+                                            {match.awayTeam.name}
+                                        </h3>
+                                        <p className="text-sm text-zinc-600 dark:text-zinc-400 mt-1">
+                                            {new Date(match.kickoff).toLocaleString(
+                                                locale
+                                            )}
+                                        </p>
+                                    </div>
+
+                                    {match.resolved && (
+                                        <div className="text-center">
+                                            <p className="text-3xl font-bold text-zinc-900 dark:text-white">
+                                                {match.homeGoals} :{" "}
+                                                {match.awayGoals}
+                                            </p>
+                                            <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1">
+                                                {t("result")}
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {!isVotingOpen(match) && (
+                                        <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded text-sm font-medium self-start sm:self-auto">
+                                            <LockIcon className="w-3.5 h-3.5" />
+                                            <span>{t("votingClosed")}</span>
+                                        </div>
+                                    )}
                                 </div>
-
-                                {match.resolved && (
-                                    <div className="text-center">
-                                        <p className="text-3xl font-bold text-zinc-900 dark:text-white">
-                                            {match.homeGoals} :{" "}
-                                            {match.awayGoals}
-                                        </p>
-                                        <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-1">
-                                            {t("result")}
-                                        </p>
-                                    </div>
-                                )}
-
-                                {!isVotingOpen(match) && (
-                                    <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 rounded text-sm font-medium self-start sm:self-auto">
-                                        <LockIcon className="w-3.5 h-3.5" />
-                                        <span>{t("votingClosed")}</span>
-                                    </div>
-                                )}
                             </div>
 
                             {/* Prediction Display / Form */}
-                            {match.predictions && match.predictions.length > 0 ? (
-                                <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-1.5">
-                                            <CheckIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-                                            <span className="text-xs font-bold text-emerald-800 dark:text-emerald-200 uppercase tracking-wide">
-                                                {t("yourVote")}
+                            <div className="mt-4">
+                                {match.predictions && match.predictions.length > 0 ? (
+                                    <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-1.5">
+                                                <CheckIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                                                <span className="text-xs font-bold text-emerald-800 dark:text-emerald-200 uppercase tracking-wide">
+                                                    {t("yourVote")}
+                                                </span>
+                                            </div>
+                                            {match.resolved && (
+                                                <span className="inline-flex items-center justify-center text-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-200 dark:bg-emerald-800 text-emerald-900 dark:text-emerald-100 whitespace-nowrap leading-normal">
+                                                    {t("pointsEarned", { points: match.predictions[0].points })}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="mt-2 flex items-center justify-center gap-3 text-lg font-bold text-zinc-900 dark:text-white">
+                                            <span>{match.homeTeam.shortName}</span>
+                                            <span className="px-3 py-1 rounded-md bg-white dark:bg-zinc-800 border border-emerald-300 dark:border-emerald-700 text-xl font-mono">
+                                                {match.predictions[0].homeGoals} : {match.predictions[0].awayGoals}
                                             </span>
+                                            <span>{match.awayTeam.shortName}</span>
                                         </div>
-                                        {match.resolved && (
-                                            <span className="inline-flex items-center justify-center text-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-200 dark:bg-emerald-800 text-emerald-900 dark:text-emerald-100 whitespace-nowrap leading-normal">
-                                                {t("pointsEarned", { points: match.predictions[0].points })}
-                                            </span>
-                                        )}
                                     </div>
-                                    <div className="mt-2 flex items-center justify-center gap-3 text-lg font-bold text-zinc-900 dark:text-white">
-                                        <span>{match.homeTeam.shortName}</span>
-                                        <span className="px-3 py-1 rounded-md bg-white dark:bg-zinc-800 border border-emerald-300 dark:border-emerald-700 text-xl font-mono">
-                                            {match.predictions[0].homeGoals} : {match.predictions[0].awayGoals}
-                                        </span>
-                                        <span>{match.awayTeam.shortName}</span>
-                                    </div>
-                                </div>
-                            ) : isVotingOpen(match) ? (
-                                <div className="space-y-4">
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                                                {match.homeTeam.shortName}
-                                            </label>
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                max="20"
-                                                value={predictions[match.id]?.homeGoals ?? ""}
-                                                onChange={(e) =>
-                                                    setPredictions({
-                                                        ...predictions,
-                                                        [match.id]: {
-                                                            ...predictions[match.id],
-                                                            homeGoals: e.target.value,
-                                                        },
-                                                    })
+                                ) : isVotingOpen(match) ? (
+                                    <div className="space-y-4">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                                                    {match.homeTeam.shortName}
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    max="20"
+                                                    value={predictions[match.id]?.homeGoals ?? ""}
+                                                    onChange={(e) =>
+                                                        setPredictions({
+                                                            ...predictions,
+                                                            [match.id]: {
+                                                                ...predictions[match.id],
+                                                                homeGoals: e.target.value,
+                                                            },
+                                                        })
+                                                    }
+                                                    className="w-full px-4 py-3 text-center text-2xl font-bold rounded-lg border-2 border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                    placeholder="0"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                                                    {match.awayTeam.shortName}
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    max="20"
+                                                    value={predictions[match.id]?.awayGoals ?? ""}
+                                                    onChange={(e) =>
+                                                        setPredictions({
+                                                            ...predictions,
+                                                            [match.id]: {
+                                                                ...predictions[match.id],
+                                                                awayGoals: e.target.value,
+                                                            },
+                                                        })
+                                                    }
+                                                    className="w-full px-4 py-3 text-center text-2xl font-bold rounded-lg border-2 border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                                    placeholder="0"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            onClick={() => {
+                                                const pred =
+                                                    predictions[match.id];
+                                                if (!pred) return;
+
+                                                if (pred.homeGoals === "" || pred.awayGoals === "") {
+                                                    setError(t("scoreRequired"));
+                                                    return;
                                                 }
-                                                className="w-full px-4 py-3 text-center text-2xl font-bold rounded-lg border-2 border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                placeholder="0"
-                                            />
-                                        </div>
 
-                                        <div>
-                                            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                                                {match.awayTeam.shortName}
-                                            </label>
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                max="20"
-                                                value={predictions[match.id]?.awayGoals ?? ""}
-                                                onChange={(e) =>
-                                                    setPredictions({
-                                                        ...predictions,
-                                                        [match.id]: {
-                                                            ...predictions[match.id],
-                                                            awayGoals: e.target.value,
-                                                        },
-                                                    })
+                                                const home = Number(pred.homeGoals);
+                                                const away = Number(pred.awayGoals);
+
+                                                if (
+                                                    !Number.isInteger(home) ||
+                                                    !Number.isInteger(away) ||
+                                                    home < 0 ||
+                                                    home > 20 ||
+                                                    away < 0 ||
+                                                    away > 20
+                                                ) {
+                                                    setError(t("scoreRangeError"));
+                                                    return;
                                                 }
-                                                className="w-full px-4 py-3 text-center text-2xl font-bold rounded-lg border-2 border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                                placeholder="0"
-                                            />
-                                        </div>
+
+                                                handlePrediction(match.id, home, away);
+                                            }}
+                                            disabled={
+                                                predictingMatchId === match.id ||
+                                                !predictions[match.id] ||
+                                                predictions[match.id].homeGoals === "" ||
+                                                predictions[match.id].awayGoals === ""
+                                            }
+                                            className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            {predictingMatchId === match.id
+                                                ? t("saving")
+                                                : t("predict")}
+                                        </button>
                                     </div>
-
-                                    <button
-                                        onClick={() => {
-                                            const pred =
-                                                predictions[match.id];
-                                            if (!pred) return;
-
-                                            if (pred.homeGoals === "" || pred.awayGoals === "") {
-                                                setError(t("scoreRequired"));
-                                                return;
-                                            }
-
-                                            const home = Number(pred.homeGoals);
-                                            const away = Number(pred.awayGoals);
-
-                                            if (
-                                                !Number.isInteger(home) ||
-                                                !Number.isInteger(away) ||
-                                                home < 0 ||
-                                                home > 20 ||
-                                                away < 0 ||
-                                                away > 20
-                                            ) {
-                                                setError(t("scoreRangeError"));
-                                                return;
-                                            }
-
-                                            handlePrediction(match.id, home, away);
-                                        }}
-                                        disabled={
-                                            predictingMatchId === match.id ||
-                                            !predictions[match.id] ||
-                                            predictions[match.id].homeGoals === "" ||
-                                            predictions[match.id].awayGoals === ""
-                                        }
-                                        className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        {predictingMatchId === match.id
-                                            ? t("saving")
-                                            : t("predict")}
-                                    </button>
-                                </div>
-                            ) : (
-                                <div className="p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg text-center">
-                                    <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                                        {match.resolved
-                                            ? t("matchFinishedNoVoting")
-                                            : t("votingClosed")}
-                                    </p>
-                                </div>
-                            )}
+                                ) : (
+                                    <div className="p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg text-center">
+                                        <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                                            {match.resolved
+                                                ? t("matchFinishedNoVoting")
+                                                : t("votingClosed")}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     ))}
                 </div>
