@@ -50,6 +50,7 @@ export default function MatchesPage() {
     const [predictingMatchId, setPredictingMatchId] = useState<string | null>(
         null
     );
+    const [editingMatchIds, setEditingMatchIds] = useState<Record<string, boolean>>({});
 
     const t = useTranslations("matches");
     const tCommon = useTranslations("common");
@@ -115,6 +116,7 @@ export default function MatchesPage() {
             }
 
             setSuccessMessage(t("predictionSaved"));
+            setEditingMatchIds((prev) => ({ ...prev, [matchId]: false }));
 
             const matchesResponse = await fetch(
                 `/api/competitions/${competitionId}/matches`
@@ -242,7 +244,7 @@ export default function MatchesPage() {
 
                             {/* Prediction Display / Form */}
                             <div className="mt-4">
-                                {match.predictions && match.predictions.length > 0 ? (
+                                {match.predictions && match.predictions.length > 0 && !editingMatchIds[match.id] ? (
                                     <div className="p-4 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg border border-emerald-200 dark:border-emerald-800">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-1.5">
@@ -251,11 +253,34 @@ export default function MatchesPage() {
                                                     {t("yourVote")}
                                                 </span>
                                             </div>
-                                            {match.resolved && (
-                                                <span className="inline-flex items-center justify-center text-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-200 dark:bg-emerald-800 text-emerald-900 dark:text-emerald-100 whitespace-nowrap leading-normal">
-                                                    {t("pointsEarned", { points: match.predictions[0].points })}
-                                                </span>
-                                            )}
+                                            <div className="flex items-center gap-2">
+                                                {match.resolved && (
+                                                    <span className="inline-flex items-center justify-center text-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-200 dark:bg-emerald-800 text-emerald-900 dark:text-emerald-100 whitespace-nowrap leading-normal">
+                                                        {t("pointsEarned", { points: match.predictions[0].points })}
+                                                    </span>
+                                                )}
+                                                {!match.resolved && isVotingOpen(match) && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setPredictions((prev) => ({
+                                                                ...prev,
+                                                                [match.id]: {
+                                                                    homeGoals: String(match.predictions[0].homeGoals),
+                                                                    awayGoals: String(match.predictions[0].awayGoals),
+                                                                },
+                                                            }));
+                                                            setEditingMatchIds((prev) => ({
+                                                                ...prev,
+                                                                [match.id]: true,
+                                                            }));
+                                                        }}
+                                                        className="px-2.5 py-1 text-xs font-semibold rounded-md bg-white dark:bg-zinc-800 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors"
+                                                    >
+                                                        {t("editPrediction")}
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                         <div className="mt-2 flex items-center justify-center gap-3 text-lg font-bold text-zinc-900 dark:text-white">
                                             <span>{match.homeTeam.shortName}</span>
@@ -315,46 +340,64 @@ export default function MatchesPage() {
                                             </div>
                                         </div>
 
-                                        <button
-                                            onClick={() => {
-                                                const pred =
-                                                    predictions[match.id];
-                                                if (!pred) return;
+                                        <div className="flex gap-2">
+                                            {match.predictions && match.predictions.length > 0 && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setEditingMatchIds((prev) => ({
+                                                            ...prev,
+                                                            [match.id]: false,
+                                                        }))
+                                                    }
+                                                    className="px-4 py-2 border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium rounded-lg transition-colors"
+                                                >
+                                                    {t("cancelEdit")}
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={() => {
+                                                    const pred =
+                                                        predictions[match.id];
+                                                    if (!pred) return;
 
-                                                if (pred.homeGoals === "" || pred.awayGoals === "") {
-                                                    setError(t("scoreRequired"));
-                                                    return;
+                                                    if (pred.homeGoals === "" || pred.awayGoals === "") {
+                                                        setError(t("scoreRequired"));
+                                                        return;
+                                                    }
+
+                                                    const home = Number(pred.homeGoals);
+                                                    const away = Number(pred.awayGoals);
+
+                                                    if (
+                                                        !Number.isInteger(home) ||
+                                                        !Number.isInteger(away) ||
+                                                        home < 0 ||
+                                                        home > 20 ||
+                                                        away < 0 ||
+                                                        away > 20
+                                                    ) {
+                                                        setError(t("scoreRangeError"));
+                                                        return;
+                                                    }
+
+                                                    handlePrediction(match.id, home, away);
+                                                }}
+                                                disabled={
+                                                    predictingMatchId === match.id ||
+                                                    !predictions[match.id] ||
+                                                    predictions[match.id].homeGoals === "" ||
+                                                    predictions[match.id].awayGoals === ""
                                                 }
-
-                                                const home = Number(pred.homeGoals);
-                                                const away = Number(pred.awayGoals);
-
-                                                if (
-                                                    !Number.isInteger(home) ||
-                                                    !Number.isInteger(away) ||
-                                                    home < 0 ||
-                                                    home > 20 ||
-                                                    away < 0 ||
-                                                    away > 20
-                                                ) {
-                                                    setError(t("scoreRangeError"));
-                                                    return;
-                                                }
-
-                                                handlePrediction(match.id, home, away);
-                                            }}
-                                            disabled={
-                                                predictingMatchId === match.id ||
-                                                !predictions[match.id] ||
-                                                predictions[match.id].homeGoals === "" ||
-                                                predictions[match.id].awayGoals === ""
-                                            }
-                                            className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                            {predictingMatchId === match.id
-                                                ? t("saving")
-                                                : t("predict")}
-                                        </button>
+                                                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                {predictingMatchId === match.id
+                                                    ? t("saving")
+                                                    : match.predictions && match.predictions.length > 0
+                                                    ? t("updatePrediction")
+                                                    : t("predict")}
+                                            </button>
+                                        </div>
                                     </div>
                                 ) : (
                                     <div className="p-4 bg-zinc-50 dark:bg-zinc-800 rounded-lg text-center">
