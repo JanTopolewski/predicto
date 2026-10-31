@@ -622,6 +622,14 @@ export default function RacingSessionsPage() {
                                         >
                                             {t("deleteSession")}
                                         </button>
+                                        {(racingSession.resolved || new Date(racingSession.startTime) <= new Date()) && (
+                                            <Link
+                                                href={`/dashboard/competitions/${competitionId}/racing/sessions/${racingSession.id}/predictions`}
+                                                className="px-4 py-2 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-medium rounded-lg transition-colors text-sm"
+                                            >
+                                                {t("viewAllPredictions")}
+                                            </Link>
+                                        )}
                                     </div>
                                 </div>
                                 {/* Form for Entering Results */}

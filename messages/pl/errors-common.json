@@ -42,6 +42,7 @@
     "WILDCARD_RESULT_REQUIRED": "Podanie pozycji na mecie dla kierowcy Wildcard jest wymagane",
     "VOTING_CLOSED": "Głosowanie na to wydarzenie zostało zamknięte",
     "MATCH_ALREADY_STARTED": "Mecz już się rozpoczął",
+    "EVENT_NOT_STARTED": "Typy innych uczestników są widoczne dopiero po rozpoczęciu wydarzenia",
     "MATCH_RESOLVED": "Mecz został już rozliczony",
     "MATCH_NOT_RESOLVED": "Mecz nie został jeszcze rozliczony",
     "MATCH_NOT_SCHEDULED": "Mecz nie jest zaplanowany do głosowania",

@@ -5,7 +5,7 @@ import { isTimePassed } from "@/lib/timeUtils";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
-    _request: NextRequest,
+    request: NextRequest,
     {
         params,
     }: {
@@ -21,6 +21,14 @@ export async function GET(
 
         const { id: competitionId, sessionId } = await params;
 
+        const competition = await prisma.competition.findUnique({
+            where: { id: competitionId },
+        });
+
+        if (!competition) {
+            return apiError(404, "COMPETITION_NOT_FOUND", "Competition not found");
+        }
+
         const member = await prisma.competitionMember.findUnique({
             where: {
                 competitionId_userId: {
@@ -30,28 +38,144 @@ export async function GET(
             },
         });
 
-        if (!member) {
+        const isCreatorOrAdmin =
+            competition.createdBy === session.user.id || session.user.role === "ADMIN";
+
+        if (!member && !isCreatorOrAdmin) {
             return forbidden();
         }
 
-        const prediction = await prisma.racingPrediction.findUnique({
-            where: {
-                sessionId_userId: {
-                    sessionId,
-                    userId: session.user.id,
+        const { searchParams } = new URL(request.url);
+        const scope = searchParams.get("scope");
+
+        // If not scope=all, return just the current user's single prediction (backward compatibility)
+        if (scope !== "all") {
+            const prediction = await prisma.racingPrediction.findUnique({
+                where: {
+                    sessionId_userId: {
+                        sessionId,
+                        userId: session.user.id,
+                    },
                 },
-            },
+                include: {
+                    firstDriver: true,
+                    secondDriver: true,
+                    thirdDriver: true,
+                    wildcardDriver: true,
+                },
+            });
+
+            return NextResponse.json({ prediction });
+        }
+
+        // scope === "all": All participants' predictions for this session
+        const racingSession = await prisma.racingSession.findUnique({
+            where: { id: sessionId },
             include: {
-                firstDriver: true,
-                secondDriver: true,
-                thirdDriver: true,
-                wildcardDriver: true,
+                weekend: {
+                    include: {
+                        season: true,
+                    },
+                },
+                participants: {
+                    include: {
+                        driver: true,
+                    },
+                },
+                wildcards: {
+                    include: {
+                        driver: true,
+                    },
+                },
+                predictions: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                username: true,
+                            },
+                        },
+                        firstDriver: true,
+                        secondDriver: true,
+                        thirdDriver: true,
+                        wildcardDriver: true,
+                    },
+                },
             },
         });
 
-        return NextResponse.json({ prediction });
+        if (
+            !racingSession ||
+            racingSession.weekend.season.competitionId !== competitionId
+        ) {
+            return apiError(404, "SESSION_NOT_FOUND", "Session not found");
+        }
+
+        const hasStarted =
+            racingSession.resolved ||
+            (racingSession.startTime && isTimePassed(racingSession.startTime));
+
+        if (!hasStarted) {
+            return apiError(
+                403,
+                "EVENT_NOT_STARTED",
+                "Predictions of other participants become visible only after the session starts"
+            );
+        }
+
+        const members = await prisma.competitionMember.findMany({
+            where: { competitionId },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        username: true,
+                    },
+                },
+            },
+            orderBy: {
+                joinedAt: "asc",
+            },
+        });
+
+        const predictionsByUserId = new Map(
+            racingSession.predictions.map((p) => [p.userId, p])
+        );
+
+        const memberPredictions = members.map((m) => {
+            const pred = predictionsByUserId.get(m.userId);
+            return {
+                user: m.user,
+                prediction: pred
+                    ? {
+                          id: pred.id,
+                          firstDriver: pred.firstDriver,
+                          secondDriver: pred.secondDriver,
+                          thirdDriver: pred.thirdDriver,
+                          wildcardDriver: pred.wildcardDriver,
+                          wildcardPosition: pred.wildcardPosition,
+                          points: pred.points,
+                          createdAt: pred.createdAt,
+                      }
+                    : null,
+            };
+        });
+
+        return NextResponse.json({
+            session: {
+                id: racingSession.id,
+                weekendId: racingSession.weekendId,
+                name: racingSession.name,
+                type: racingSession.type,
+                startTime: racingSession.startTime,
+                resolved: racingSession.resolved,
+                wildcard: racingSession.wildcards?.[0] || null,
+                grandPrix: racingSession.weekend.grandPrix,
+            },
+            predictions: memberPredictions,
+        });
     } catch (error) {
-        console.error("Error fetching prediction:", error);
+        console.error("Error fetching session predictions:", error);
         return internalError();
     }
 }

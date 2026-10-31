@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { POST } from "../../app/api/competitions/[id]/matches/[matchId]/predictions/route";
+import { GET, POST } from "../../app/api/competitions/[id]/matches/[matchId]/predictions/route";
 import { asAnon, asUser, ctx, db, FUTURE, jsonReq, PAST } from "../helpers";
+import { NextRequest } from "next/server";
 
 const params = ctx({ id: "c1", matchId: "m1" });
 const call = (body: unknown) => POST(jsonReq(body), params);
+const callGet = () => GET(new NextRequest("http://localhost/api/competitions/c1/matches/m1/predictions"), params);
 
 function setup(matchOverrides: Record<string, unknown> = {}) {
     asUser("user1");
@@ -88,5 +90,66 @@ describe("POST football predict", () => {
         setup(overrides);
         expect((await call({ homeGoals: 1, awayGoals: 1 })).status).toBe(400);
         expect(db.footballPrediction.upsert).not.toHaveBeenCalled();
+    });
+});
+
+describe("GET all football predictions for match", () => {
+    it("returns 401 without session", async () => {
+        asAnon();
+        expect((await callGet()).status).toBe(401);
+    });
+
+    it("returns 403 when match has not started yet", async () => {
+        asUser("user1");
+        db.competition.findUnique.mockResolvedValue({ id: "c1", createdBy: "creator" });
+        db.competitionMember.findUnique.mockResolvedValue({ id: "mem1" });
+        db.footballMatch.findUnique.mockResolvedValue({
+            id: "m1",
+            kickoff: FUTURE(),
+            resolved: false,
+            season: { competitionId: "c1" },
+            predictions: [],
+        });
+        const res = await callGet();
+        expect(res.status).toBe(403);
+        const data = await res.json();
+        expect(data.code).toBe("EVENT_NOT_STARTED");
+    });
+
+    it("returns predictions for all members after match kickoff", async () => {
+        asUser("user1");
+        db.competition.findUnique.mockResolvedValue({ id: "c1", createdBy: "creator" });
+        db.competitionMember.findUnique.mockResolvedValue({ id: "mem1" });
+        db.footballMatch.findUnique.mockResolvedValue({
+            id: "m1",
+            kickoff: PAST(),
+            resolved: false,
+            homeTeam: { name: "Home" },
+            awayTeam: { name: "Away" },
+            season: { competitionId: "c1" },
+            predictions: [
+                {
+                    id: "p1",
+                    userId: "user1",
+                    homeGoals: 2,
+                    awayGoals: 1,
+                    points: 0,
+                    user: { id: "user1", username: "User One" },
+                },
+            ],
+        });
+        db.competitionMember.findMany.mockResolvedValue([
+            { userId: "user1", user: { id: "user1", username: "User One" } },
+            { userId: "user2", user: { id: "user2", username: "User Two" } },
+        ]);
+
+        const res = await callGet();
+        expect(res.status).toBe(200);
+        const data = await res.json();
+        expect(data.predictions).toHaveLength(2);
+        expect(data.predictions[0].user.username).toBe("User One");
+        expect(data.predictions[0].prediction).toMatchObject({ homeGoals: 2, awayGoals: 1 });
+        expect(data.predictions[1].user.username).toBe("User Two");
+        expect(data.predictions[1].prediction).toBeNull();
     });
 });

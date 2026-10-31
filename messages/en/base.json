@@ -241,6 +241,10 @@
     "scoreRequired": "Enter score for both teams",
     "scoreRangeError": "Score must be between 0 and 20",
     "matchFinishedNoVoting": "Match finished - voting closed",
+    "viewAllPredictions": "View all predictions",
+    "allPredictionsTitle": "All participants' predictions",
+    "noPredictionsSubmitted": "No predictions submitted",
+    "noPredictionFromUser": "No prediction",
     "admin": {
       "title": "Manage matches",
       "subtitle": "Create, edit and calculate points",
@@ -265,6 +269,7 @@
       "deleteMatch": "Delete",
       "matchDeleted": "Match has been deleted",
       "deleteConfirm": "Are you sure you want to delete this match?",
+      "viewAllPredictions": "View all predictions",
       "teamsMustDiffer": "Please select different teams",
       "scoreRequired": "Please enter score",
       "announceWinner": {
@@ -315,6 +320,10 @@
     "validationRequired": "Please select all required fields",
     "validationPodium": "Please select podium drivers",
     "validationWildcard": "Please predict the finishing position for the wildcard driver",
+    "viewAllPredictions": "View all predictions",
+    "allPredictionsTitle": "All participants' predictions",
+    "noPredictionsSubmitted": "No predictions submitted",
+    "noPredictionFromUser": "No prediction",
     "admin": {
       "title": "Racing Admin Panel",
       "subtitle": "Manage weekends, sessions and season winner",
@@ -384,6 +393,7 @@
         "sessionDeleted": "Session deleted successfully!",
         "resultsCalculated": "Results confirmed, voting locked and points calculated!",
         "sessionMarkedClosed": "Session marked as finished!",
+        "viewAllPredictions": "View all predictions",
         "wildcardRequiredValidation": "Wildcard driver is required for this session (no podium)",
         "wildcardRangeError": "Wildcard position must be between 1 and {max}",
         "wildcardResultRequiredError": "Please provide the finishing position for the wildcard driver",

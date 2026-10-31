@@ -411,6 +411,17 @@ export default function MatchesPage() {
                                     </div>
                                 )}
                             </div>
+
+                            {(match.resolved || new Date(match.kickoff) <= new Date()) && (
+                                <div className="mt-3 pt-3 border-t border-zinc-200 dark:border-zinc-800">
+                                    <Link
+                                        href={`/dashboard/competitions/${competitionId}/matches/${match.id}/predictions`}
+                                        className="w-full inline-flex items-center justify-center px-3 py-2 text-xs font-semibold rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 transition-colors"
+                                    >
+                                        {t("viewAllPredictions")}
+                                    </Link>
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>

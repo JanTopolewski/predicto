@@ -2,7 +2,136 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { isTimePassed } from "@/lib/timeUtils";
 import { NextRequest, NextResponse } from "next/server";
-import { apiError, unauthorized, internalError } from "@/lib/api";
+import { apiError, unauthorized, internalError, forbidden } from "@/lib/api";
+
+export async function GET(
+    _request: NextRequest,
+    {
+        params,
+    }: {
+        params: Promise<{ id: string; matchId: string }>;
+    }
+) {
+    try {
+        const session = await auth();
+
+        if (!session?.user?.id) {
+            return unauthorized();
+        }
+
+        const { id: competitionId, matchId } = await params;
+
+        const competition = await prisma.competition.findUnique({
+            where: { id: competitionId },
+        });
+
+        if (!competition) {
+            return apiError(404, "COMPETITION_NOT_FOUND", "Competition not found");
+        }
+
+        const member = await prisma.competitionMember.findUnique({
+            where: {
+                competitionId_userId: {
+                    competitionId,
+                    userId: session.user.id,
+                },
+            },
+        });
+
+        const isCreatorOrAdmin =
+            competition.createdBy === session.user.id || session.user.role === "ADMIN";
+
+        if (!member && !isCreatorOrAdmin) {
+            return forbidden();
+        }
+
+        const match = await prisma.footballMatch.findUnique({
+            where: { id: matchId },
+            include: {
+                homeTeam: true,
+                awayTeam: true,
+                season: true,
+                predictions: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                username: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        if (!match || match.season.competitionId !== competitionId) {
+            return apiError(404, "MATCH_NOT_FOUND", "Match not found");
+        }
+
+        // Predictions of other participants can only be viewed after the match has started or if resolved
+        const hasStarted = match.resolved || (match.kickoff && isTimePassed(match.kickoff));
+        if (!hasStarted) {
+            return apiError(
+                403,
+                "EVENT_NOT_STARTED",
+                "Predictions of other participants become visible only after the match starts"
+            );
+        }
+
+        // Fetch all members of the competition to display both those who predicted and those who did not
+        const members = await prisma.competitionMember.findMany({
+            where: { competitionId },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        username: true,
+                    },
+                },
+            },
+            orderBy: {
+                joinedAt: "asc",
+            },
+        });
+
+        const predictionsByUserId = new Map(
+            match.predictions.map((p) => [p.userId, p])
+        );
+
+        const memberPredictions = members.map((m) => {
+            const pred = predictionsByUserId.get(m.userId);
+            return {
+                user: m.user,
+                prediction: pred
+                    ? {
+                          id: pred.id,
+                          homeGoals: pred.homeGoals,
+                          awayGoals: pred.awayGoals,
+                          points: pred.points,
+                          createdAt: pred.createdAt,
+                      }
+                    : null,
+            };
+        });
+
+        return NextResponse.json({
+            match: {
+                id: match.id,
+                homeTeam: match.homeTeam,
+                awayTeam: match.awayTeam,
+                homeGoals: match.homeGoals,
+                awayGoals: match.awayGoals,
+                kickoff: match.kickoff,
+                resolved: match.resolved,
+                status: match.status,
+            },
+            predictions: memberPredictions,
+        });
+    } catch (error) {
+        console.error("Error fetching match predictions:", error);
+        return internalError();
+    }
+}
 
 export async function POST(
     request: NextRequest,
