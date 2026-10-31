@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { BellIcon, BellSlashIcon } from "@/components/Icons";
 
@@ -21,6 +22,7 @@ function urlBase64ToUint8Array(base64String: string) {
 
 export function NotificationToggle() {
   const t = useTranslations("notifications");
+  const { data: session, status } = useSession();
   const [isSupported, setIsSupported] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -29,12 +31,17 @@ export function NotificationToggle() {
   useEffect(() => {
     if (typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window) {
       setIsSupported(true);
-      checkSubscription();
+      if (status === "authenticated" && session?.user?.id) {
+        checkSubscription();
+      } else if (status === "unauthenticated") {
+        setIsSubscribed(false);
+        setLoading(false);
+      }
     } else {
       setIsSupported(false);
       setLoading(false);
     }
-  }, []);
+  }, [session?.user?.id, status]);
 
   const checkSubscription = async () => {
     try {
@@ -43,7 +50,19 @@ export function NotificationToggle() {
 
       if (registration) {
         const subscription = await registration.pushManager.getSubscription();
-        setIsSubscribed(Boolean(subscription));
+        if (subscription) {
+          const res = await fetch(
+            `/api/push/subscriptions?endpoint=${encodeURIComponent(subscription.endpoint)}`
+          );
+          if (res.ok) {
+            const data = await res.json();
+            setIsSubscribed(Boolean(data.subscribed));
+          } else {
+            setIsSubscribed(false);
+          }
+        } else {
+          setIsSubscribed(false);
+        }
       } else {
         setIsSubscribed(false);
       }

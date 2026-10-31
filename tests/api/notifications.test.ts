@@ -19,11 +19,28 @@ describe("Push Subscriptions API", () => {
 
   it("returns 401 for unauthenticated user", async () => {
     asAnon();
-    const res = await getSubscription();
+    const res = await getSubscription(new NextRequest("http://localhost/api/push/subscriptions"));
     expect(res.status).toBe(401);
 
     const postRes = await postSubscription(jsonReq({ endpoint: "ep", keys: { p256dh: "k", auth: "a" } }));
     expect(postRes.status).toBe(401);
+  });
+
+  it("checks subscription status for specific endpoint", async () => {
+    asUser("user1");
+    db.pushSubscription.findFirst.mockResolvedValue({ id: "sub1", userId: "user1", endpoint: "https://ep1" });
+
+    const req = new NextRequest("http://localhost/api/push/subscriptions?endpoint=https%3A%2F%2Fep1");
+    const res = await getSubscription(req);
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.subscribed).toBe(true);
+    expect(db.pushSubscription.findFirst).toHaveBeenCalledWith({
+      where: {
+        endpoint: "https://ep1",
+        userId: "user1",
+      },
+    });
   });
 
   it("saves subscription for authenticated user", async () => {

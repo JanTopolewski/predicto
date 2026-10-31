@@ -3,11 +3,27 @@ import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { apiError, internalError, unauthorized } from "@/lib/api";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
       return unauthorized();
+    }
+
+    const { searchParams } = new URL(request.url);
+    const endpoint = searchParams.get("endpoint");
+
+    if (endpoint) {
+      const match = await prisma.pushSubscription.findFirst({
+        where: {
+          endpoint,
+          userId: session.user.id,
+        },
+      });
+
+      return NextResponse.json({
+        subscribed: Boolean(match),
+      });
     }
 
     const count = await prisma.pushSubscription.count({
