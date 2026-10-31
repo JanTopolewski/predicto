@@ -116,6 +116,7 @@ export default function MatchesPage() {
             }
 
             setSuccessMessage(t("predictionSaved"));
+            setError("");
             setEditingMatchIds((prev) => ({ ...prev, [matchId]: false }));
 
             const matchesResponse = await fetch(
@@ -381,6 +382,7 @@ export default function MatchesPage() {
                                                         return;
                                                     }
 
+                                                    setError("");
                                                     handlePrediction(match.id, home, away);
                                                 }}
                                                 disabled={

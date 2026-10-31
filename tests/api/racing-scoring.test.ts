@@ -136,6 +136,23 @@ describe("racing calculate-points: state and authorization", () => {
         expect(db.racingPrediction.update).not.toHaveBeenCalled();
     });
 
+    it("returns 400 when wildcard is configured for the session but missing in results", async () => {
+        setup([podium("A", "B", "C")]);
+        db.racingSession.findUnique.mockResolvedValueOnce({
+            id: "s1",
+            type: "RACE",
+            weekend: { season: { competition: { id: "c1", createdBy: "admin1" } } },
+            participants: ["A", "B", "C", "D", "W"].map((driverId) => ({ driverId })),
+            wildcards: [{ driverId: "W" }],
+            results: RESULTS,
+            predictions: [],
+        });
+        const res = await call();
+        expect(res.status).toBe(400);
+        const data = await res.json();
+        expect(data.code).toBe("WILDCARD_RESULT_REQUIRED");
+    });
+
     it("returns 403 for anonymous, regular user and foreign admin", async () => {
         asAnon();
         expect((await call()).status).toBe(403);

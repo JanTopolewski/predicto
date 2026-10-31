@@ -314,6 +314,7 @@
     "wildcardPlaceholder": "Wpisz pozycję (1-{max})...",
     "validationRequired": "Wybierz wszystkie wymagane pola",
     "validationPodium": "Wybierz kierowców na podium",
+    "validationWildcard": "Podaj typowaną pozycję dla kierowcy Wildcard",
     "admin": {
       "title": "Panel administracyjny F1",
       "subtitle": "Zarządzaj weekendami, sesjami i zwycięzcą sezonu",
@@ -385,6 +386,7 @@
         "sessionMarkedClosed": "Sesja oznaczona jako zakończona!",
         "wildcardRequiredValidation": "Kierowca Wildcard jest wymagany dla tej sesji (brak podium)",
         "wildcardRangeError": "Pozycja Wildcard musi być liczbą od 1 do {max}",
+        "wildcardResultRequiredError": "Podaj pozycję na mecie dla kierowcy Wildcard",
         "podiumDistinctError": "Miejsca na podium muszą zajmować różni kierowcy",
         "podiumRequiredError": "Wybierz kierowców dla pozycji 1, 2 i 3",
         "fieldsRequiredError": "Wszystkie pola są wymagane i wybierz przynajmniej jednego kierowcę"

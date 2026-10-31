@@ -262,7 +262,12 @@ export default function RacingSessionsPage() {
         }
 
         const maxPos = racingSession.participants.length;
-        if (wildcard && wildcardPosition) {
+        if (wildcard) {
+            if (!wildcardPosition) {
+                setError(t("wildcardResultRequiredError"));
+                setIsSubmittingResults(false);
+                return;
+            }
             const pos = parseInt(wildcardPosition);
             if (isNaN(pos) || pos < 1 || pos > maxPos) {
                 setError(t("wildcardRangeError", { max: maxPos }));

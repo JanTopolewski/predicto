@@ -174,7 +174,21 @@ export async function POST(
             }
         }
 
-        // Wildcard validation (optional but if provided, must have position)
+        // Get wildcard driver from session (admin-selected)
+        const sessionWildcard = await prisma.wildcard.findFirst({
+            where: { sessionId },
+        });
+
+        // If session has a configured wildcard driver, predicting their position is mandatory
+        if (sessionWildcard && !wildcardPosition) {
+            return apiError(
+                400,
+                "WILDCARD_POSITION_REQUIRED",
+                "Wildcard predicted position is required for this session"
+            );
+        }
+
+        // Wildcard validation (if provided, must have position)
         if (wildcardPosition) {
             if (!Number.isInteger(wildcardPosition) || wildcardPosition < 1 || wildcardPosition > maxPosition) {
                 return apiError(
@@ -194,11 +208,6 @@ export async function POST(
                 "Please provide at least wildcard position or podium prediction"
             );
         }
-
-        // Get wildcard driver from session (admin-selected)
-        const sessionWildcard = await prisma.wildcard.findFirst({
-            where: { sessionId },
-        });
 
         const prediction = await prisma.racingPrediction.upsert({
             where: {

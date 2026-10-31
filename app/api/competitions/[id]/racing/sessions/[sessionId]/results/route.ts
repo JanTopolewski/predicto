@@ -103,6 +103,17 @@ export async function POST(
             seenPositions.add(item.position);
         }
 
+        // If session has a configured wildcard driver, result for that driver is mandatory
+        const sessionWildcard = racingSession.wildcards?.[0];
+        if (sessionWildcard && !seenDriverIds.has(sessionWildcard.driverId)) {
+            return apiError(
+                400,
+                "WILDCARD_RESULT_REQUIRED",
+                "Finishing position for the wildcard driver is required",
+                { driverId: sessionWildcard.driverId }
+            );
+        }
+
         const scoringRules = await prisma.competitionScoring.findUnique({
             where: { competitionId },
         });

@@ -112,7 +112,11 @@ export default function RacingPage() {
     const handleSubmitPrediction = async (
         sessionId: string,
         sessionType: string,
+        hasWildcard: boolean
     ) => {
+        setError("");
+        setSuccess("");
+
         if (!currentPrediction || currentPrediction.sessionId !== sessionId) {
             setError(t("validationRequired"));
             return;
@@ -127,6 +131,11 @@ export default function RacingPage() {
                 !currentPrediction.thirdDriver)
         ) {
             setError(t("validationPodium"));
+            return;
+        }
+
+        if (hasWildcard && !currentPrediction.wildcardPosition) {
+            setError(t("validationWildcard"));
             return;
         }
 
@@ -158,6 +167,7 @@ export default function RacingPage() {
             }
 
             setSuccess(t("predictionSaved"));
+            setError("");
             setCurrentPrediction(null);
             setEditingSessionIds((prev) => ({ ...prev, [sessionId]: false }));
             await fetchWeekends();
@@ -269,7 +279,7 @@ export default function RacingPage() {
                                             <div>
                                                 {existingVote && !editingSessionIds[racingSession.id] ? (
                                                     <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg overflow-hidden transition-all">
-                                                        <div className="p-3.5 flex items-center justify-between">
+                                                        <div className="px-3.5 py-2.5 min-h-[46px] flex items-center justify-between">
                                                             <button
                                                                 type="button"
                                                                 onClick={() => toggleVoteExpanded(racingSession.id)}
@@ -307,7 +317,7 @@ export default function RacingPage() {
                                                                                 [racingSession.id]: true,
                                                                             }));
                                                                         }}
-                                                                        className="px-2.5 py-1 text-xs font-semibold rounded-md bg-white dark:bg-zinc-800 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors"
+                                                                        className="px-2.5 py-1 text-xs font-semibold rounded-md bg-white dark:bg-zinc-800 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors leading-none"
                                                                     >
                                                                         {t("editPrediction")}
                                                                     </button>
@@ -502,7 +512,8 @@ export default function RacingPage() {
                                                                 onClick={() =>
                                                                     handleSubmitPrediction(
                                                                         racingSession.id,
-                                                                        racingSession.type
+                                                                        racingSession.type,
+                                                                        Boolean(racingSession.wildcards && racingSession.wildcards.length > 0)
                                                                     )
                                                                 }
                                                                 className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"

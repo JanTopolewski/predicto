@@ -314,6 +314,7 @@
     "wildcardPlaceholder": "Enter position (1-{max})...",
     "validationRequired": "Please select all required fields",
     "validationPodium": "Please select podium drivers",
+    "validationWildcard": "Please predict the finishing position for the wildcard driver",
     "admin": {
       "title": "Racing Admin Panel",
       "subtitle": "Manage weekends, sessions and season winner",
@@ -385,6 +386,7 @@
         "sessionMarkedClosed": "Session marked as finished!",
         "wildcardRequiredValidation": "Wildcard driver is required for this session (no podium)",
         "wildcardRangeError": "Wildcard position must be between 1 and {max}",
+        "wildcardResultRequiredError": "Please provide the finishing position for the wildcard driver",
         "podiumDistinctError": "Podium places must be taken by different drivers",
         "podiumRequiredError": "Select drivers for 1st, 2nd, and 3rd place",
         "fieldsRequiredError": "All fields are required and select at least one driver"

@@ -18,7 +18,7 @@ function setup(over: Record<string, unknown> = {}) {
         participants: drivers,
         ...over,
     });
-    db.wildcard.findFirst.mockResolvedValue({ driverId: "D" });
+    db.wildcard.findFirst.mockResolvedValue(null);
     db.racingPrediction.upsert.mockImplementation(async (a: any) => a.create);
 }
 
@@ -80,9 +80,19 @@ describe("POST racing predictions", () => {
 
     it("takes the wildcard driver from the session (admin-chosen), not from the body", async () => {
         setup();
+        db.wildcard.findFirst.mockResolvedValue({ driverId: "D" });
         await call({ ...ok, wildcardPosition: 2, wildcardDriver: "A", wildcardDriverId: "A" });
         expect(upserted().create.wildcardDriverId).toBe("D");
         expect(upserted().create.wildcardPosition).toBe(2);
+    });
+
+    it("rejects prediction without wildcard if wildcard is configured for the session", async () => {
+        setup();
+        db.wildcard.findFirst.mockResolvedValue({ driverId: "D" });
+        const res = await call(ok);
+        expect(res.status).toBe(400);
+        const data = await res.json();
+        expect(data.code).toBe("WILDCARD_POSITION_REQUIRED");
     });
 
     it("non-podium session (qualifying): podium fields are nulled, wildcard works", async () => {
