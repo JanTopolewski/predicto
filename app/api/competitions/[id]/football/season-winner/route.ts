@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { apiError, unauthorized, internalError, canManageCompetition } from "@/lib/api";
+import { apiError, forbidden, unauthorized, internalError, canManageCompetition } from "@/lib/api";
 
 export async function POST(
     request: NextRequest,
@@ -182,7 +182,7 @@ export async function PUT(
         const session = await auth();
 
         if (!session?.user?.id || session.user.role !== "ADMIN") {
-            return apiError(403, "FORBIDDEN", "Only admins can announce season winner");
+            return forbidden();
         }
 
         const competitionId = (await params).id;

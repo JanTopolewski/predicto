@@ -95,6 +95,16 @@ describe("POST /api/drivers", () => {
             team: "Orlen Team",
         });
     });
+
+    it("GET /api/teams supports ?sort=name", async () => {
+        withDbRole("ADMIN");
+        db.team.findMany.mockResolvedValue([]);
+        const res = await listTeams(jsonReq(undefined, "GET", "http://localhost/api/teams?sort=name") as never);
+        expect(res.status).toBe(200);
+        expect(db.team.findMany).toHaveBeenCalledWith({
+            orderBy: { name: "asc" },
+        });
+    });
 });
 
 describe("PUT /api/drivers/[id]", () => {

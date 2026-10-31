@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { apiError, unauthorized, forbidden, internalError } from "@/lib/api";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
     try {
         const session = await auth();
 
@@ -20,8 +20,13 @@ export async function GET() {
             return forbidden();
         }
 
+        const url = request?.nextUrl ?? new URL(request?.url ?? "http://localhost/api/teams");
+        const sort = url.searchParams?.get("sort");
+
+        const orderBy = sort === "name" || sort === "asc" ? { name: "asc" as const } : { createdAt: "desc" as const };
+
         const teams = await prisma.team.findMany({
-            orderBy: { createdAt: "desc" },
+            orderBy,
         });
 
         return NextResponse.json({ teams });

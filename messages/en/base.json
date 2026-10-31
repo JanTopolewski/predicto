@@ -27,7 +27,8 @@
     "all": "All",
     "confirm": "Confirm",
     "warning": "Warning",
-    "pointsShort": "pts"
+    "pointsShort": "pts",
+    "you": "YOU"
   },
   "notifications": {
     "enable": "Enable notifications",

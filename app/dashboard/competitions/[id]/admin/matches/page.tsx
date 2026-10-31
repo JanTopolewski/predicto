@@ -74,7 +74,7 @@ export default function AdminMatchesPage() {
 
                 const [matchesRes, teamsRes] = await Promise.all([
                     fetch(`/api/competitions/${competitionId}/matches`),
-                    fetch("/api/teams/sorted"),
+                    fetch("/api/teams?sort=name"),
                 ]);
 
                 if (!matchesRes.ok) {

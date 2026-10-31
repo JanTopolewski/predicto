@@ -27,7 +27,8 @@
     "all": "Wszystkie",
     "confirm": "Potwierdź",
     "warning": "Ostrzeżenie",
-    "pointsShort": "pkt"
+    "pointsShort": "pkt",
+    "you": "TY"
   },
   "notifications": {
     "enable": "Włącz powiadomienia",

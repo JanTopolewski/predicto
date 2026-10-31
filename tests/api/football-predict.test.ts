@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { GET, POST } from "../../app/api/competitions/[id]/matches/[matchId]/predictions/route";
 import { asAnon, asUser, ctx, db, FUTURE, jsonReq, PAST } from "../helpers";
-import { NextRequest } from "next/server";
 
 const params = ctx({ id: "c1", matchId: "m1" });
 const call = (body: unknown) => POST(jsonReq(body), params);
-const callGet = () => GET(new NextRequest("http://localhost/api/competitions/c1/matches/m1/predictions"), params);
+const callGet = (url = "http://localhost/api/competitions/c1/matches/m1/predictions?scope=all") =>
+    GET(jsonReq(undefined, "GET", url) as never, params);
 
 function setup(matchOverrides: Record<string, unknown> = {}) {
     asUser("user1");
@@ -114,6 +114,25 @@ describe("GET all football predictions for match", () => {
         expect(res.status).toBe(403);
         const data = await res.json();
         expect(data.code).toBe("EVENT_NOT_STARTED");
+    });
+
+    it("returns only current user's prediction without scope=all", async () => {
+        asUser("user1");
+        db.competition.findUnique.mockResolvedValue({ id: "c1", createdBy: "creator" });
+        db.competitionMember.findUnique.mockResolvedValue({ id: "mem1" });
+        db.footballPrediction.findUnique.mockResolvedValue({
+            id: "p1",
+            userId: "user1",
+            homeGoals: 2,
+            awayGoals: 1,
+            points: 0,
+        });
+
+        const res = await callGet("http://localhost/api/competitions/c1/matches/m1/predictions");
+        expect(res.status).toBe(200);
+        const data = await res.json();
+        expect(data.prediction).toMatchObject({ homeGoals: 2, awayGoals: 1 });
+        expect(db.footballMatch.findUnique).not.toHaveBeenCalled();
     });
 
     it("returns predictions for all members after match kickoff", async () => {

@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { apiError, unauthorized, internalError, forbidden } from "@/lib/api";
 
 export async function GET(
-    _request: NextRequest,
+    request: NextRequest,
     {
         params,
     }: {
@@ -43,6 +43,23 @@ export async function GET(
 
         if (!member && !isCreatorOrAdmin) {
             return forbidden();
+        }
+
+        const url = request.nextUrl ?? new URL(request.url ?? "http://localhost/api/test");
+        const scope = url.searchParams?.get("scope");
+
+        // If not scope=all, return just the current user's single prediction (backward compatibility)
+        if (scope !== "all") {
+            const prediction = await prisma.footballPrediction.findUnique({
+                where: {
+                    matchId_userId: {
+                        matchId,
+                        userId: session.user.id,
+                    },
+                },
+            });
+
+            return NextResponse.json({ prediction });
         }
 
         const match = await prisma.footballMatch.findUnique({

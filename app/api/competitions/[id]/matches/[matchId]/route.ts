@@ -92,24 +92,7 @@ export async function PATCH(
             }
         }
 
-        const updatedMatch = await prisma.footballMatch.update({
-            where: { id: matchId },
-            data: {
-                ...(homeGoals !== undefined && { homeGoals }),
-                ...(awayGoals !== undefined && { awayGoals }),
-                ...(status && { status }),
-                ...(parsedVotingClosedAt !== undefined && {
-                    votingClosedAt: parsedVotingClosedAt,
-                }),
-                ...(homeGoals !== undefined &&
-                    awayGoals !== undefined && { resolved: true }),
-            },
-            include: {
-                homeTeam: true,
-                awayTeam: true,
-                predictions: true,
-            },
-        });
+        let updatedMatch;
 
         // Automatically calculate points if score is provided and match resolved
         if (homeGoals !== undefined && awayGoals !== undefined) {
@@ -121,37 +104,53 @@ export async function PATCH(
             const winnerPoints = scoringRules?.winnerPoints ?? 1;
             const actualResult = homeGoals - awayGoals;
 
-            const updates = [];
-            for (const prediction of updatedMatch.predictions) {
-                const predictedResult = prediction.homeGoals - prediction.awayGoals;
-                let points = 0;
+            // Execute match update, prediction points update, and member points calculation in a single transaction
+            updatedMatch = await prisma.$transaction(async (tx: any) => {
+                const matchResult = await tx.footballMatch.update({
+                    where: { id: matchId },
+                    data: {
+                        homeGoals,
+                        awayGoals,
+                        resolved: true,
+                        ...(status && { status }),
+                        ...(parsedVotingClosedAt !== undefined && {
+                            votingClosedAt: parsedVotingClosedAt,
+                        }),
+                    },
+                    include: {
+                        homeTeam: true,
+                        awayTeam: true,
+                        predictions: true,
+                    },
+                });
 
-                if (
-                    prediction.homeGoals === homeGoals &&
-                    prediction.awayGoals === awayGoals
-                ) {
-                    points = exactScorePoints;
-                } else if (
-                    (actualResult === 0 && predictedResult === 0) ||
-                    (actualResult > 0 && predictedResult > 0) ||
-                    (actualResult < 0 && predictedResult < 0)
-                ) {
-                    points = winnerPoints;
-                }
+                for (const prediction of matchResult.predictions) {
+                    const predictedResult = prediction.homeGoals - prediction.awayGoals;
+                    let points = 0;
 
-                const oldPoints = prediction.points || 0;
-                const pointsDiff = points - oldPoints;
+                    if (
+                        prediction.homeGoals === homeGoals &&
+                        prediction.awayGoals === awayGoals
+                    ) {
+                        points = exactScorePoints;
+                    } else if (
+                        (actualResult === 0 && predictedResult === 0) ||
+                        (actualResult > 0 && predictedResult > 0) ||
+                        (actualResult < 0 && predictedResult < 0)
+                    ) {
+                        points = winnerPoints;
+                    }
 
-                updates.push(
-                    prisma.footballPrediction.update({
+                    const oldPoints = prediction.points || 0;
+                    const pointsDiff = points - oldPoints;
+
+                    await tx.footballPrediction.update({
                         where: { id: prediction.id },
                         data: { points },
-                    })
-                );
+                    });
 
-                if (pointsDiff !== 0) {
-                    updates.push(
-                        prisma.competitionMember.update({
+                    if (pointsDiff !== 0) {
+                        await tx.competitionMember.update({
                             where: {
                                 competitionId_userId: {
                                     competitionId,
@@ -163,14 +162,29 @@ export async function PATCH(
                                     increment: pointsDiff,
                                 },
                             },
-                        })
-                    );
+                        });
+                    }
                 }
-            }
 
-            if (updates.length > 0) {
-                await Promise.all(updates);
-            }
+                return matchResult;
+            });
+        } else {
+            updatedMatch = await prisma.footballMatch.update({
+                where: { id: matchId },
+                data: {
+                    ...(homeGoals !== undefined && { homeGoals }),
+                    ...(awayGoals !== undefined && { awayGoals }),
+                    ...(status && { status }),
+                    ...(parsedVotingClosedAt !== undefined && {
+                        votingClosedAt: parsedVotingClosedAt,
+                    }),
+                },
+                include: {
+                    homeTeam: true,
+                    awayTeam: true,
+                    predictions: true,
+                },
+            });
         }
 
         return NextResponse.json({ match: updatedMatch });

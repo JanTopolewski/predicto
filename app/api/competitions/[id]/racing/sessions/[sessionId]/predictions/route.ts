@@ -45,8 +45,8 @@ export async function GET(
             return forbidden();
         }
 
-        const { searchParams } = new URL(request.url);
-        const scope = searchParams.get("scope");
+        const url = request.nextUrl ?? new URL(request.url ?? "http://localhost/api/test");
+        const scope = url.searchParams?.get("scope");
 
         // If not scope=all, return just the current user's single prediction (backward compatibility)
         if (scope !== "all") {

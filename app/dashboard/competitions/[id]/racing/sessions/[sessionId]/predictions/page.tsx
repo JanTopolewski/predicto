@@ -189,7 +189,7 @@ export default function RacingSessionPredictionsPage() {
                                                 </span>
                                                 {isCurrentUser && (
                                                     <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300">
-                                                        TY
+                                                        {tCommon("you")}
                                                     </span>
                                                 )}
                                             </div>
