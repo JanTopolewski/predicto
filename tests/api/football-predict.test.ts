@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { POST } from "../../app/api/competitions/[id]/matches/[matchId]/predict/route";
+import { POST } from "../../app/api/competitions/[id]/matches/[matchId]/predictions/route";
 import { asAnon, asUser, ctx, db, FUTURE, jsonReq, PAST } from "../helpers";
 
 const params = ctx({ id: "c1", matchId: "m1" });

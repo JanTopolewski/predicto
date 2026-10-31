@@ -124,8 +124,8 @@ export default function ProfilePage() {
         }
 
         try {
-            const response = await fetch("/api/auth/change-password", {
-                method: "POST",
+            const response = await fetch("/api/auth/password", {
+                method: "PATCH",
                 headers: {
                     "Content-Type": "application/json",
                 },

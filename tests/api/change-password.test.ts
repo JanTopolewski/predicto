@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import { beforeAll, describe, expect, it } from "vitest";
-import { POST } from "../../app/api/auth/change-password/route";
+import { PATCH } from "../../app/api/auth/password/route";
 import { asAnon, asUser, db, jsonReq } from "../helpers";
 
 const OLD_PASSWORD = "stareHasło_żółć123";
@@ -11,9 +11,9 @@ beforeAll(async () => {
     hash = await bcrypt.hash(OLD_PASSWORD, 4);
 });
 
-const call = (body: unknown) => POST(jsonReq(body));
+const call = (body: unknown) => PATCH(jsonReq(body, "PATCH"));
 
-describe("POST /api/auth/change-password", () => {
+describe("PATCH /api/auth/password", () => {
     it("returns 401 without a session", async () => {
         asAnon();
         expect((await call({ currentPassword: "a", newPassword: "b" })).status).toBe(401);

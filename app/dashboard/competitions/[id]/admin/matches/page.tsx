@@ -203,33 +203,11 @@ export default function AdminMatchesPage() {
                 matches.map((m) => (m.id === matchId ? data.match : m))
             );
 
-            setSuccessMessage(t("saveResult"));
+            setSuccessMessage(t("resultUpdated"));
             setEditingMatchId(null);
             setEditHomeGoals("");
             setEditAwayGoals("");
-
-            setIsCalculating(matchId);
-            try {
-                const calculateResponse = await fetch(
-                    `/api/competitions/${competitionId}/matches/${matchId}/calculate-points`,
-                    {
-                        method: "POST",
-                    }
-                );
-
-                if (calculateResponse.ok) {
-                    setSuccessMessage(t("resultUpdated"));
-                } else {
-                    const errorData = await calculateResponse.json();
-                    setError(apiError(errorData));
-                }
-            } catch (err) {
-                console.error(err);
-                setError(apiError());
-            } finally {
-                setIsCalculating("");
-                setIsUpdating(false);
-            }
+            setIsUpdating(false);
 
             setTimeout(() => setSuccessMessage(""), 3000);
         } catch (err) {
@@ -239,37 +217,7 @@ export default function AdminMatchesPage() {
         }
     };
 
-    const handleCalculatePoints = async (matchId: string) => {
-        setError("");
-        setSuccessMessage("");
-        setIsCalculating(matchId);
 
-        try {
-            const response = await fetch(
-                `/api/competitions/${competitionId}/matches/${matchId}/calculate-points`,
-                {
-                    method: "POST",
-                }
-            );
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                setError(apiError(data));
-                setIsCalculating("");
-                return;
-            }
-
-            setSuccessMessage(t("pointsCalculated"));
-            setIsCalculating("");
-
-            setTimeout(() => setSuccessMessage(""), 3000);
-        } catch (err) {
-            setError(apiError());
-            console.error(err);
-            setIsCalculating("");
-        }
-    };
 
     const handleDeleteMatch = async (matchId: string) => {
         if (!window.confirm(t("deleteConfirm"))) {

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { GET as getSubscription, POST as postSubscription, DELETE as deleteSubscription } from "../../app/api/push/subscription/route";
+import { GET as getSubscription, POST as postSubscription, DELETE as deleteSubscription } from "../../app/api/push/subscriptions/route";
 import { POST as cronReminders } from "../../app/api/cron/reminders/route";
 import { asAnon, asUser, db, jsonReq } from "../helpers";
 import { NextRequest } from "next/server";

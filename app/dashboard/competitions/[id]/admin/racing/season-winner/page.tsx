@@ -72,9 +72,9 @@ export default function RacingSeasonWinnerPage() {
 
         try {
             const response = await fetch(
-                `/api/competitions/${competitionId}/racing/season-winner/announce`,
+                `/api/competitions/${competitionId}/racing/season-winner`,
                 {
-                    method: "POST",
+                    method: "PUT",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ driverId: selectedDriverId }),
                 }

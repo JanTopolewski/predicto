@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { GET as listMine, POST as createCompetition } from "../../app/api/competitions/route";
-import { GET as listAll } from "../../app/api/competitions/all/route";
+import { GET as listCompetitions, POST as createCompetition } from "../../app/api/competitions/route";
 import { POST as createMatch } from "../../app/api/competitions/[id]/matches/route";
-import { POST as announceFootball } from "../../app/api/competitions/[id]/football/season-winner/announce/route";
+import { PUT as announceFootball } from "../../app/api/competitions/[id]/football/season-winner/route";
 import { asAdmin, asAnon, asUser, calls, ctx, db, jsonReq } from "../helpers";
+
+const listMine = (req?: any) =>
+    listCompetitions(req && req.url ? req : jsonReq(undefined, "GET", "http://localhost/api/competitions") as never);
+const listAll = (req?: any) =>
+    listCompetitions(req && req.url ? req : jsonReq(undefined, "GET", "http://localhost/api/competitions?scope=all") as never);
 
 describe("POST /api/competitions", () => {
     const body = {
@@ -107,7 +111,7 @@ describe("GET /api/competitions (my competitions)", () => {
     });
 });
 
-describe("GET /api/competitions/all - visibility and invite code privacy", () => {
+describe("GET /api/competitions?scope=all - visibility and invite code privacy", () => {
     const comp = (over: Record<string, unknown>) => ({
         id: "c1",
         name: "N",

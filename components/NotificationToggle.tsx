@@ -72,7 +72,7 @@ export function NotificationToggle() {
             const endpoint = subscription.endpoint;
             await subscription.unsubscribe();
 
-            await fetch("/api/push/subscription", {
+            await fetch("/api/push/subscriptions", {
               method: "DELETE",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ endpoint }),
@@ -106,7 +106,7 @@ export function NotificationToggle() {
 
         const subJson = subscription.toJSON();
 
-        const res = await fetch("/api/push/subscription", {
+        const res = await fetch("/api/push/subscriptions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

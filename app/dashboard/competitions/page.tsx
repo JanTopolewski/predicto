@@ -44,7 +44,7 @@ export default function CompetitionsPage() {
         const fetchCompetitions = async () => {
             try {
                 setLoading(true);
-                const response = await fetch("/api/competitions/all");
+                const response = await fetch("/api/competitions?scope=all");
 
                 if (!response.ok) {
                     const data = await response.json();
@@ -72,7 +72,7 @@ export default function CompetitionsPage() {
 
         try {
             const response = await fetch(
-                `/api/competitions/${competitionId}/join`,
+                `/api/competitions/${competitionId}/members`,
                 {
                     method: "POST",
                 }
@@ -114,7 +114,7 @@ export default function CompetitionsPage() {
             }
 
             const response = await fetch(
-                `/api/competitions/join-by-code`,
+                `/api/competitions/members`,
                 {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },

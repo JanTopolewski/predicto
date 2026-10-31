@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { POST } from "../../app/api/competitions/[id]/racing/sessions/[sessionId]/calculate-points/route";
-import { asAdmin, asAnon, asUser, calls, ctx, db } from "../helpers";
-
-const call = () => POST(new Request("http://x") as never, ctx({ id: "c1", sessionId: "s1" }));
+import { POST } from "../../app/api/competitions/[id]/racing/sessions/[sessionId]/results/route";
+import { asAdmin, asAnon, asUser, calls, ctx, db, jsonReq } from "../helpers";
 
 // Result: A=P1, B=P2, C=P3, D=P4
 const RESULTS = ["A", "B", "C", "D"].map((driverId, i) => ({ driverId, position: i + 1 }));
+
+const call = (customResults = RESULTS) =>
+    POST(jsonReq({ results: customResults }, "POST"), ctx({ id: "c1", sessionId: "s1" }));
 
 type Pred = Partial<{
     firstDriverId: string;
@@ -25,6 +26,8 @@ function setup(
         id: "s1",
         type: opts.type ?? "RACE",
         weekend: { season: { competition: { id: "c1", createdBy: "admin1" } } },
+        participants: ["A", "B", "C", "D", "X", "Y"].map((driverId) => ({ driverId })),
+        wildcards: [],
         results: opts.results ?? RESULTS,
         predictions: predictions.map((p, i) => ({ id: `p${i}`, userId: `u${i}`, points: 0, ...p })),
     });
@@ -117,7 +120,7 @@ describe("racing calculate-points: state and authorization", () => {
     it("marks the session as resolved and adds points to members", async () => {
         setup([podium("A", "B", "C")]);
         await call();
-        expect(calls(db.racingSession.update)[0].data).toEqual({ resolved: true });
+        expect(calls(db.racingSession.update)[0].data).toMatchObject({ resolved: true });
         expect(calls(db.competitionMember.update)[0].data.points.increment).toBe(9);
     });
 
@@ -129,7 +132,7 @@ describe("racing calculate-points: state and authorization", () => {
 
     it("returns 400 when there are no results", async () => {
         setup([podium("A", "B", "C")], { results: [] });
-        expect((await call()).status).toBe(400);
+        expect((await call([])).status).toBe(400);
         expect(db.racingPrediction.update).not.toHaveBeenCalled();
     });
 

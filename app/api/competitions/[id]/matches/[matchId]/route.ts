@@ -111,6 +111,68 @@ export async function PATCH(
             },
         });
 
+        // Automatically calculate points if score is provided and match resolved
+        if (homeGoals !== undefined && awayGoals !== undefined) {
+            const scoringRules = await prisma.competitionScoring.findUnique({
+                where: { competitionId },
+            });
+
+            const exactScorePoints = scoringRules?.exactScorePoints ?? 3;
+            const winnerPoints = scoringRules?.winnerPoints ?? 1;
+            const actualResult = homeGoals - awayGoals;
+
+            const updates = [];
+            for (const prediction of updatedMatch.predictions) {
+                const predictedResult = prediction.homeGoals - prediction.awayGoals;
+                let points = 0;
+
+                if (
+                    prediction.homeGoals === homeGoals &&
+                    prediction.awayGoals === awayGoals
+                ) {
+                    points = exactScorePoints;
+                } else if (
+                    (actualResult === 0 && predictedResult === 0) ||
+                    (actualResult > 0 && predictedResult > 0) ||
+                    (actualResult < 0 && predictedResult < 0)
+                ) {
+                    points = winnerPoints;
+                }
+
+                const oldPoints = prediction.points || 0;
+                const pointsDiff = points - oldPoints;
+
+                updates.push(
+                    prisma.footballPrediction.update({
+                        where: { id: prediction.id },
+                        data: { points },
+                    })
+                );
+
+                if (pointsDiff !== 0) {
+                    updates.push(
+                        prisma.competitionMember.update({
+                            where: {
+                                competitionId_userId: {
+                                    competitionId,
+                                    userId: prediction.userId,
+                                },
+                            },
+                            data: {
+                                points: {
+                                    increment: pointsDiff,
+                                },
+                            },
+                        })
+                    );
+                }
+            }
+
+            if (updates.length > 0) {
+                await Promise.all(updates);
+            }
+        }
+
         return NextResponse.json({ match: updatedMatch });
     } catch (error) {
         console.error("Error updating match:", error);

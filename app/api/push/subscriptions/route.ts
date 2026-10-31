@@ -19,7 +19,7 @@ export async function GET() {
       count,
     });
   } catch (error) {
-    console.error("GET /api/push/subscription error:", error);
+    console.error("GET /api/push/subscriptions error:", error);
     return internalError();
   }
 }
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, id: subscription.id });
   } catch (error) {
-    console.error("POST /api/push/subscription error:", error);
+    console.error("POST /api/push/subscriptions error:", error);
     return internalError();
   }
 }
@@ -89,7 +89,8 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("DELETE /api/push/subscription error:", error);
+    console.error("DELETE /api/push/subscriptions error:", error);
     return internalError();
   }
 }
+

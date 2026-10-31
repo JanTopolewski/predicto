@@ -292,16 +292,6 @@ export default function RacingSessionsPage() {
                 throw new Error(apiError(data));
             }
 
-            const calcRes = await fetch(
-                `/api/competitions/${competitionId}/racing/sessions/${racingSession.id}/calculate-points`,
-                { method: "POST" }
-            );
-
-            if (!calcRes.ok) {
-                const data = await calcRes.json().catch(() => null);
-                throw new Error(apiError(data));
-            }
-
             setSuccess(t("resultsCalculated"));
             setResolvingSessionId(null);
 

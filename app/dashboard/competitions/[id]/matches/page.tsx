@@ -99,7 +99,7 @@ export default function MatchesPage() {
 
         try {
             const response = await fetch(
-                `/api/competitions/${competitionId}/matches/${matchId}/predict`,
+                `/api/competitions/${competitionId}/matches/${matchId}/predictions`,
                 {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },

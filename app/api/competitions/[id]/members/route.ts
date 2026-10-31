@@ -3,7 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { apiError, unauthorized, internalError } from "@/lib/api";
 
-export async function POST(request: NextRequest) {
+export async function POST(
+    _request: NextRequest,
+    { params }: { params: Promise<{ id: string }> }
+) {
     try {
         const session = await auth();
 
@@ -11,24 +14,29 @@ export async function POST(request: NextRequest) {
             return unauthorized();
         }
 
-        const { inviteCode } = await request.json();
-
-        if (!inviteCode || typeof inviteCode !== "string" || !inviteCode.trim()) {
-            return apiError(400, "MISSING_INVITE_CODE", "Invite code is required");
-        }
+        const { id } = await params;
+        const competitionId = id;
 
         const competition = await prisma.competition.findUnique({
-            where: { inviteCode: inviteCode.trim().toUpperCase() },
+            where: { id: competitionId },
         });
 
         if (!competition) {
-            return apiError(404, "INVALID_INVITE_CODE", "Invalid invite code");
+            return apiError(404, "COMPETITION_NOT_FOUND", "Competition not found");
+        }
+
+        if (!competition.isPublic) {
+            return apiError(
+                403,
+                "PRIVATE_COMPETITION",
+                "This competition is private. An invite code is required."
+            );
         }
 
         const existingMember = await prisma.competitionMember.findUnique({
             where: {
                 competitionId_userId: {
-                    competitionId: competition.id,
+                    competitionId,
                     userId: session.user.id,
                 },
             },
@@ -40,7 +48,7 @@ export async function POST(request: NextRequest) {
 
         await prisma.competitionMember.create({
             data: {
-                competitionId: competition.id,
+                competitionId,
                 userId: session.user.id,
                 points: 0,
             },
@@ -51,7 +59,8 @@ export async function POST(request: NextRequest) {
             { status: 200 }
         );
     } catch (error) {
-        console.error("Error joining competition by code:", error);
+        console.error("Error joining competition:", error);
         return internalError();
     }
 }
+
