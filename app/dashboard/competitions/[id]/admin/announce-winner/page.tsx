@@ -69,9 +69,9 @@ export default function AnnounceWinnerPage() {
 
         try {
             const response = await fetch(
-                `/api/competitions/${competitionId}/football/season-winner/announce`,
+                `/api/competitions/${competitionId}/football/season-winner`,
                 {
-                    method: "POST",
+                    method: "PUT",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ winningTeamId: selectedTeamId }),
                 }

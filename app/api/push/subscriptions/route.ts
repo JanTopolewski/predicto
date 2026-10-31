@@ -3,11 +3,27 @@ import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { apiError, internalError, unauthorized } from "@/lib/api";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     if (!session?.user?.id) {
       return unauthorized();
+    }
+
+    const { searchParams } = new URL(request.url);
+    const endpoint = searchParams.get("endpoint");
+
+    if (endpoint) {
+      const match = await prisma.pushSubscription.findFirst({
+        where: {
+          endpoint,
+          userId: session.user.id,
+        },
+      });
+
+      return NextResponse.json({
+        subscribed: Boolean(match),
+      });
     }
 
     const count = await prisma.pushSubscription.count({
@@ -19,7 +35,7 @@ export async function GET() {
       count,
     });
   } catch (error) {
-    console.error("GET /api/push/subscription error:", error);
+    console.error("GET /api/push/subscriptions error:", error);
     return internalError();
   }
 }
@@ -56,7 +72,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, id: subscription.id });
   } catch (error) {
-    console.error("POST /api/push/subscription error:", error);
+    console.error("POST /api/push/subscriptions error:", error);
     return internalError();
   }
 }
@@ -89,7 +105,8 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("DELETE /api/push/subscription error:", error);
+    console.error("DELETE /api/push/subscriptions error:", error);
     return internalError();
   }
 }
+

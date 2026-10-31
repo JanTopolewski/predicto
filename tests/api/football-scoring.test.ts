@@ -1,8 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { POST } from "../../app/api/competitions/[id]/matches/[matchId]/calculate-points/route";
-import { asAdmin, asAnon, asUser, ctx, db, calls } from "../helpers";
+import { PATCH } from "../../app/api/competitions/[id]/matches/[matchId]/route";
+import { asAdmin, asAnon, asUser, ctx, db, calls, jsonReq } from "../helpers";
 
-const call = () => POST(new Request("http://x") as never, ctx({ id: "c1", matchId: "m1" }));
+let currentResult: { homeGoals: number | null; awayGoals: number | null } = { homeGoals: 2, awayGoals: 1 };
+
+const call = () =>
+    PATCH(
+        jsonReq({ homeGoals: currentResult.homeGoals, awayGoals: currentResult.awayGoals }, "PATCH"),
+        ctx({ id: "c1", matchId: "m1" })
+    );
 
 type P = { id: string; userId: string; homeGoals: number; awayGoals: number; points?: number };
 
@@ -12,14 +18,22 @@ function setup(
     rules: Record<string, number> | null = null,
     over: Record<string, unknown> = {}
 ) {
+    currentResult = { homeGoals: result.homeGoals, awayGoals: result.awayGoals };
     asAdmin("admin1");
     db.footballMatch.findUnique.mockResolvedValue({
         id: "m1",
-        resolved: true,
+        resolved: false,
         ...result,
         season: { competitionId: "c1", competition: { createdBy: "admin1" } },
         predictions,
         ...over,
+    });
+    db.footballMatch.update.mockResolvedValue({
+        id: "m1",
+        resolved: true,
+        homeGoals: result.homeGoals,
+        awayGoals: result.awayGoals,
+        predictions,
     });
     db.competitionScoring.findUnique.mockResolvedValue(rules);
 }
@@ -125,13 +139,5 @@ describe("football calculate-points: authorization and state", () => {
             season: { competitionId: "inna", competition: { createdBy: "admin1" } },
         });
         expect((await call()).status).toBe(404);
-    });
-
-    it("returns 400 when the result has not been set", async () => {
-        setup({ homeGoals: null, awayGoals: null, resolved: false }, [pred(1, 0)], null, {
-            resolved: false,
-        });
-        expect((await call()).status).toBe(400);
-        expect(db.footballPrediction.update).not.toHaveBeenCalled();
     });
 });

@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { POST } from "../../app/api/competitions/[id]/racing/sessions/[sessionId]/predictions/route";
+import { GET, POST } from "../../app/api/competitions/[id]/racing/sessions/[sessionId]/predictions/route";
 import { asAnon, asUser, ctx, db, FUTURE, jsonReq, PAST } from "../helpers";
+import { NextRequest } from "next/server";
 
 const call = (body: unknown) => POST(jsonReq(body), ctx({ id: "c1", sessionId: "s1" }));
+const callGet = (url = "http://localhost/api/competitions/c1/racing/sessions/s1/predictions?scope=all") =>
+    GET(new NextRequest(url), ctx({ id: "c1", sessionId: "s1" }));
 const drivers = ["A", "B", "C", "D"].map((driverId) => ({ driverId }));
 
 function setup(over: Record<string, unknown> = {}) {
@@ -14,11 +17,11 @@ function setup(over: Record<string, unknown> = {}) {
         resolved: false,
         votingClosedAt: null,
         startTime: FUTURE(),
-        weekend: { season: { competition: { id: "c1" } } },
+        weekend: { season: { competitionId: "c1", competition: { id: "c1" } } },
         participants: drivers,
         ...over,
     });
-    db.wildcard.findFirst.mockResolvedValue({ driverId: "D" });
+    db.wildcard.findFirst.mockResolvedValue(null);
     db.racingPrediction.upsert.mockImplementation(async (a: any) => a.create);
 }
 
@@ -80,9 +83,19 @@ describe("POST racing predictions", () => {
 
     it("takes the wildcard driver from the session (admin-chosen), not from the body", async () => {
         setup();
+        db.wildcard.findFirst.mockResolvedValue({ driverId: "D" });
         await call({ ...ok, wildcardPosition: 2, wildcardDriver: "A", wildcardDriverId: "A" });
         expect(upserted().create.wildcardDriverId).toBe("D");
         expect(upserted().create.wildcardPosition).toBe(2);
+    });
+
+    it("rejects prediction without wildcard if wildcard is configured for the session", async () => {
+        setup();
+        db.wildcard.findFirst.mockResolvedValue({ driverId: "D" });
+        const res = await call(ok);
+        expect(res.status).toBe(400);
+        const data = await res.json();
+        expect(data.code).toBe("WILDCARD_POSITION_REQUIRED");
     });
 
     it("non-podium session (qualifying): podium fields are nulled, wildcard works", async () => {
@@ -99,5 +112,58 @@ describe("POST racing predictions", () => {
     it("qualifying: a podium without a wildcard is rejected", async () => {
         setup({ type: "QUALIFYING" });
         expect((await call(ok)).status).toBe(400);
+    });
+});
+
+describe("GET all racing predictions for session", () => {
+    it("returns 401 without session", async () => {
+        asAnon();
+        expect((await callGet()).status).toBe(401);
+    });
+
+    it("returns 403 when session has not started yet", async () => {
+        setup({ startTime: FUTURE(), resolved: false });
+        db.competition.findUnique.mockResolvedValue({ id: "c1", createdBy: "admin" });
+        const res = await callGet();
+        expect(res.status).toBe(403);
+        const data = await res.json();
+        expect(data.code).toBe("EVENT_NOT_STARTED");
+    });
+
+    it("returns predictions for all members after session start", async () => {
+        setup({
+            startTime: PAST(),
+            resolved: false,
+            predictions: [
+                {
+                    id: "p1",
+                    userId: "user1",
+                    firstDriver: { id: "A", name: "Driver A" },
+                    secondDriver: { id: "B", name: "Driver B" },
+                    thirdDriver: { id: "C", name: "Driver C" },
+                    wildcardDriver: null,
+                    wildcardPosition: null,
+                    points: 0,
+                    user: { id: "user1", username: "User One" },
+                },
+            ],
+            wildcards: [],
+            weekend: { grandPrix: "Monaco GP", season: { competitionId: "c1" } },
+        });
+        db.competition.findUnique.mockResolvedValue({ id: "c1", createdBy: "admin" });
+        db.competitionMember.findMany.mockResolvedValue([
+            { userId: "user1", user: { id: "user1", username: "User One" } },
+            { userId: "user2", user: { id: "user2", username: "User Two" } },
+        ]);
+
+        const res = await callGet();
+        expect(res.status).toBe(200);
+        const data = await res.json();
+        expect(data.session.grandPrix).toBe("Monaco GP");
+        expect(data.predictions).toHaveLength(2);
+        expect(data.predictions[0].user.username).toBe("User One");
+        expect(data.predictions[0].prediction.firstDriver.name).toBe("Driver A");
+        expect(data.predictions[1].user.username).toBe("User Two");
+        expect(data.predictions[1].prediction).toBeNull();
     });
 });

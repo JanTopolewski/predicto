@@ -69,6 +69,7 @@ export default function RacingPage() {
     } | null>(null);
 
     const [expandedVotes, setExpandedVotes] = useState<Record<string, boolean>>({});
+    const [editingSessionIds, setEditingSessionIds] = useState<Record<string, boolean>>({});
 
     const toggleVoteExpanded = (sessionId: string) => {
         setExpandedVotes((prev) => ({
@@ -111,7 +112,11 @@ export default function RacingPage() {
     const handleSubmitPrediction = async (
         sessionId: string,
         sessionType: string,
+        hasWildcard: boolean
     ) => {
+        setError("");
+        setSuccess("");
+
         if (!currentPrediction || currentPrediction.sessionId !== sessionId) {
             setError(t("validationRequired"));
             return;
@@ -126,6 +131,11 @@ export default function RacingPage() {
                 !currentPrediction.thirdDriver)
         ) {
             setError(t("validationPodium"));
+            return;
+        }
+
+        if (hasWildcard && !currentPrediction.wildcardPosition) {
+            setError(t("validationWildcard"));
             return;
         }
 
@@ -157,7 +167,9 @@ export default function RacingPage() {
             }
 
             setSuccess(t("predictionSaved"));
+            setError("");
             setCurrentPrediction(null);
+            setEditingSessionIds((prev) => ({ ...prev, [sessionId]: false }));
             await fetchWeekends();
             setTimeout(() => setSuccess(""), 3000);
         } catch (err) {
@@ -265,32 +277,53 @@ export default function RacingPage() {
                                             </div>
 
                                             <div>
-                                                {existingVote ? (
+                                                {existingVote && !editingSessionIds[racingSession.id] ? (
                                                     <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg overflow-hidden transition-all">
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => toggleVoteExpanded(racingSession.id)}
-                                                            className="w-full p-3.5 flex items-center justify-between text-left hover:bg-emerald-100/50 dark:hover:bg-emerald-900/30 transition-colors cursor-pointer"
-                                                        >
-                                                            <div className="flex items-center gap-2">
+                                                        <div className="px-3.5 py-2.5 min-h-[46px] flex items-center justify-between">
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => toggleVoteExpanded(racingSession.id)}
+                                                                className="flex items-center gap-2 text-left hover:opacity-80 transition-opacity cursor-pointer flex-1"
+                                                            >
                                                                 <CheckIcon className="w-4 h-4 text-emerald-700 dark:text-emerald-300 flex-shrink-0" />
                                                                 <span className="text-xs font-bold text-emerald-800 dark:text-emerald-200 uppercase tracking-wide">
                                                                     {t("yourVote")}
                                                                 </span>
-                                                            </div>
+                                                                <ChevronDownIcon
+                                                                    className={`w-4 h-4 text-emerald-700 dark:text-emerald-300 transition-transform duration-200 ${
+                                                                        expandedVotes[racingSession.id] ? "rotate-180" : ""
+                                                                    }`}
+                                                                />
+                                                            </button>
                                                             <div className="flex items-center gap-2">
                                                                 {racingSession.resolved && (
                                                                     <span className="inline-flex items-center justify-center text-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-200 dark:bg-emerald-800 text-emerald-900 dark:text-emerald-100 whitespace-nowrap leading-normal">
                                                                         {t("pointsEarned", { points: existingVote.points || 0 })}
                                                                     </span>
                                                                 )}
-                                                                <ChevronDownIcon
-                                                                    className={`w-4 h-4 text-emerald-700 dark:text-emerald-300 transition-transform duration-200 ${
-                                                                        expandedVotes[racingSession.id] ? "rotate-180" : ""
-                                                                    }`}
-                                                                />
+                                                                {!isStarted && !racingSession.resolved && (!racingSession.votingClosedAt || new Date(racingSession.votingClosedAt) > new Date()) && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            setCurrentPrediction({
+                                                                                sessionId: racingSession.id,
+                                                                                firstDriver: existingVote.firstDriverId || "",
+                                                                                secondDriver: existingVote.secondDriverId || "",
+                                                                                thirdDriver: existingVote.thirdDriverId || "",
+                                                                                wildcardPosition: existingVote.wildcardPosition || null,
+                                                                            });
+                                                                            setEditingSessionIds((prev) => ({
+                                                                                ...prev,
+                                                                                [racingSession.id]: true,
+                                                                            }));
+                                                                        }}
+                                                                        className="px-2.5 py-1 text-xs font-semibold rounded-md bg-white dark:bg-zinc-800 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors leading-none"
+                                                                    >
+                                                                        {t("editPrediction")}
+                                                                    </button>
+                                                                )}
                                                             </div>
-                                                        </button>
+                                                        </div>
 
                                                         {expandedVotes[racingSession.id] && (
                                                             <div className="p-4 pt-1 border-t border-emerald-200/60 dark:border-emerald-800/60 text-sm text-zinc-800 dark:text-zinc-200 space-y-3">
@@ -334,7 +367,7 @@ export default function RacingPage() {
                                                             </div>
                                                         )}
                                                     </div>
-                                                ) : !isStarted && !racingSession.resolved && !racingSession.votingClosedAt ? (
+                                                ) : !isStarted && !racingSession.resolved && (!racingSession.votingClosedAt || new Date(racingSession.votingClosedAt) > new Date()) ? (
                                                     <div className="space-y-3">
                                                         {isPodiumSession && (
                                                             <div className="p-3 sm:p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-zinc-200 dark:border-zinc-700/80">
@@ -459,17 +492,35 @@ export default function RacingPage() {
                                                             </div>
                                                         )}
 
-                                                        <button
-                                                            onClick={() =>
-                                                                handleSubmitPrediction(
-                                                                    racingSession.id,
-                                                                    racingSession.type
-                                                                )
-                                                            }
-                                                            className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
-                                                        >
-                                                            {t("submitPrediction")}
-                                                        </button>
+                                                        <div className="flex gap-2">
+                                                            {existingVote && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setEditingSessionIds((prev) => ({
+                                                                            ...prev,
+                                                                            [racingSession.id]: false,
+                                                                        }));
+                                                                        setCurrentPrediction(null);
+                                                                    }}
+                                                                    className="px-4 py-2 border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium rounded-lg transition-colors"
+                                                                >
+                                                                    {t("cancelEdit")}
+                                                                </button>
+                                                            )}
+                                                            <button
+                                                                onClick={() =>
+                                                                    handleSubmitPrediction(
+                                                                        racingSession.id,
+                                                                        racingSession.type,
+                                                                        Boolean(racingSession.wildcards && racingSession.wildcards.length > 0)
+                                                                    )
+                                                                }
+                                                                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
+                                                            >
+                                                                {existingVote ? t("updatePrediction") : t("submitPrediction")}
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 ) : (
                                                     <p className="text-sm text-zinc-600 dark:text-zinc-400">
@@ -479,6 +530,17 @@ export default function RacingPage() {
                                                     </p>
                                                 )}
                                             </div>
+
+                                            {(racingSession.resolved || isStarted) && (
+                                                <div className="mt-3 pt-3 border-t border-zinc-200 dark:border-zinc-800">
+                                                    <Link
+                                                        href={`/dashboard/competitions/${competitionId}/racing/sessions/${racingSession.id}/predictions`}
+                                                        className="w-full inline-flex items-center justify-center px-3 py-2 text-xs font-semibold rounded-lg bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 transition-colors"
+                                                    >
+                                                        {t("viewAllPredictions")}
+                                                    </Link>
+                                                </div>
+                                            )}
                                         </div>
                                     );
                                 })}

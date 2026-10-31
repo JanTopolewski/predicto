@@ -39,6 +39,9 @@ export async function POST(
                 },
                 participants: true,
                 wildcards: true,
+                predictions: {
+                    include: { user: true },
+                },
             },
         });
 
@@ -100,13 +103,38 @@ export async function POST(
             seenPositions.add(item.position);
         }
 
+        // If session has a configured wildcard driver, result for that driver is mandatory
+        const sessionWildcard = racingSession.wildcards?.[0];
+        if (sessionWildcard && !seenDriverIds.has(sessionWildcard.driverId)) {
+            return apiError(
+                400,
+                "WILDCARD_RESULT_REQUIRED",
+                "Finishing position for the wildcard driver is required",
+                { driverId: sessionWildcard.driverId }
+            );
+        }
+
+        const scoringRules = await prisma.competitionScoring.findUnique({
+            where: { competitionId },
+        });
+
+        const podiumExactPoints = scoringRules?.podiumExactPoints ?? 3;
+        const podiumAnyPoints = scoringRules?.podiumAnyPoints ?? 1;
+        const wildcardPoints = scoringRules?.wildcardPoints ?? 2;
+        const isPodiumSession = racingSession.type === "SPRINT" || racingSession.type === "RACE";
+
+        const resultsMap = new Map<string, number>();
+        results.forEach((result: { driverId: string; position: number }) => {
+            resultsMap.set(result.driverId, result.position);
+        });
+
         await prisma.$transaction(async (tx) => {
             await tx.racingResult.deleteMany({
                 where: { sessionId },
             });
 
             await tx.racingResult.createMany({
-                data: results.map((r) => ({
+                data: results.map((r: { driverId: string; position: number }) => ({
                     sessionId,
                     driverId: r.driverId,
                     position: r.position,
@@ -117,12 +145,67 @@ export async function POST(
                 where: { id: sessionId },
                 data: {
                     votingClosedAt: new Date(),
+                    resolved: true,
                 },
             });
+
+            for (const prediction of racingSession.predictions || []) {
+                let points = 0;
+
+                if (isPodiumSession && prediction.firstDriverId && prediction.secondDriverId && prediction.thirdDriverId) {
+                    const pos1 = resultsMap.get(prediction.firstDriverId);
+                    const pos2 = resultsMap.get(prediction.secondDriverId);
+                    const pos3 = resultsMap.get(prediction.thirdDriverId);
+
+                    if (pos1 === 1) points += podiumExactPoints;
+                    if (pos2 === 2) points += podiumExactPoints;
+                    if (pos3 === 3) points += podiumExactPoints;
+
+                    if (pos1 && pos1 <= 3 && pos1 !== 1) points += podiumAnyPoints;
+                    if (pos2 && pos2 <= 3 && pos2 !== 2) points += podiumAnyPoints;
+                    if (pos3 && pos3 <= 3 && pos3 !== 3) points += podiumAnyPoints;
+                }
+
+                if (prediction.wildcardDriverId && prediction.wildcardPosition) {
+                    const actualPosition = resultsMap.get(prediction.wildcardDriverId);
+
+                    if (actualPosition) {
+                        if (actualPosition === prediction.wildcardPosition) {
+                            points += wildcardPoints;
+                        } else if (Math.abs(actualPosition - prediction.wildcardPosition) <= 2) {
+                            points += Math.round(wildcardPoints / 2);
+                        }
+                    }
+                }
+
+                const oldPoints = prediction.points || 0;
+                const pointsDiff = points - oldPoints;
+
+                await tx.racingPrediction.update({
+                    where: { id: prediction.id },
+                    data: { points },
+                });
+
+                if (pointsDiff !== 0) {
+                    await tx.competitionMember.update({
+                        where: {
+                            competitionId_userId: {
+                                competitionId,
+                                userId: prediction.userId,
+                            },
+                        },
+                        data: {
+                            points: {
+                                increment: pointsDiff,
+                            },
+                        },
+                    });
+                }
+            }
         });
 
         return NextResponse.json({
-            message: "Results saved and voting locked successfully",
+            message: "Results saved and points calculated successfully",
         });
     } catch (error) {
         console.error("Error setting session results:", error);

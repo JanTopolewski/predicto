@@ -27,7 +27,8 @@
     "all": "All",
     "confirm": "Confirm",
     "warning": "Warning",
-    "pointsShort": "pts"
+    "pointsShort": "pts",
+    "you": "YOU"
   },
   "notifications": {
     "enable": "Enable notifications",
@@ -234,10 +235,17 @@
     "noMatches": "No matches found for this competition",
     "predictionSaved": "Your prediction has been saved",
     "yourVote": "Your prediction",
+    "editPrediction": "Change prediction",
+    "updatePrediction": "Update prediction",
+    "cancelEdit": "Cancel",
     "pointsEarned": "+{points} pts",
     "scoreRequired": "Enter score for both teams",
     "scoreRangeError": "Score must be between 0 and 20",
     "matchFinishedNoVoting": "Match finished - voting closed",
+    "viewAllPredictions": "View all predictions",
+    "allPredictionsTitle": "All participants' predictions",
+    "noPredictionsSubmitted": "No predictions submitted",
+    "noPredictionFromUser": "No prediction",
     "admin": {
       "title": "Manage matches",
       "subtitle": "Create, edit and calculate points",
@@ -262,6 +270,7 @@
       "deleteMatch": "Delete",
       "matchDeleted": "Match has been deleted",
       "deleteConfirm": "Are you sure you want to delete this match?",
+      "viewAllPredictions": "View all predictions",
       "teamsMustDiffer": "Please select different teams",
       "scoreRequired": "Please enter score",
       "announceWinner": {
@@ -298,6 +307,9 @@
     "sessionResolved": "Session resolved",
     "sessionInProgress": "Session is in progress",
     "yourVote": "Your submitted vote for this session:",
+    "editPrediction": "Change prediction",
+    "updatePrediction": "Update prediction",
+    "cancelEdit": "Cancel",
     "pointsEarned": "+{points} pts",
     "wildcardPredicted": "Predicted Wildcard position: P{pos}",
     "selectPodium": "SELECT PODIUM (3 pts exact, 1 pt any):",
@@ -308,6 +320,11 @@
     "wildcardPlaceholder": "Enter position (1-{max})...",
     "validationRequired": "Please select all required fields",
     "validationPodium": "Please select podium drivers",
+    "validationWildcard": "Please predict the finishing position for the wildcard driver",
+    "viewAllPredictions": "View all predictions",
+    "allPredictionsTitle": "All participants' predictions",
+    "noPredictionsSubmitted": "No predictions submitted",
+    "noPredictionFromUser": "No prediction",
     "admin": {
       "title": "Racing Admin Panel",
       "subtitle": "Manage weekends, sessions and season winner",
@@ -377,8 +394,10 @@
         "sessionDeleted": "Session deleted successfully!",
         "resultsCalculated": "Results confirmed, voting locked and points calculated!",
         "sessionMarkedClosed": "Session marked as finished!",
+        "viewAllPredictions": "View all predictions",
         "wildcardRequiredValidation": "Wildcard driver is required for this session (no podium)",
         "wildcardRangeError": "Wildcard position must be between 1 and {max}",
+        "wildcardResultRequiredError": "Please provide the finishing position for the wildcard driver",
         "podiumDistinctError": "Podium places must be taken by different drivers",
         "podiumRequiredError": "Select drivers for 1st, 2nd, and 3rd place",
         "fieldsRequiredError": "All fields are required and select at least one driver"

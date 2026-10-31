@@ -28,7 +28,7 @@ const protectedHandlers: [string, () => Promise<Response>][] = [
     ["GET /drivers/[id]", () => getDriver(req(undefined, "GET"), idCtx)],
     ["PUT /drivers/[id]", () => updateDriver(req({ name: "A", number: 1, team: "T" }, "PUT"), idCtx)],
     ["DELETE /drivers/[id]", () => deleteDriver(req(undefined, "DELETE"), idCtx)],
-    ["GET /teams", () => listTeams()],
+    ["GET /teams", () => listTeams(req(undefined, "GET"))],
     ["POST /teams", () => createTeam(req({ name: "A", shortName: "a" }))],
     ["GET /teams/[id]", () => getTeam(req(undefined, "GET"), idCtx)],
     ["PUT /teams/[id]", () => updateTeam(req({ name: "A", shortName: "a" }, "PUT"), idCtx)],
@@ -93,6 +93,16 @@ describe("POST /api/drivers", () => {
             name: "Łukasz Żółć",
             number: 88,
             team: "Orlen Team",
+        });
+    });
+
+    it("GET /api/teams supports ?sort=name", async () => {
+        withDbRole("ADMIN");
+        db.team.findMany.mockResolvedValue([]);
+        const res = await listTeams(jsonReq(undefined, "GET", "http://localhost/api/teams?sort=name") as never);
+        expect(res.status).toBe(200);
+        expect(db.team.findMany).toHaveBeenCalledWith({
+            orderBy: { name: "asc" },
         });
     });
 });

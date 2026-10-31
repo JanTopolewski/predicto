@@ -92,24 +92,100 @@ export async function PATCH(
             }
         }
 
-        const updatedMatch = await prisma.footballMatch.update({
-            where: { id: matchId },
-            data: {
-                ...(homeGoals !== undefined && { homeGoals }),
-                ...(awayGoals !== undefined && { awayGoals }),
-                ...(status && { status }),
-                ...(parsedVotingClosedAt !== undefined && {
-                    votingClosedAt: parsedVotingClosedAt,
-                }),
-                ...(homeGoals !== undefined &&
-                    awayGoals !== undefined && { resolved: true }),
-            },
-            include: {
-                homeTeam: true,
-                awayTeam: true,
-                predictions: true,
-            },
-        });
+        let updatedMatch;
+
+        // Automatically calculate points if score is provided and match resolved
+        if (homeGoals !== undefined && awayGoals !== undefined) {
+            const scoringRules = await prisma.competitionScoring.findUnique({
+                where: { competitionId },
+            });
+
+            const exactScorePoints = scoringRules?.exactScorePoints ?? 3;
+            const winnerPoints = scoringRules?.winnerPoints ?? 1;
+            const actualResult = homeGoals - awayGoals;
+
+            // Execute match update, prediction points update, and member points calculation in a single transaction
+            updatedMatch = await prisma.$transaction(async (tx: any) => {
+                const matchResult = await tx.footballMatch.update({
+                    where: { id: matchId },
+                    data: {
+                        homeGoals,
+                        awayGoals,
+                        resolved: true,
+                        ...(status && { status }),
+                        ...(parsedVotingClosedAt !== undefined && {
+                            votingClosedAt: parsedVotingClosedAt,
+                        }),
+                    },
+                    include: {
+                        homeTeam: true,
+                        awayTeam: true,
+                        predictions: true,
+                    },
+                });
+
+                for (const prediction of matchResult.predictions) {
+                    const predictedResult = prediction.homeGoals - prediction.awayGoals;
+                    let points = 0;
+
+                    if (
+                        prediction.homeGoals === homeGoals &&
+                        prediction.awayGoals === awayGoals
+                    ) {
+                        points = exactScorePoints;
+                    } else if (
+                        (actualResult === 0 && predictedResult === 0) ||
+                        (actualResult > 0 && predictedResult > 0) ||
+                        (actualResult < 0 && predictedResult < 0)
+                    ) {
+                        points = winnerPoints;
+                    }
+
+                    const oldPoints = prediction.points || 0;
+                    const pointsDiff = points - oldPoints;
+
+                    await tx.footballPrediction.update({
+                        where: { id: prediction.id },
+                        data: { points },
+                    });
+
+                    if (pointsDiff !== 0) {
+                        await tx.competitionMember.update({
+                            where: {
+                                competitionId_userId: {
+                                    competitionId,
+                                    userId: prediction.userId,
+                                },
+                            },
+                            data: {
+                                points: {
+                                    increment: pointsDiff,
+                                },
+                            },
+                        });
+                    }
+                }
+
+                return matchResult;
+            });
+        } else {
+            updatedMatch = await prisma.footballMatch.update({
+                where: { id: matchId },
+                data: {
+                    ...(homeGoals !== undefined && { homeGoals }),
+                    ...(awayGoals !== undefined && { awayGoals }),
+                    ...(status && { status }),
+                    ...(parsedVotingClosedAt !== undefined && {
+                        votingClosedAt: parsedVotingClosedAt,
+                    }),
+                },
+                include: {
+                    homeTeam: true,
+                    awayTeam: true,
+                    predictions: true,
+                },
+            });
+        }
 
         return NextResponse.json({ match: updatedMatch });
     } catch (error) {

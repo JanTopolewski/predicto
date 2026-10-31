@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { POST as announce } from "../../app/api/competitions/[id]/racing/season-winner/announce/route";
+import { PUT as announce } from "../../app/api/competitions/[id]/racing/season-winner/route";
 import { POST as results } from "../../app/api/competitions/[id]/racing/sessions/[sessionId]/results/route";
 import { asAdmin, asAnon, asUser, calls, ctx, db, jsonReq } from "../helpers";
 

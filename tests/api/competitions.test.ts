@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { POST as joinById } from "../../app/api/competitions/[id]/join/route";
-import { POST as joinByCode } from "../../app/api/competitions/join-by-code/route";
-import { GET as getCompetition } from "../../app/api/competitions/[id]/route";
-import { DELETE as deleteCompetition } from "../../app/api/competitions/[id]/delete/route";
+import { POST as joinById } from "../../app/api/competitions/[id]/members/route";
+import { POST as joinByCode } from "../../app/api/competitions/members/route";
+import { GET as getCompetition, DELETE as deleteCompetition } from "../../app/api/competitions/[id]/route";
 import { asAdmin, asAnon, asUser, ctx, db, jsonReq } from "../helpers";
 
 const byId = () => joinById(jsonReq(undefined), ctx({ id: "c1" }));
@@ -96,7 +95,7 @@ describe("GET /api/competitions/[id] - data isolation", () => {
     });
 });
 
-describe("DELETE /api/competitions/[id]/delete", () => {
+describe("DELETE /api/competitions/[id]", () => {
     const del = () => deleteCompetition(jsonReq(undefined, "DELETE") as never, ctx({ id: "c1" }));
 
     it("returns 403: anonymous, regular user, foreign admin", async () => {
